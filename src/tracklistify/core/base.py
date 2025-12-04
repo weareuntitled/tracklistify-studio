@@ -10,6 +10,7 @@ from typing import List, Optional, Tuple
 
 # Local/package imports
 from tracklistify.config.factory import get_config
+from tracklistify.core.exceptions import DownloadError, ValidationError
 from tracklistify.core.track import Track
 from tracklistify.core.types import AudioSegment
 from tracklistify.downloaders import DownloaderFactory
@@ -51,6 +52,9 @@ class AsyncApp:
         """Process input URL or file path."""
         try:
             local_path, source_path = await self._prepare_input(input_path)
+
+            # Keep a reference for output metadata
+            self.source_path = source_path
 
             self.logger.info("Processing audio...")
 
@@ -98,6 +102,95 @@ class AsyncApp:
         finally:
             # Always clean up temporary files
             await self.cleanup()
+
+    def _build_mix_info(self, title: str, tracks: List["Track"]) -> dict:
+        """Assemble mix metadata used by exporters."""
+
+        mix_info = {
+            "title": sanitizer(title) if title else "Unknown Mix",
+            "date": datetime.now().strftime("%Y-%m-%d"),
+        }
+
+        # Prefer artist/uploader information from download metadata
+        artist = (
+            getattr(self, "uploader", None)
+            or self.mix_metadata.get("uploader")
+            or self.mix_metadata.get("artist")
+        )
+        if artist:
+            mix_info["artist"] = sanitizer(artist)
+
+        # yt-dlp upload_date is in YYYYMMDD format – normalize if present
+        upload_date = self.mix_metadata.get("upload_date")
+        if isinstance(upload_date, str) and len(upload_date) == 8:
+            mix_info["date"] = f"{upload_date[0:4]}-{upload_date[4:6]}-{upload_date[6:8]}"
+
+        duration = self.mix_metadata.get("duration") or getattr(self, "duration", None)
+        if duration:
+            mix_info["duration"] = duration
+
+        if hasattr(self, "source_path"):
+            mix_info["source"] = self.source_path
+
+        # Include a simple analysis summary
+        mix_info["track_count"] = len(tracks)
+
+        return mix_info
+
+    async def _prepare_input(self, input_path: str) -> Tuple[str, str]:
+        """Validate, download (if needed) and normalize the input source."""
+
+        # Reset any stale metadata before handling a new input
+        self.mix_metadata = {}
+        self.original_title = None
+        self.duration = None
+        self.uploader = None
+
+        result = validate_input(input_path)
+        if not result:
+            raise ValidationError("Input must be a valid URL or existing audio file")
+
+        validated_path, is_local_file = result
+
+        # Local file requires no download – just record minimal metadata
+        if is_local_file:
+            self.logger.info(f"Using local file: {sanitizer(validated_path)}")
+            self.original_title = Path(validated_path).stem
+            return validated_path, validated_path
+
+        # Remote URL: pick downloader and fetch the audio
+        self.logger.info(f"Downloading from: {sanitizer(validated_path)}")
+        try:
+            downloader = self.downloader_factory.create_downloader(validated_path)
+        except ValueError as exc:  # Unsupported URL format
+            raise ValidationError(
+                f"Unsupported or unrecognized URL: {sanitizer(validated_path)}"
+            ) from exc
+
+        try:
+            downloaded_path = await downloader.download(validated_path)
+        except Exception as exc:  # noqa: BLE001 - surface download errors
+            raise DownloadError(
+                f"Failed to download audio from {sanitizer(validated_path)}",
+                url=validated_path,
+                cause=exc,
+            ) from exc
+
+        if not downloaded_path:
+            raise DownloadError(
+                f"Downloader returned no file path for {sanitizer(validated_path)}",
+                url=validated_path,
+            )
+
+        # Persist metadata gathered during download for later output
+        self.mix_metadata = downloader.get_last_metadata() or {}
+        self.original_title = getattr(downloader, "title", None) or Path(
+            downloaded_path
+        ).stem
+        self.duration = getattr(downloader, "duration", None)
+        self.uploader = getattr(downloader, "uploader", None)
+
+        return downloaded_path, validated_path
 
     def split_audio(self, file_path: str) -> List[AudioSegment]:
         """Split audio file into overlapping segments for analysis."""
