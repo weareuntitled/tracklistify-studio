@@ -1,0 +1,333 @@
+{
+    "mix_info": {
+        "title": "efcda65a-0464-4f53-b903-dfc354379b12",
+        "date": "2025-12-04",
+        "source": "C:\\Users\\hi\\Documents\\tracklistify\\storage\\downloads\\efcda65a-0464-4f53-b903-dfc354379b12.mp3",
+        "track_count": 45
+    },
+    "track_count": 45,
+    "analysis_info": {
+        "timestamp": "2025-12-04T14:45:18.386444",
+        "track_count": 45,
+        "average_confidence": 86.77554132055556,
+        "min_confidence": 50.96831300000001,
+        "max_confidence": 99.35286045800001
+    },
+    "tracks": [
+        {
+            "song_name": "Bird Cave",
+            "artist": "Substance",
+            "time_in_mix": "00:00:00",
+            "confidence": 54.9989942,
+            "duration": null
+        },
+        {
+            "song_name": "Cirrus",
+            "artist": "Konstantin Scharf",
+            "time_in_mix": "00:04:40",
+            "confidence": 50.96831300000001,
+            "duration": null
+        },
+        {
+            "song_name": "Cheetah",
+            "artist": "Klint",
+            "time_in_mix": "00:09:55",
+            "confidence": 86.1623762,
+            "duration": null
+        },
+        {
+            "song_name": "%037.2",
+            "artist": "Toru Ikemoto",
+            "time_in_mix": "00:11:40",
+            "confidence": 71.3397024,
+            "duration": null
+        },
+        {
+            "song_name": "Carnal Fever",
+            "artist": "Alarico",
+            "time_in_mix": "00:12:15",
+            "confidence": 88.092863628,
+            "duration": null
+        },
+        {
+            "song_name": "Wonderful",
+            "artist": "Lasgo",
+            "time_in_mix": "00:15:10",
+            "confidence": 89.55261704,
+            "duration": null
+        },
+        {
+            "song_name": "The House of House",
+            "artist": "Cherry Moon Trax",
+            "time_in_mix": "00:15:45",
+            "confidence": 90.39907436000001,
+            "duration": null
+        },
+        {
+            "song_name": "Look What You Made Me Do",
+            "artist": "Akucum",
+            "time_in_mix": "00:17:30",
+            "confidence": 63.6486056,
+            "duration": null
+        },
+        {
+            "song_name": "28 - 33",
+            "artist": "Bidoben",
+            "time_in_mix": "00:18:40",
+            "confidence": 85.08150588,
+            "duration": null
+        },
+        {
+            "song_name": "Intuition",
+            "artist": "Connor Wall",
+            "time_in_mix": "00:21:00",
+            "confidence": 77.61061145800001,
+            "duration": null
+        },
+        {
+            "song_name": "Mutt",
+            "artist": "Aidan Rudd",
+            "time_in_mix": "00:25:40",
+            "confidence": 93.28849317999999,
+            "duration": null
+        },
+        {
+            "song_name": "Ghost Transmission",
+            "artist": "Clotur",
+            "time_in_mix": "00:27:25",
+            "confidence": 90.23456576000001,
+            "duration": null
+        },
+        {
+            "song_name": "Mooree",
+            "artist": "Cirkle",
+            "time_in_mix": "00:29:10",
+            "confidence": 90.215182018,
+            "duration": null
+        },
+        {
+            "song_name": "93 Million Miles",
+            "artist": "Aerone",
+            "time_in_mix": "00:30:55",
+            "confidence": 97.5337505,
+            "duration": null
+        },
+        {
+            "song_name": "Epinephrine",
+            "artist": "Altinbas",
+            "time_in_mix": "00:33:15",
+            "confidence": 84.326028356,
+            "duration": null
+        },
+        {
+            "song_name": "Dark Space",
+            "artist": "Klaudia Gawlas",
+            "time_in_mix": "00:35:35",
+            "confidence": 96.50020598,
+            "duration": null
+        },
+        {
+            "song_name": "Eins Zwei Polizei",
+            "artist": "Mo-Do",
+            "time_in_mix": "00:38:30",
+            "confidence": 97.126460158,
+            "duration": null
+        },
+        {
+            "song_name": "Exposition K",
+            "artist": "Volster",
+            "time_in_mix": "00:42:00",
+            "confidence": 89.45477038,
+            "duration": null
+        },
+        {
+            "song_name": "Bevel",
+            "artist": "Mython",
+            "time_in_mix": "00:43:45",
+            "confidence": 83.22763383200001,
+            "duration": null
+        },
+        {
+            "song_name": "Sappho",
+            "artist": "Phil Berg",
+            "time_in_mix": "00:46:40",
+            "confidence": 86.688828564,
+            "duration": null
+        },
+        {
+            "song_name": "No Limit",
+            "artist": "2 Unlimited",
+            "time_in_mix": "00:47:50",
+            "confidence": 98.29823970000001,
+            "duration": null
+        },
+        {
+            "song_name": "Lahante",
+            "artist": "Yanamaste",
+            "time_in_mix": "00:50:10",
+            "confidence": 96.999490275,
+            "duration": null
+        },
+        {
+            "song_name": "Beautiful Disguise",
+            "artist": "Enarxis",
+            "time_in_mix": "00:53:05",
+            "confidence": 68.8699488,
+            "duration": null
+        },
+        {
+            "song_name": "Parti",
+            "artist": "Konvulsion",
+            "time_in_mix": "00:56:00",
+            "confidence": 95.41671278000001,
+            "duration": null
+        },
+        {
+            "song_name": "Captcha",
+            "artist": "Glaskin",
+            "time_in_mix": "00:57:45",
+            "confidence": 89.78674388000002,
+            "duration": null
+        },
+        {
+            "song_name": "Code 23 B",
+            "artist": "Tonikattitude",
+            "time_in_mix": "00:58:20",
+            "confidence": 96.07400892000001,
+            "duration": null
+        },
+        {
+            "song_name": "Next Door Hates Me (Khas Remix)",
+            "artist": "CULT",
+            "time_in_mix": "00:59:30",
+            "confidence": 82.598161844,
+            "duration": null
+        },
+        {
+            "song_name": "Out of the Blue",
+            "artist": "System F",
+            "time_in_mix": "01:03:00",
+            "confidence": 60.916329000000005,
+            "duration": null
+        },
+        {
+            "song_name": "Lost In Mind (Extended Mix)",
+            "artist": "DJ Gerard",
+            "time_in_mix": "01:04:45",
+            "confidence": 85.715413,
+            "duration": null
+        },
+        {
+            "song_name": "Fixed Gear (Bours? Remix)",
+            "artist": "Groef",
+            "time_in_mix": "01:05:55",
+            "confidence": 94.353199156,
+            "duration": null
+        },
+        {
+            "song_name": "Asche",
+            "artist": "Rove Ranger",
+            "time_in_mix": "01:07:05",
+            "confidence": 84.67543118,
+            "duration": null
+        },
+        {
+            "song_name": "Drugs and Rugs (Dirticow Remix Dirticow is on Adderall Mix)",
+            "artist": "DirtiTraxxx",
+            "time_in_mix": "01:07:40",
+            "confidence": 99.121797104,
+            "duration": null
+        },
+        {
+            "song_name": "Music Dance Experience",
+            "artist": "Audio Units",
+            "time_in_mix": "01:11:10",
+            "confidence": 96.68486118,
+            "duration": null
+        },
+        {
+            "song_name": "Brainprint",
+            "artist": "No Valentia",
+            "time_in_mix": "01:14:05",
+            "confidence": 96.892583355,
+            "duration": null
+        },
+        {
+            "song_name": "Bitxx (Abstrs Remix) [feat. Abstrs] [Abstrs Remix]",
+            "artist": "Frankie Watch",
+            "time_in_mix": "01:21:05",
+            "confidence": 93.4613945,
+            "duration": null
+        },
+        {
+            "song_name": "Dragon Fruit",
+            "artist": "No Valentia",
+            "time_in_mix": "01:26:20",
+            "confidence": 87.64684215,
+            "duration": null
+        },
+        {
+            "song_name": "Slicering",
+            "artist": "VOICEX",
+            "time_in_mix": "01:31:00",
+            "confidence": 98.747968664,
+            "duration": null
+        },
+        {
+            "song_name": "Mayday (1)",
+            "artist": "No Valentia",
+            "time_in_mix": "01:31:35",
+            "confidence": 87.593174158,
+            "duration": null
+        },
+        {
+            "song_name": "Landing in Baghdad",
+            "artist": "Sina XX",
+            "time_in_mix": "01:32:10",
+            "confidence": 87.517440475,
+            "duration": null
+        },
+        {
+            "song_name": "She Awakes",
+            "artist": "DKFSK",
+            "time_in_mix": "01:36:50",
+            "confidence": 87.16393694,
+            "duration": null
+        },
+        {
+            "song_name": "Kasss",
+            "artist": "FENIM0RE",
+            "time_in_mix": "01:44:25",
+            "confidence": 98.34790235599999,
+            "duration": null
+        },
+        {
+            "song_name": "Unfound (feat. Kybera)",
+            "artist": "Kabay",
+            "time_in_mix": "01:46:45",
+            "confidence": 83.7754495,
+            "duration": null
+        },
+        {
+            "song_name": "Leda",
+            "artist": "Franco Rossi",
+            "time_in_mix": "01:54:20",
+            "confidence": 81.83171759999999,
+            "duration": null
+        },
+        {
+            "song_name": "Older",
+            "artist": "Alberto Tolo",
+            "time_in_mix": "01:55:30",
+            "confidence": 86.607169956,
+            "duration": null
+        },
+        {
+            "song_name": "Walking on Mars",
+            "artist": "Yanamaste",
+            "time_in_mix": "01:57:15",
+            "confidence": 99.35286045800001,
+            "duration": null
+        }
+    ]
+}

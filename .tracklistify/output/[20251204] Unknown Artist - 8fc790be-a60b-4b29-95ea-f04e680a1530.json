@@ -1,0 +1,172 @@
+{
+    "mix_info": {
+        "title": "8fc790be-a60b-4b29-95ea-f04e680a1530",
+        "date": "2025-12-04",
+        "source": "C:\\Users\\hi\\Documents\\tracklistify\\storage\\downloads\\8fc790be-a60b-4b29-95ea-f04e680a1530.mp3",
+        "track_count": 22
+    },
+    "track_count": 22,
+    "analysis_info": {
+        "timestamp": "2025-12-04T18:35:04.699519",
+        "track_count": 22,
+        "average_confidence": 84.76042852545454,
+        "min_confidence": 59.8136664,
+        "max_confidence": 99.927806856
+    },
+    "tracks": [
+        {
+            "song_name": "Les Mains Moites",
+            "artist": "Catartsis & Varia",
+            "time_in_mix": "00:04:05",
+            "confidence": 85.56487539999999,
+            "duration": null
+        },
+        {
+            "song_name": "Canvas",
+            "artist": "Neo",
+            "time_in_mix": "00:07:00",
+            "confidence": 92.94562338,
+            "duration": null
+        },
+        {
+            "song_name": "Something Else",
+            "artist": "Paula Koski",
+            "time_in_mix": "00:08:45",
+            "confidence": 92.51123666000001,
+            "duration": null
+        },
+        {
+            "song_name": "Get Out of My Mind (Version 1)",
+            "artist": "TWR72",
+            "time_in_mix": "00:11:40",
+            "confidence": 99.82059001799999,
+            "duration": null
+        },
+        {
+            "song_name": "Let Me Be Your Underwear (feat. Kim Cooper) [Underground Club Mix]",
+            "artist": "Club 69",
+            "time_in_mix": "00:17:30",
+            "confidence": 93.08390612000001,
+            "duration": null
+        },
+        {
+            "song_name": "Unveiling the Secret (Razormaid Re-Edit)",
+            "artist": "Psyche",
+            "time_in_mix": "00:19:15",
+            "confidence": 59.8136664,
+            "duration": null
+        },
+        {
+            "song_name": "Session #055 Special VR Edition at Club MASS Eat Sleep Techno Repeat Improvised Modular Techno",
+            "artist": "Obscure Machines",
+            "time_in_mix": "00:19:50",
+            "confidence": 97.75674341999999,
+            "duration": null
+        },
+        {
+            "song_name": "Erradicate",
+            "artist": "Neo",
+            "time_in_mix": "00:20:25",
+            "confidence": 93.1593178,
+            "duration": null
+        },
+        {
+            "song_name": "Dry Beetle",
+            "artist": "Rene Wise",
+            "time_in_mix": "00:21:35",
+            "confidence": 65.9331316,
+            "duration": null
+        },
+        {
+            "song_name": "Hanegi",
+            "artist": "DJ Hi-C",
+            "time_in_mix": "00:23:20",
+            "confidence": 99.88920688600001,
+            "duration": null
+        },
+        {
+            "song_name": "Towards the Constellations",
+            "artist": "Dr Smoke & Oscar Mulero",
+            "time_in_mix": "00:28:00",
+            "confidence": 62.909604,
+            "duration": null
+        },
+        {
+            "song_name": "Miami",
+            "artist": "Saturn",
+            "time_in_mix": "00:30:20",
+            "confidence": 60.7635978,
+            "duration": null
+        },
+        {
+            "song_name": "Contatto",
+            "artist": "Sciahri & Hertz Collision",
+            "time_in_mix": "00:33:15",
+            "confidence": 94.0196632,
+            "duration": null
+        },
+        {
+            "song_name": "Naughty Stingray",
+            "artist": "Neo & Vault Records",
+            "time_in_mix": "00:36:10",
+            "confidence": 95.33703324,
+            "duration": null
+        },
+        {
+            "song_name": "Banana Split",
+            "artist": "Neo (AUS)",
+            "time_in_mix": "00:37:20",
+            "confidence": 99.927806856,
+            "duration": null
+        },
+        {
+            "song_name": "Duality",
+            "artist": "Luigi Madonna",
+            "time_in_mix": "00:44:55",
+            "confidence": 78.99822,
+            "duration": null
+        },
+        {
+            "song_name": "Medusa",
+            "artist": "KR!Z",
+            "time_in_mix": "00:47:50",
+            "confidence": 95.51746843999999,
+            "duration": null
+        },
+        {
+            "song_name": "Post Urban Condition",
+            "artist": "Fresko",
+            "time_in_mix": "00:49:35",
+            "confidence": 78.51201280000001,
+            "duration": null
+        },
+        {
+            "song_name": "Airwave (Radio Vocal Edit)",
+            "artist": "Rank 1",
+            "time_in_mix": "00:50:10",
+            "confidence": 89.84556194,
+            "duration": null
+        },
+        {
+            "song_name": "Fleeting Image",
+            "artist": "Adlas",
+            "time_in_mix": "00:51:20",
+            "confidence": 78.9322132,
+            "duration": null
+        },
+        {
+            "song_name": "Upstairs Downstairs Enigma",
+            "artist": "Earwax (IT)",
+            "time_in_mix": "00:56:00",
+            "confidence": 86.60233020000001,
+            "duration": null
+        },
+        {
+            "song_name": "Right To Disobey",
+            "artist": "S.A.M.",
+            "time_in_mix": "00:57:10",
+            "confidence": 62.88561820000001,
+            "duration": null
+        }
+    ]
+}
