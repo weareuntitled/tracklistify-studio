@@ -3,13 +3,13 @@ Output formatting and file handling for Tracklistify.
 """
 
 # Standard library imports
-import json
 import re
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
 # Local/package imports
+from backend.storage import save_json_atomically
 from tracklistify.config import get_config
 from tracklistify.core.exceptions import ExportError
 from tracklistify.core.track import Track
@@ -158,8 +158,7 @@ class TracklistOutput:
             ],
         }
 
-        with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
+        save_json_atomically(str(output_file), data)
 
         logger.info("Analysis Summary:")
         logger.info(f"- Total tracks: {data['analysis_info']['track_count']}")

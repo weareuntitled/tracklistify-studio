@@ -1,10 +1,26 @@
 import os
-import json
-from flask import Flask, jsonify, request, render_template, send_from_directory, session, redirect
+from functools import lru_cache
+from typing import Any, Dict
+
+import yt_dlp  # WICHTIG: pip install yt-dlp
+from backend.models import (
+    LoginRequest,
+    PurchaseToggleRequest,
+    QueueSubmission,
+    ResolveAudioRequest,
+    ResolveMetadataRequest,
+    SetMetadataRequest,
+    SetRenameRequest,
+    ToggleFavoriteRequest,
+    TrackFlagRequest,
+    RegisterRequest,
+)
+from backend.storage import load_json_value
+from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, session
+from pydantic import ValidationError
+from werkzeug.exceptions import BadRequest, HTTPException
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
-from functools import lru_cache
-import yt_dlp  # WICHTIG: pip install yt-dlp
 
 # Eigene Module
 from config import SNIPPET_DIR, STATIC_DIR, UPLOAD_DIR
@@ -21,6 +37,24 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key")
 @lru_cache(maxsize=500)
 def cached_resolve_audio(query):
     return resolve_audio_stream_url(query)
+
+
+def parse_body(model_cls):
+    data = request.get_json(silent=True)
+    if data is None:
+        raise BadRequest("Request body must be JSON")
+    try:
+        return model_cls.model_validate(data)
+    except ValidationError as exc:
+        raise BadRequest(exc.errors())
+
+
+def safe_path(base: str, *paths: str) -> str:
+    base_abs = os.path.abspath(base)
+    candidate = os.path.abspath(os.path.join(base_abs, *paths))
+    if not candidate.startswith(base_abs + os.sep) and candidate != base_abs:
+        raise BadRequest("Invalid path")
+    return candidate
 
 # --- Frontend Routes ---
 @app.route("/")
@@ -70,14 +104,14 @@ def list_tracks(sid):
 
 @app.route("/api/sets/<int:sid>/rename", methods=["POST"])
 def rename_set(sid):
-    data = request.get_json(force=True)
-    database.rename_set(sid, data.get("name"))
+    payload = parse_body(SetRenameRequest)
+    database.rename_set(sid, payload.name)
     return jsonify({"ok": True})
 
 @app.route("/api/sets/<int:sid>/metadata", methods=["POST"])
 def update_set_metadata(sid):
-    data = request.get_json(force=True)
-    database.update_set_metadata(sid, data)
+    payload = parse_body(SetMetadataRequest)
+    database.update_set_metadata(sid, payload.model_dump(exclude_none=True))
     return jsonify({"ok": True})
 
 @app.route("/api/sets/<int:sid>", methods=["DELETE"])
@@ -94,8 +128,8 @@ def delete_track(tid):
 
 @app.route("/api/tracks/<int:tid>/like", methods=["POST"])
 def like_track(tid):
-    data = request.get_json(force=True)
-    liked = 1 if data.get("liked") else 0
+    data = parse_body(ToggleFavoriteRequest)
+    liked = 1 if data.liked else 0
     database.toggle_track_like(tid, liked)
     return jsonify({"ok": True})
 
@@ -105,8 +139,8 @@ def liked_tracks():
 
 @app.route("/api/tracks/<int:tid>/purchase", methods=["POST"])
 def purchase_track(tid):
-    data = request.get_json(force=True)
-    purchased = 1 if data.get("purchased") else 0
+    data = parse_body(PurchaseToggleRequest)
+    purchased = 1 if data.purchased else 0
     database.toggle_track_purchase(tid, purchased)
     return jsonify({"ok": True})
 
@@ -116,8 +150,8 @@ def purchased_tracks():
 
 @app.route("/api/producers/<int:pid>/like", methods=["POST"])
 def like_producer(pid):
-    data = request.get_json(force=True)
-    liked = 1 if data.get("liked") else 0
+    data = parse_body(ToggleFavoriteRequest)
+    liked = 1 if data.liked else 0
     database.toggle_producer_like(pid, liked)
     return jsonify({"ok": True})
 
@@ -127,8 +161,8 @@ def liked_producers():
 
 @app.route("/api/tracks/<int:tid>/flag", methods=["POST"])
 def flag_track(tid):
-    data = request.get_json(force=True)
-    flag = int(data.get("flag", 0))
+    data = parse_body(TrackFlagRequest)
+    flag = int(data.flag or 0)
     database.update_track_flag(tid, flag)
     return jsonify({"ok": True})
 
@@ -138,78 +172,87 @@ def get_metadata():
     """
     Holt Metadaten via yt-dlp (schnell, ohne Download).
     """
-    try:
-        data = request.get_json(force=True)
-        url = data.get("url")
-        if not url: 
-            return jsonify({"ok": False, "error": "Keine URL"}), 400
-        
-        # Optionen für schnellen Metadaten-Abruf
-        ydl_opts = {
-            'quiet': True,
-            'no_warnings': True,
-            'extract_flat': True, # Nur Playlist/Video Infos, nicht streamen
-            'skip_download': True
-        }
+    data = parse_body(ResolveMetadataRequest)
+    url = data.url
 
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            
-            title = info.get('title', '')
-            uploader = info.get('uploader', '')
-            
-            # Logik: "Artist - Title" vs "Event"
-            artist_guess = uploader
-            name_guess = title
-            event_guess = ""
-            
-            # Wenn Bindestrich im Titel, splitten wir oft Artist - Setname
-            if " - " in title:
-                parts = title.split(" - ", 1)
-                if len(parts) == 2:
-                    # Heuristik: Wenn Uploader "HÖR BERLIN" o.ä. ist, ist das das Event
-                    if uploader and uploader.lower() in ["hör berlin", "boiler room", "mixmag", "cercle"]:
-                        event_guess = uploader
-                        artist_guess = parts[0]
-                        name_guess = parts[1]
-                    else:
-                        # Sonst nehmen wir an: Artist - Titel im Video-Titel
-                        artist_guess = parts[0]
-                        name_guess = parts[1]
+    # Optionen für schnellen Metadaten-Abruf
+    ydl_opts = {
+        'quiet': True,
+        'no_warnings': True,
+        'extract_flat': True, # Nur Playlist/Video Infos, nicht streamen
+        'skip_download': True
+    }
 
-            return jsonify({
-                "ok": True,
-                "name": name_guess.strip(),
-                "artist": artist_guess.strip(),
-                "event": event_guess.strip()
-            })
-            
-    except Exception as e:
-        print(f"[Metadata Error] {e}")
-        return jsonify({"ok": False, "error": str(e)}), 500
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+
+        title = info.get('title', '')
+        uploader = info.get('uploader', '')
+
+        # Logik: "Artist - Title" vs "Event"
+        artist_guess = uploader
+        name_guess = title
+        event_guess = ""
+
+        # Wenn Bindestrich im Titel, splitten wir oft Artist - Setname
+        if " - " in title:
+            parts = title.split(" - ", 1)
+            if len(parts) == 2:
+                # Heuristik: Wenn Uploader "HÖR BERLIN" o.ä. ist, ist das das Event
+                if uploader and uploader.lower() in ["hör berlin", "boiler room", "mixmag", "cercle"]:
+                    event_guess = uploader
+                    artist_guess = parts[0]
+                    name_guess = parts[1]
+                else:
+                    # Sonst nehmen wir an: Artist - Titel im Video-Titel
+                    artist_guess = parts[0]
+                    name_guess = parts[1]
+
+        return jsonify({
+            "ok": True,
+            "name": name_guess.strip(),
+            "artist": artist_guess.strip(),
+            "event": event_guess.strip()
+        })
 
 
 # --- API: Queue & Jobs ---
 @app.route("/api/queue/add", methods=["POST"])
 def add_job():
-    job_type = request.form.get("type")
     metadata_raw = request.form.get("metadata")
-    metadata = json.loads(metadata_raw) if metadata_raw else {}
+    metadata: Dict[str, Any] = {}
 
-    if job_type == "url":
-        url = request.form.get("value")
-        if not url: return jsonify({"ok": False, "error": "Keine URL"}), 400
-        job_manager.add_job("url", url, metadata)
-        
-    elif job_type == "file":
-        if 'file' not in request.files: return jsonify({"ok": False}), 400
+    if metadata_raw:
+        try:
+            metadata = load_json_value(metadata_raw) or {}
+        except Exception as exc:
+            raise BadRequest(f"Invalid metadata payload: {exc}")
+        if not isinstance(metadata, dict):
+            raise BadRequest("Metadata must be a JSON object")
+
+    submission = QueueSubmission.model_validate(
+        {"type": request.form.get("type"), "value": request.form.get("value"), "metadata": metadata}
+    )
+
+    if submission.type == "url":
+        if not submission.value:
+            raise BadRequest("Keine URL")
+        job_manager.add_job("url", submission.value, submission.metadata)
+
+    elif submission.type == "file":
+        if 'file' not in request.files:
+            raise BadRequest("File upload required")
         file = request.files['file']
-        if file.filename:
-            filename = secure_filename(file.filename)
-            save_path = os.path.join(UPLOAD_DIR, filename)
-            file.save(save_path)
-            job_manager.add_job("file", save_path, metadata)
-            
+        if not file or not file.filename:
+            raise BadRequest("File upload required")
+        filename = secure_filename(file.filename)
+        if not filename:
+            raise BadRequest("Filename missing")
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+        save_path = safe_path(UPLOAD_DIR, filename)
+        file.save(save_path)
+        job_manager.add_job("file", save_path, submission.metadata)
+
     return jsonify({"ok": True})
 
 @app.route("/api/queue/status")
@@ -233,8 +276,8 @@ def rescan_run():
 
 @app.route("/api/resolve_audio", methods=["POST"])
 def resolve_audio():
-    data = request.get_json(force=True)
-    query = data.get("query")
+    data = parse_body(ResolveAudioRequest)
+    query = data.query
     url = cached_resolve_audio(query)
     if url:
         return jsonify({"ok": True, "url": url})
@@ -284,11 +327,9 @@ def serve_js(filename):
 # --- API: Auth ---
 @app.route("/api/auth/register", methods=["POST"])
 def register():
-    data = request.get_json(force=True)
-    username = (data.get("username") or "").strip()
-    password = (data.get("password") or "").strip()
-    if not username or not password:
-        return jsonify({"ok": False, "error": "Username und Passwort erforderlich"}), 400
+    data = parse_body(RegisterRequest)
+    username = data.username
+    password = data.password
 
     if database.get_user(username):
         return jsonify({"ok": False, "error": "User existiert bereits"}), 409
@@ -302,9 +343,9 @@ def register():
 
 @app.route("/api/auth/login", methods=["POST"])
 def login():
-    data = request.get_json(force=True)
-    username = (data.get("username") or "").strip()
-    password = (data.get("password") or "").strip()
+    data = parse_body(LoginRequest)
+    username = data.username
+    password = data.password
     user = database.get_user(username)
     if not user or not check_password_hash(user["password_hash"], password):
         return jsonify({"ok": False, "error": "Ungültige Zugangsdaten"}), 401
@@ -325,6 +366,22 @@ def profile():
 def logout():
     session.clear()
     return jsonify({"ok": True})
+
+
+@app.errorhandler(Exception)
+def handle_exception(error):
+    if isinstance(error, ValidationError):
+        code = 400
+        message = error.errors()
+    elif isinstance(error, HTTPException):
+        code = error.code or 500
+        message = getattr(error, "description", str(error))
+    else:
+        code = 500
+        message = str(error) or "Internal Server Error"
+
+    response = {"error": True, "message": message, "code": code}
+    return jsonify(response), code
 
 if __name__ == "__main__":
     database.init_db()

@@ -1,5 +1,4 @@
 import os
-import json
 import datetime
 import shutil
 from typing import Dict
@@ -9,6 +8,7 @@ from config import (
     IMPORT_JSON_CLEANUP_MODE,
     IMPORT_JSON_ARCHIVE_DIR,
 )
+from backend.storage import load_json_file
 from database import get_conn
 
 
@@ -119,8 +119,7 @@ def import_json_files(output_dir: str = JSON_OUTPUT_DIR, cleanup: bool = True) -
                 continue
 
             try:
-                with open(path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
+                data = load_json_file(path)
 
                 mix = data.get("mix_info", {}) or {}
                 meta = data.get("meta", {}) or data.get("set", {}) or {}
