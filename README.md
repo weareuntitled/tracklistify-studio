@@ -70,6 +70,10 @@ python -m venv .venv
 pip install -r requirements.txt
 # Falls requirements.txt fehlt:
 pip install flask yt-dlp tracklistify
+ 
+# Hinweis: Es sind keine optionalen Bibliotheken wie "ktem" nötig – alle erforderlichen
+# Pakete sind bereits in der requirements.txt hinterlegt, damit die Installation sofort
+# funktioniert.
 ```
 The server initializes the database, kicks off the background job worker, imports any JSON already present in `.tracklistify/output`, and serves the UI at `http://127.0.0.1:5000`.
 
