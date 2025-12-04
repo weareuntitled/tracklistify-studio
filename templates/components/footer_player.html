@@ -19,7 +19,7 @@
     <div class="flex-1 flex items-center justify-between px-6 pb-2">
         <div class="flex items-center gap-4 w-1/3 overflow-hidden">
             <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center text-orange-500 shadow-sm shrink-0">
-                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zm0 5a4 4 0 110 8 4 4 0 010-8zm0 2a2 2 0 100 4 2 2 0 000-4z"/></svg>
             </div>
             <div class="min-w-0 flex-1">
                 <div class="font-bold text-gray-900 text-sm truncate" x-text="activeTrack ? activeTrack.title : '-'"></div>
@@ -45,9 +45,12 @@
             <div class="text-[10px] font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded">
                 <span x-text="formatTime(audio.currentTime)">00:00</span> / <span x-text="formatTime(audio.duration || 0)">00:00</span>
             </div>
-            <div class="flex items-center gap-2 group w-24">
-                <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-                <input type="range" min="0" max="1" step="0.05" x-model="audio.volume" @input="updateVolume" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500">
+            <div class="flex items-center gap-2 group w-28">
+                <div class="text-gray-500" :class="audio.volume === 0 ? 'text-gray-300' : 'text-gray-500'">
+                    <svg x-show="audio.volume === 0" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464l4.95-4.95m-4.95 4.95l4.95 4.95m-4.95-4.95a5 5 0 010 7.072M6.586 15H5a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C11.923 3.663 13 4.109 13 5v14c0 .891-1.077 1.337-1.707.707L6.586 15z" /></svg>
+                    <svg x-show="audio.volume > 0" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M6.586 15H5a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C11.923 3.663 13 4.109 13 5v14c0 .891-1.077 1.337-1.707.707L6.586 15z" /></svg>
+                </div>
+                <input type="range" min="0" max="1" step="0.05" x-model="audio.volume" @input="updateVolume" class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500">
             </div>
         </div>
     </div>
