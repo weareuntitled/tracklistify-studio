@@ -217,25 +217,8 @@ document.addEventListener('alpine:init', () => {
                 }
                 
                 // Live Log Toasties
-                if (status.active && status.active.log) {
-                    const currentLog = status.active.log.trim();
-                    if (currentLog !== this.lastLogLine) {
-                        this.lastLogLine = currentLog;
-                        
-                        const cleanMsg = currentLog.replace(/\[.*?\]/g, '').trim();
+                this.handleLiveLog(status);
 
-                        if (/Found Beatport Profile/i.test(cleanMsg)) {
-                            this.showToast("Producer Identified", cleanMsg, "producer");
-                        } else if (/Found SoundCloud Profile/i.test(cleanMsg)) {
-                            this.showToast("DJ Profile Linked", cleanMsg, "dj");
-                        } else if (currentLog.includes("Found") || currentLog.includes("Identified") || currentLog.includes("=>")) {
-                            // Track erkannt
-                            this.showToast("Track erkannt", cleanMsg, "track");
-                        } else if (currentLog.includes("Download:")) {
-                            this.showToast("Download gestartet", status.active.label, "info");
-                        }
-                    }
-                }
                 this.queueStatus = status;
             } catch(e) {}
         },
@@ -601,11 +584,57 @@ document.addEventListener('alpine:init', () => {
             return 'bg-gray-500'; 
         },
         
-        getPhaseLabel(phase) { 
-            if (phase === 'downloading') return 'Download'; 
-            if (phase === 'analyzing') return 'Analyse'; 
-            if (phase === 'importing') return 'Import'; 
-            return 'Verarbeite...'; 
+        getPhaseLabel(phase) {
+            if (phase === 'downloading') return 'Download';
+            if (phase === 'analyzing') return 'Analyse';
+            if (phase === 'importing') return 'Import';
+            return 'Verarbeite...';
+        },
+
+        handleLiveLog(status) {
+            if (!status.active) {
+                this.lastLogLine = '';
+                return;
+            }
+
+            if (!status.active.log) return;
+
+            const currentLog = status.active.log.trim();
+            if (currentLog === this.lastLogLine) return;
+            this.lastLogLine = currentLog;
+
+            const cleanMsg = currentLog.replace(/\[.*?\]/g, '').trim();
+            const lower = cleanMsg.toLowerCase();
+
+            if (lower.includes('soundcloud profile') || lower.includes('dj profile')) {
+                this.showToast('DJ verknüpft', cleanMsg, 'dj');
+                return;
+            }
+
+            if (lower.includes('beatport profile') || lower.includes('producer')) {
+                this.showToast('Producer gefunden', cleanMsg, 'producer');
+                return;
+            }
+
+            if (lower.includes('artist profile') || lower.includes('artist page') || lower.includes('profil')) {
+                this.showToast('Artist-Profil', cleanMsg, 'artist');
+                return;
+            }
+
+            if (lower.includes('download:')) {
+                this.showToast('Download gestartet', status.active.label, 'info');
+                return;
+            }
+
+            if (
+                lower.includes('identifying') ||
+                lower.includes('identified') ||
+                lower.includes('track match') ||
+                (lower.includes('found') && lower.includes('track')) ||
+                cleanMsg.includes('=>')
+            ) {
+                this.showToast('Track erkannt', cleanMsg, 'track');
+            }
         },
         
         getSearchLink(track, provider) {

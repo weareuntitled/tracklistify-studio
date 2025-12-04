@@ -42,13 +42,8 @@
     </div>
 
     <div class="flex items-center gap-2">
-        <div class="hidden md:flex items-center gap-2 mr-2 group" title="Lautstärke">
-             <svg class="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-             <input type="range" min="0" max="1" step="0.05" x-model="audio.volume" @input="updateVolume" class="w-16 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500">
-        </div>
-
-        <button @click="showRescanView()" 
-                class="relative p-2 text-gray-400 hover:text-orange-600 transition-all duration-200 rounded-full hover:bg-orange-50 active:scale-95" 
+        <button @click="showRescanView()"
+                class="relative p-2 text-gray-400 hover:text-orange-600 transition-all duration-200 rounded-full hover:bg-orange-50 active:scale-95"
                 title="Rescan Queue">
             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 01-2-2M5 11V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
