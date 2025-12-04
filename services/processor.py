@@ -60,22 +60,15 @@ def process_job(job):
         job.phase = "analyzing"
         job.progress = 0
         job.log_msg("Starte Analyse...")
-        
-        cmd_ana = [sys.executable, "-m", "tracklistify.cli", file_path]
-        proc_ana = subprocess.Popen(
-            cmd_ana,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            encoding='utf-8',
-            errors='ignore'
-        )
 
-        ana_output = []
+        cmd_ana = [sys.executable, "-m", "tracklistify", file_path]
+        proc_ana = subprocess.Popen(cmd_ana, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='ignore')
+
+        analyzer_output = []
         for line in proc_ana.stdout:
             l = line.strip()
             if l:
-                ana_output.append(l)
+                analyzer_output.append(l)
                 # Nur wichtige Lines ins UI loggen, alles ins Terminal
                 print(f"[Tracklistify] {l}")
                 if "Identifying" in l or "Found" in l:
@@ -86,11 +79,14 @@ def process_job(job):
         print(f"Analyse Exit Code: {proc_ana.returncode}") # Debug Print
 
         if proc_ana.returncode != 0:
-            summary = "\n".join(ana_output[-5:]) if ana_output else "Keine Ausgabe erhalten."
-            job.error = f"Analyzer exited with code {proc_ana.returncode}"
             job.phase = "error"
+            job.status = "failed"
+            job.error = f"Analyzer exited with code {proc_ana.returncode}"
             job.log_msg(job.error)
-            job.log_msg(summary)
+            if analyzer_output:
+                job.log_msg("Analyzer output:")
+                for entry in analyzer_output:
+                    job.log_msg(entry)
             raise RuntimeError(job.error)
 
         # 3. IMPORT

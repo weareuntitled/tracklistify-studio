@@ -1,31 +1,44 @@
 import os
 import json
 import datetime
-from typing import Dict, List
-
-from config import JSON_OUTPUT_DIR, DOWNLOAD_DIR, BASE_DIR
+import shutil
+from config import (
+    JSON_OUTPUT_DIR,
+    DOWNLOAD_DIR,
+    IMPORT_JSON_CLEANUP_MODE,
+    IMPORT_JSON_ARCHIVE_DIR,
+)
 from database import get_conn
 
+
 def _guess_audio_file_from_title(title):
-    if not title: return None
+    if not title:
+        return None
     norm = title.lower().replace("_", " ").strip()
     best, score = None, 0
     try:
         if os.path.exists(DOWNLOAD_DIR):
             for f in os.listdir(DOWNLOAD_DIR):
                 full = os.path.join(DOWNLOAD_DIR, f)
-                if not os.path.isfile(full): continue
+                if not os.path.isfile(full):
+                    continue
                 stem = os.path.splitext(f)[0].lower()
                 sc = 0
-                if norm in stem: sc += 5
+                if norm in stem:
+                    sc += 5
                 sc += len(set(norm.split()) & set(stem.split()))
-                if sc > score: score, best = sc, full
-    except: pass
+                if sc > score:
+                    score, best = sc, full
+    except Exception:
+        pass
     return best if score > 0 else None
 
+
 def _parse_time_to_seconds(val):
-    if val is None: return 0.0
-    if isinstance(val, (int, float)): return float(val)
+    if val is None:
+        return 0.0
+    if isinstance(val, (int, float)):
+        return float(val)
     if isinstance(val, str) and ":" in val:
         parts = val.split(":")
         try:
@@ -33,107 +46,142 @@ def _parse_time_to_seconds(val):
                 return int(parts[0]) * 60 + int(parts[1])
             elif len(parts) == 3:
                 return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
-        except: pass
-    try: return float(val)
-    except: return 0.0
+        except Exception:
+            pass
+    try:
+        return float(val)
+    except Exception:
+        return 0.0
+
+
+def _cleanup_processed_file(path, filename, actions):
+    if IMPORT_JSON_CLEANUP_MODE == "delete":
+        try:
+            os.remove(path)
+            actions.append({"file": path, "action": "deleted"})
+        except Exception as exc:
+            actions.append({"file": path, "action": "delete_failed", "error": str(exc)})
+    elif IMPORT_JSON_CLEANUP_MODE == "move":
+        try:
+            os.makedirs(IMPORT_JSON_ARCHIVE_DIR, exist_ok=True)
+            target = os.path.join(IMPORT_JSON_ARCHIVE_DIR, filename)
+            if os.path.exists(target):
+                stem, ext = os.path.splitext(filename)
+                target = os.path.join(
+                    IMPORT_JSON_ARCHIVE_DIR,
+                    f"{stem}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}{ext}",
+                )
+            shutil.move(path, target)
+            actions.append({"file": path, "action": "moved", "destination": target})
+        except Exception as exc:
+            actions.append({"file": path, "action": "move_failed", "error": str(exc)})
+
 
 def import_json_files(output_dir: str = JSON_OUTPUT_DIR, cleanup: bool = True) -> Dict[str, object]:
     """
     Liest JSON-Dateien ein und schreibt sie in die DB.
-
-    Args:
-        output_dir: Optional alternatives Ausgabeverzeichnis für Tracklistify JSON Dateien.
-        cleanup: Entfernt erfolgreich importierte JSON Dateien nach dem Import.
-
-    Returns:
-        dict: Struktur mit neuen IDs, Import-Statistiken und Fehlern.
+    RÜCKGABE: Strukturiertes Ergebnis mit Status, importierten Set-IDs und Aktionen.
     """
+    result = {
+        "status": "pending",
+        "message": "",
+        "new_set_ids": [],
+        "processed_files": [],
+        "skipped_files": [],
+        "errors": [],
+        "cleanup_actions": [],
+    }
+
+    if not os.path.isdir(JSON_OUTPUT_DIR):
+        result["status"] = "missing_directory"
+        result["message"] = f"Output directory not found: {JSON_OUTPUT_DIR}"
+        print(f"[Importer] {result['message']}")
+        return result
+
+    json_files = [f for f in sorted(os.listdir(JSON_OUTPUT_DIR)) if f.endswith(".json")]
+    if not json_files:
+        result["status"] = "no_new_files"
+        result["message"] = "No JSON files to import."
+        return result
+
     conn = get_conn()
     cur = conn.cursor()
 
-    new_set_ids: List[int] = []
-    messages: List[str] = []
-    errors: List[str] = []
-    processed_paths: List[str] = []
+    try:
+        for fname in json_files:
+            path = os.path.join(JSON_OUTPUT_DIR, fname)
 
-    if not os.path.isdir(output_dir):
-        messages.append(f"Kein Output-Ordner gefunden: {output_dir}")
-        conn.close()
-        return {"new_set_ids": new_set_ids, "imported": 0, "skipped": 0, "errors": errors, "messages": messages}
+            # Dubletten-Check
+            cur.execute("SELECT id FROM sets WHERE source_file = ?", (os.path.abspath(path),))
+            if cur.fetchone():
+                result["skipped_files"].append({"file": path, "reason": "duplicate"})
+                continue
 
-    for fname in sorted(os.listdir(output_dir)):
-        if not fname.endswith(".json"):
-            continue
-        path = os.path.join(output_dir, fname)
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
 
-        # Dubletten-Check
-        cur.execute("SELECT id FROM sets WHERE source_file = ?", (os.path.abspath(path),))
-        if cur.fetchone():
-            messages.append(f"Überspringe bereits importierte Datei: {fname}")
-            continue
+                mix = data.get("mix_info", {}) or {}
+                meta = data.get("meta", {}) or data.get("set", {}) or {}
+                ana = data.get("analysis_info", {}) or {}
 
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+                raw_title = mix.get("title") or meta.get("title") or os.path.splitext(fname)[0]
+                artist = mix.get("artist") or meta.get("artist")
 
-            mix = data.get("mix_info", {}) or {}
-            meta = data.get("meta", {}) or data.get("set", {}) or {}
-            ana = data.get("analysis_info", {}) or {}
+                if not artist:
+                    parts = raw_title.split(" - ", 1)
+                    artist = parts[0] if len(parts) == 2 else "Unknown Artist"
+                    if len(parts) == 2:
+                        raw_title = parts[1]
 
-            raw_title = mix.get("title") or meta.get("title") or os.path.splitext(fname)[0]
-            artist = mix.get("artist") or meta.get("artist")
-
-            if not artist:
-                parts = raw_title.split(" - ", 1)
-                artist = parts[0] if len(parts) == 2 else "Unknown Artist"
-                if len(parts) == 2:
-                    raw_title = parts[1]
-
-            set_name = f"{artist} - {raw_title}"
-            audio_file = ana.get("audio_file") or _guess_audio_file_from_title(raw_title)
-
-            cur.execute(
-                "INSERT INTO sets (name, source_file, created_at, audio_file) VALUES (?, ?, ?, ?)",
-                (set_name, os.path.abspath(path), datetime.datetime.now().isoformat(), audio_file),
-            )
-            set_id = cur.lastrowid
-
-            new_set_ids.append(set_id)
-            processed_paths.append(path)
-
-            tracks = data.get("tracks") or data.get("tracklist") or []
-            for i, t in enumerate(tracks, 1):
-                s = _parse_time_to_seconds(t.get("start") or t.get("start_seconds"))
-                e = _parse_time_to_seconds(t.get("end") or t.get("end_seconds"))
+                set_name = f"{artist} - {raw_title}"
+                audio_file = ana.get("audio_file") or _guess_audio_file_from_title(raw_title)
 
                 cur.execute(
-                    """
-                    INSERT INTO tracks (set_id, position, artist, title, confidence, start_time, end_time, flag)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 0)
-                """,
-                    (set_id, i, t.get("artist"), t.get("title"), t.get("confidence"), s, e),
+                    "INSERT INTO sets (name, source_file, created_at, audio_file) VALUES (?, ?, ?, ?)",
+                    (set_name, os.path.abspath(path), datetime.datetime.now().isoformat(), audio_file),
                 )
+                set_id = cur.lastrowid
 
-        except Exception as e:
-            errors.append(f"{fname}: {e}")
+                result["new_set_ids"].append(set_id)
+                result["processed_files"].append(path)
 
-    conn.commit()
-    conn.close()
+                tracks = data.get("tracks") or data.get("tracklist") or []
+                for i, t in enumerate(tracks, 1):
+                    s = _parse_time_to_seconds(t.get("start") or t.get("start_seconds"))
+                    e = _parse_time_to_seconds(t.get("end") or t.get("end_seconds"))
 
-    if cleanup:
-        for path in processed_paths:
-            try:
-                os.remove(path)
+                    cur.execute(
+                        """
+                        INSERT INTO tracks (set_id, position, artist, title, confidence, start_time, end_time, flag)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+                        """,
+                        (set_id, i, t.get("artist"), t.get("title"), t.get("confidence"), s, e),
+                    )
+
             except Exception as e:
-                errors.append(f"Cleanup fehlgeschlagen für {os.path.basename(path)}: {e}")
+                result["errors"].append({"file": path, "error": str(e)})
+                print(f"[Importer] Fehler bei {fname}: {e}")
 
-    if not new_set_ids and not errors:
-        messages.append("Keine neuen JSON Dateien zum Import gefunden.")
+        conn.commit()
+    finally:
+        conn.close()
 
-    return {
-        "new_set_ids": new_set_ids,
-        "imported": len(new_set_ids),
-        "skipped": len(messages),
-        "errors": errors,
-        "messages": messages,
-    }
+    if result["processed_files"]:
+        for path in result["processed_files"]:
+            _cleanup_processed_file(path, os.path.basename(path), result["cleanup_actions"])
+
+    if result["new_set_ids"]:
+        result["status"] = "imported"
+        result["message"] = f"Imported {len(result['new_set_ids'])} sets."
+    elif result["errors"]:
+        result["status"] = "errors"
+        result["message"] = "Errors occurred during import."
+    else:
+        result["status"] = "no_new_files"
+        if result["skipped_files"]:
+            result["message"] = "No new files to import (duplicates)."
+        else:
+            result["message"] = "No new files to import."
+
+    return result

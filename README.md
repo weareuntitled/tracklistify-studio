@@ -1,101 +1,133 @@
-![Tracklistify banner](docs/assets/banner.png)
+# Tracklistify Studio (Helper Edition)
 
-# Tracklistify Studio
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![Status](https://img.shields.io/badge/Status-Beta-orange)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-A Flask-based helper app that wraps the `tracklistify` analyzer with a simple queue, downloader, and dashboard UI. Studio lets you drop in YouTube/Mixcloud/SoundCloud links or upload audio files, runs the Tracklistify CLI in the background, and imports the generated JSON into a local SQLite library with snippets and playback support.
+**Tracklistify Studio** ist eine lokale Hybrid-Webanwendung für DJs und Musiksammler. Sie automatisiert die Analyse von DJ-Sets, erkennt Tracks (via Audio-Fingerprinting), verwaltet Metadaten und hilft beim Aufbau einer kuratierten Musikbibliothek ("Merkliste").
 
-## What this repo contains
-- **Flask UI (`app.py`, `templates/`, `static/`)** – dashboard, queue, likes, and rescan views built with Tailwind + Alpine.
-- **Job pipeline (`job_manager.py`, `services/processor.py`)** – downloads audio via `yt-dlp`, runs `python -m tracklistify`, and streams analyzer logs back to the UI.
-- **Importer (`services/importer.py`)** – ingests Tracklistify JSON from `.tracklistify/output` into `tracklistify.db` with metadata guessing.
-- **Storage layout (`config.py`)** – creates data directories under the repo so everything works out of the box.
+> [!NOTE]
+> **Datenschutz:** Die Analyse läuft komplett lokal auf deinem Rechner. Deine Audio-Dateien und Datenbank verlassen deinen PC nicht.
 
-## Prerequisites
-- Python 3.11+
-- `ffmpeg` available on your `PATH`
-- `yt-dlp` (Python package) for downloads/metadata
-- A working internet connection for provider calls (Shazam/ACRCloud via the Tracklistify CLI)
+---
 
-> The repo includes the `tracklistify` package itself (see `pyproject.toml`), so you do **not** need a separate checkout. Installing the repo in editable mode gives you the `tracklistify` CLI used by the processor.
+## 🚀 Features
 
-## Setup
-### Common steps (Windows, macOS, Linux)
-```bash
-# Clone
-git clone https://github.com/betmoar/tracklistify-studio.git
-cd tracklistify-studio
+* **Smart Import & Analyse:**
+    * Importiere Sets direkt via **YouTube/Mixcloud URL** oder lokale Audiodateien.
+    * **Auto-Tagging:** Automatische Erkennung von Artist, Event und Set-Name aus Dateinamen oder Videotiteln (Smart Regex Parsing).
+    * Hintergrund-Verarbeitung in einer **Warteschlange (Queue)** – arbeite weiter, während analysiert wird.
+* **Audio Player & Preloading:**
+    * **Instant Playback:** Streaming-URLs werden im Hintergrund vorgeladen (Aggressive Preloading), sodass Tracks ohne Verzögerung starten.
+    * **Midas Touch Scrubbing:** Optimierter Player für einfache Navigation im Set.
+    * **Visuelles Feedback:** Deterministische Waveform-Visualisierung auf Canvas-Basis.
+* **Set Management:**
+    * Metadaten-Editor für Sets (B2B, Event, Tags).
+    * **Dashboard:** Statistiken zu deinen Top-Artists und Discovery-Raten.
+    * Rechtsklick-Kontextmenüs für schnelle Aktionen.
+* **Track Discovery:**
+    * "Merkliste" (Likes) Funktion mit eigenem Shopping-View.
+    * Direkte Shop-Links zu **Bandcamp** (Primary), Beatport, SoundCloud und YouTube.
+    * **Rescan-Queue:** Markiere falsch erkannte Tracks zur späteren Überprüfung.
 
-# Create and activate a virtual environment (example for venv)
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+---
 
-# Install Python dependencies (provides the local `tracklistify` CLI)
-pip install -r requirements.txt
-pip install -e .
+## 🛠️ Architektur
+
+```mermaid
+graph TD;
+    User[Frontend / Browser] -->|Fetch API| App[Flask App.py];
+    App <-->|Read/Write| DB[(SQLite DB)];
+    App -->|Add Job| JobMgr[Job Manager];
+    JobMgr -->|Queue| Worker[Processor Worker];
+    Worker -->|1. Resolve/Download| YTDLP[yt-dlp];
+    Worker -->|2. Analyze Audio| TL[Tracklistify Core];
+    Worker -->|3. Save Results| DB;
+    Worker -->|4. Cleanup| Delete[Delete Temp Audio];
 ```
 
-### Windows quick start via `start_helper.bat`
-After running the installation commands above once, you can start the app with the helper script:
+---
 
-```powershell
-# From the repo root
-start_helper.bat
-```
+## 📦 Installation
 
-The script activates `.venv`, starts the Flask server, and opens `http://127.0.0.1:5000` in your browser.
+### 1. Voraussetzungen
+* **Python 3.10+**
+* **FFmpeg:** Muss im System-PATH installiert sein (für Audio-Konvertierung).
 
-## Directory layout
-- `tracklistify.db` – SQLite database with sets and tracks
-- `storage/uploads` – uploaded audio files from the UI
-- `storage/downloads` – temporary downloads created by `yt-dlp`
-- `.tracklistify/output` – JSON emitted by the Tracklistify analyzer (importer reads from here)
-- `.tracklistify/snippets` – audio snippets used by the player
-- `static/` – bundled JS/CSS assets
-
-All folders are created automatically when `config.py` is imported.
+### 2. Setup
 
 ## Running the app
 ```bash
-# From an activated virtualenv
-python app.py
+# Repository klonen
+git clone [https://github.com/DEIN_USER/tracklistify-studio.git](https://github.com/DEIN_USER/tracklistify-studio.git)
+cd tracklistify-studio
+
+# Virtuelle Umgebung erstellen (Windows)
+python -m venv .venv
+.venv\Scripts\activate
+
+# Abhängigkeiten installieren
+pip install -r requirements.txt
+# Falls requirements.txt fehlt:
+pip install flask yt-dlp tracklistify
 ```
 The server initializes the database, kicks off the background job worker, imports any JSON already present in `.tracklistify/output`, and serves the UI at `http://127.0.0.1:5000`.
 
-### Processing a set
-1. Open the UI and choose **Add to queue**.
-2. Submit a **URL** (YouTube/Mixcloud/SoundCloud/etc.) or upload an **audio file**. Optional metadata (artist, name, event, tags) is stored after import.
-3. The queue view shows phases (`downloading → analyzing → importing`) and live logs from Tracklistify so you can spot provider/ffmpeg errors while a job runs.
-4. Imported sets appear in the sidebar; tracks can be liked/flagged, and problematic entries can be marked for rescan.
+---
 
-### Manual import
-If you generated Tracklistify JSON yourself, drop the files into `.tracklistify/output` and call:
+## ▶️ Starten
+
+### Windows (One-Click)
+Starte die Datei **`start_helper.bat`**.
+
+### Manuell (Terminal)
 ```bash
-python - <<'PY'
-from services import importer
-print(importer.import_json_files())
-PY
+python app.py
 ```
-You can also trigger it from the UI via **Rescan → Import JSON** (`POST /api/sets/import`).
+Der Server startet standardmäßig auf `http://127.0.0.1:5000`.
 
-## API hints
-- `GET /api/queue/status` – current job + recent history
-- `POST /api/queue/add` – enqueue a URL or uploaded file
-- `POST /api/resolve_metadata` – quick metadata guess via `yt-dlp`
-- `GET /api/sets`, `GET /api/sets/<id>/tracks` – data for the main views
+---
 
-The endpoints mirror the UI features and return JSON suitable for automation.
+## 📂 Projektstruktur
 
-## Troubleshooting
-- **`yt-dlp` or `ffmpeg` missing:** ensure both are installed and reachable on `PATH`. Download/analysis will fail otherwise.
-- **Analyzer exits with errors:** check the job log in the queue view; if Tracklistify aborted, clear broken downloads and re-run the job after fixing the dependency/config issue.
-- **No sets imported:** confirm `.tracklistify/output` contains JSON and that `services/importer.py` hasn’t already deduplicated the same `source_file` path. Delete/move stale files after successful imports to avoid reprocessing.
-- **Database location:** `tracklistify.db` lives in the repo root. Delete it to reset the library; it will be recreated on next start.
-- **`No module named tracklistify.__main__`:** ensure `pip install -e .` was run inside the `.venv` before starting the helper or `app.py`.
+```text
+tracklistify/
+├── app.py                 # Flask Controller & API Routes
+├── job_manager.py         # Threaded Queue Management
+├── database.py            # SQLite Model & Queries
+├── config.py              # Pfad-Konfigurationen
+├── services/
+│   ├── processor.py       # Worker: Download, Analyse, Cleanup
+│   └── importer.py        # Importiert JSON-Ergebnisse
+├── static/
+│   ├── js/app.js          # Frontend Logik (Alpine.js)
+│   └── tracklistify_logo.png
+└── templates/             # Jinja2 Views
+    ├── base.html          # Base Layout (Tailwind Load)
+    ├── index.html         # Main Layout Container
+    └── components/        # Modulare UI-Teile
+        ├── dashboard.html
+        ├── footer_player.html
+        ├── queue_view.html
+        ├── rescan_view.html
+        └── ...
+```
 
-## Development notes
-- Tailwind/Alpine templates live in `templates/` with component includes under `templates/components/`.
-- Background work runs inside the Flask process; `JobManager` spawns a single worker thread at import time (`job_manager.manager`).
-- Tests can be added under `tests/` and executed with `pytest` once dependencies are installed.
+---
 
-## License
-MIT – see [LICENSE](LICENSE).
+## 🗺️ Roadmap
+
+- [x] Audio Player mit Waveform-Visualisierung (Canvas)
+- [x] Warteschlange (Queue) System mit Status-Pill
+- [x] Smart Metadata Parsing (Regex für Uploads)
+- [x] Dashboard & Statistiken
+- [ ] **Spotify Export:** Erstelle Playlists direkt aus deinen Likes.
+- [ ] **Artist Database:** Detaillierte Profile & Social Links für gefundene Künstler.
+- [ ] **Drag & Drop:** Einfacheres Hinzufügen von Dateien im Browser.
+
+---
+
+## ⚠️ Disclaimer
+
+> [!WARNING]
+> **Rechtlicher Hinweis:** Dieses Tool nutzt `yt-dlp` zum Streamen und Analysieren von Audio. Bitte beachte die Urheberrechte und Nutzungsbedingungen der jeweiligen Plattformen (YouTube, Mixcloud, etc.). Die heruntergeladenen Dateien werden nach der Analyse automatisch gelöscht (Hybrid-Ansatz), um Speicherplatz zu sparen und lokale Kopien zu minimieren.
