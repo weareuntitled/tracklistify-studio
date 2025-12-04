@@ -165,26 +165,7 @@ def process_job(job, cancel_event: Event | None = None):
                         database.update_set_soundcloud(set_id, dj_info.get("soundcloud_url"), dj_id)
                         job.log_msg(f"Found SoundCloud Profile: {dj_name}")
 
-            # Beatport enrichment for producers (tracks)
-            producer_cache: dict[str, dict | None] = {}
-            for set_id in new_ids:
-                tracks = database.get_tracks_by_set(set_id)
-                for track in tracks:
-                    artist_name = track.get("artist")
-                    if not artist_name:
-                        continue
-                    if artist_name not in producer_cache:
-                        producer_cache[artist_name] = enrichment.find_producer_on_beatport(artist_name)
-                    info = producer_cache.get(artist_name)
-                    if info:
-                        producer_id = database.upsert_producer(
-                            artist_name,
-                            image_url=info.get("image_url"),
-                            beatport_url=info.get("beatport_url"),
-                            beatport_id=info.get("beatport_id"),
-                        )
-                        database.assign_track_entities(track.get("id"), producer_id=producer_id, beatport_url=info.get("beatport_url"))
-                        job.log_msg(f"Found Beatport Profile: {artist_name}")
+            # Beatport enrichment disabled (previously relied on BeautifulSoup)
 
         return {"new_sets": count}
 

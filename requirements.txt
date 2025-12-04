@@ -15,10 +15,8 @@ Authlib==1.6.0
 av==15.1.0
 axios==0.4.0
 babel==2.17.0
-beautifulsoup4==4.12.3
 blinker==1.9.0
 Brotli==1.1.0
-bs4==0.0.2
 certifi==2024.2.2
 cffi==1.16.0
 charset-normalizer==3.3.2
@@ -81,7 +79,6 @@ Markdown==3.8
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 matplotlib==3.10.3
-matrix-client==0.4.0
 mdurl==0.1.2
 mkl==2021.4.0
 moviepy==1.0.3
@@ -181,7 +178,7 @@ typing-inspection==0.4.1
 typing_extensions==4.14.0
 tzdata==2024.1
 tzlocal==5.3.1
-urllib3==2.4.0
+urllib3>=2.2,<3
 uv==0.9.14
 uvicorn==0.34.3
 webdriver-manager==4.0.2
