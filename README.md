@@ -56,6 +56,7 @@ graph TD;
 
 ### 2. Setup
 
+## Running the app
 ```bash
 # Repository klonen
 git clone [https://github.com/DEIN_USER/tracklistify-studio.git](https://github.com/DEIN_USER/tracklistify-studio.git)
@@ -70,6 +71,7 @@ pip install -r requirements.txt
 # Falls requirements.txt fehlt:
 pip install flask yt-dlp tracklistify
 ```
+The server initializes the database, kicks off the background job worker, imports any JSON already present in `.tracklistify/output`, and serves the UI at `http://127.0.0.1:5000`.
 
 ---
 

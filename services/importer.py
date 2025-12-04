@@ -77,7 +77,7 @@ def _cleanup_processed_file(path, filename, actions):
             actions.append({"file": path, "action": "move_failed", "error": str(exc)})
 
 
-def import_json_files():
+def import_json_files(output_dir: str = JSON_OUTPUT_DIR, cleanup: bool = True) -> Dict[str, object]:
     """
     Liest JSON-Dateien ein und schreibt sie in die DB.
     RÜCKGABE: Liste der neu angelegten Set-IDs (immer eine Liste, auch wenn leer).
