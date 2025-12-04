@@ -15,6 +15,14 @@ if not exist ".venv\Scripts\activate.bat" (
 :: Venv aktivieren
 call .venv\Scripts\activate
 
+:: Fehlende Dependencies nachinstallieren (z.B. beautifulsoup4)
+echo Pruefe Python-Abhaengigkeiten...
+python -c "import importlib.util, sys; missing=[]; [missing.append(install) for pkg,install in [('bs4','beautifulsoup4'),('beautifulsoup4','beautifulsoup4')] if importlib.util.find_spec(pkg) is None and install not in missing]; print('Missing: ' + ', '.join(missing) if missing else ''); sys.exit(len(missing))"
+if errorlevel 1 (
+    echo Einige Pakete fehlen. Installiere requirements...
+    pip install -r requirements.txt
+)
+
 :: Info ausgeben
 echo.
 echo ========================================================
