@@ -1,9 +1,7 @@
 import logging
 import urllib.parse
 
-import requests
 import yt_dlp
-from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
@@ -50,38 +48,11 @@ def find_dj_on_soundcloud(dj_name: str):
 
 
 def find_producer_on_beatport(producer_name: str):
-    """Scrape Beatport artist search results to find the first matching producer."""
+    """Beatport lookup disabled because BeautifulSoup is no longer required.
+
+    Returns None so callers can skip Beatport enrichment without errors.
+    """
     if not producer_name:
         return None
 
-    search_url = f"https://www.beatport.com/search/artists?q={urllib.parse.quote_plus(producer_name)}"
-    headers = {"User-Agent": USER_AGENT}
-
-    try:
-        resp = requests.get(search_url, headers=headers, timeout=8)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "html.parser")
-
-        # Beatport search cards typically live under anchors with /artist/ slug
-        link = soup.select_one("a[href*='/artist/']")
-        if not link:
-            return None
-
-        url = urllib.parse.urljoin("https://www.beatport.com", link.get("href"))
-        image = None
-        img_tag = link.find("img")
-        if img_tag:
-            image = img_tag.get("data-src") or img_tag.get("src")
-
-        # Beatport URLs usually end with /<name>/<id>
-        beatport_id = None
-        try:
-            parts = url.rstrip("/").split("/")
-            beatport_id = parts[-1]
-        except Exception:
-            beatport_id = None
-
-        return {"beatport_url": url, "image_url": image, "beatport_id": beatport_id}
-    except Exception as exc:  # noqa: BLE001
-        logger.debug("Beatport lookup failed: %s", exc)
-        return None
+    return None
