@@ -6,6 +6,7 @@ import yt_dlp
 from threading import Event
 from config import DOWNLOAD_DIR
 from services import importer
+from services import enrichment
 import database
 
 
@@ -140,6 +141,31 @@ def process_job(job, cancel_event: Event | None = None):
             if final_name: database.rename_set(target_id, final_name)
             database.update_set_metadata(target_id, upd)
             job.log_msg("Metadaten gespeichert.")
+
+        # 5. ENRICHMENT
+        if new_ids:
+            try:
+                for set_id in new_ids:
+                    set_artists = enrichment.get_set_artists(set_id)
+                    track_artists = enrichment.get_track_artists(set_id)
+
+                    if set_artists:
+                        sc_profiles = enrichment.lookup_soundcloud_profiles(set_artists)
+                        saved_sc = enrichment.save_soundcloud_profiles(sc_profiles)
+                        for entry in saved_sc:
+                            label = entry.get("profile_url") or entry.get("soundcloud_id") or entry.get("artist_name")
+                            if label:
+                                job.log_msg(f"Found SoundCloud Profile: {label}")
+
+                    if track_artists:
+                        bp_profiles = enrichment.lookup_beatport_profiles(track_artists)
+                        saved_bp = enrichment.save_beatport_profiles(bp_profiles)
+                        for entry in saved_bp:
+                            label = entry.get("profile_url") or entry.get("beatport_id") or entry.get("artist_name")
+                            if label:
+                                job.log_msg(f"Found Beatport Profile: {label}")
+            except Exception as exc:
+                job.log_msg(f"Enrichment failed: {exc}")
 
         return {"new_sets": count}
 

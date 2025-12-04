@@ -46,6 +46,26 @@ def init_db():
         )
     """)
 
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS beatport_profiles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            artist_name TEXT UNIQUE,
+            beatport_id TEXT,
+            profile_url TEXT,
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS soundcloud_profiles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            artist_name TEXT UNIQUE,
+            soundcloud_id TEXT,
+            profile_url TEXT,
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+
     # --- MIGRATION: Neue Spalten hinzufügen ---
     cur.execute("PRAGMA table_info(sets)")
     existing_set_cols = [col[1] for col in cur.fetchall()]
@@ -165,6 +185,70 @@ def rename_set(set_id, new_name):
     conn.execute("UPDATE sets SET name = ? WHERE id = ?", (new_name, set_id))
     conn.commit()
     conn.close()
+
+
+def save_beatport_profiles(profiles):
+    conn = get_conn()
+    cur = conn.cursor()
+    saved = []
+    for profile in profiles:
+        artist_name = profile.get("artist") or profile.get("artist_name")
+        beatport_id = profile.get("beatport_id") or profile.get("id")
+        profile_url = profile.get("url") or profile.get("profile_url")
+        if not artist_name:
+            continue
+        cur.execute(
+            """
+            INSERT INTO beatport_profiles (artist_name, beatport_id, profile_url)
+            VALUES (?, ?, ?)
+            ON CONFLICT(artist_name) DO UPDATE SET
+                beatport_id=excluded.beatport_id,
+                profile_url=excluded.profile_url
+            """,
+            (artist_name, beatport_id, profile_url),
+        )
+        saved.append(
+            {
+                "artist_name": artist_name,
+                "beatport_id": beatport_id,
+                "profile_url": profile_url,
+            }
+        )
+    conn.commit()
+    conn.close()
+    return saved
+
+
+def save_soundcloud_profiles(profiles):
+    conn = get_conn()
+    cur = conn.cursor()
+    saved = []
+    for profile in profiles:
+        artist_name = profile.get("artist") or profile.get("artist_name")
+        sc_id = profile.get("soundcloud_id") or profile.get("id")
+        profile_url = profile.get("url") or profile.get("profile_url")
+        if not artist_name:
+            continue
+        cur.execute(
+            """
+            INSERT INTO soundcloud_profiles (artist_name, soundcloud_id, profile_url)
+            VALUES (?, ?, ?)
+            ON CONFLICT(artist_name) DO UPDATE SET
+                soundcloud_id=excluded.soundcloud_id,
+                profile_url=excluded.profile_url
+            """,
+            (artist_name, sc_id, profile_url),
+        )
+        saved.append(
+            {
+                "artist_name": artist_name,
+                "soundcloud_id": sc_id,
+                "profile_url": profile_url,
+            }
+        )
+    conn.commit()
+    conn.close()
+    return saved
 
 def delete_set(set_id):
     conn = get_conn()
