@@ -97,17 +97,14 @@ def process_job(job):
         result = importer.import_json_files()
         print(f"Importer Result: {result} (Type: {type(result)})") # Debug Print
 
+        new_ids = []
+
         if isinstance(result, list):
             new_ids = result
         elif isinstance(result, dict) and isinstance(result.get("new_set_ids"), list):
             new_ids = result.get("new_set_ids", [])
         else:
-            new_ids = []
             job.log_msg("ACHTUNG: Importer gab unerwartetes Format zurück, Metadata Skip.")
-
-        if not isinstance(new_ids, list):
-            job.log_msg("Importer lieferte keine Liste zurück, setze auf leer.")
-            new_ids = []
 
         count = len(new_ids)
         

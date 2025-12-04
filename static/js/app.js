@@ -112,14 +112,12 @@ document.addEventListener('alpine:init', () => {
         
         // 1. Server: Holt Infos von YouTube/Mixcloud via yt-dlp
         async fetchUrlMetadata(url) {
-            const query = (url || '').trim();
-            if (!query || !(query.startsWith('http') || query.startsWith('www'))) return;
+            if (!url || !(url.startsWith('http') || url.startsWith('www'))) return;
             this.inputs.isLoadingMeta = true;
             try {
                 const res = await fetch('/api/resolve_metadata', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: query })
+                    body: JSON.stringify({ url })
                 });
                 const data = await res.json();
 

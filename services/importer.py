@@ -184,9 +184,4 @@ def import_json_files():
         else:
             result["message"] = "No new files to import."
 
-    # Defensive: always return a list, even if the internal state was modified unexpectedly
-    new_set_ids = result.get("new_set_ids", [])
-    if not isinstance(new_set_ids, list):
-        new_set_ids = [] if new_set_ids is None else [new_set_ids]
-    result["new_set_ids"] = new_set_ids
-    return new_set_ids
+    return result["new_set_ids"]
