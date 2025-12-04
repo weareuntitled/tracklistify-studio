@@ -272,6 +272,11 @@ document.addEventListener('alpine:init', () => {
             const isObject = setOrId && typeof setOrId === 'object';
             const id = isObject ? setOrId.id : setOrId;
 
+            // Ensure we always have the latest sidebar list (e.g. after DB reset)
+            if (!this.sets.length) {
+                await this.fetchSets();
+            }
+
             if (isObject) {
                 this.activeSet = setOrId;
 
@@ -612,6 +617,17 @@ document.addEventListener('alpine:init', () => {
             return 'Verarbeite...';
         },
 
+        cleanLogMessage(msg) {
+            const parts = msg.split(' - ');
+            const level = parts[0]?.toLowerCase();
+
+            if (parts.length >= 3 && ['info', 'debug', 'warning', 'error'].includes(level)) {
+                return parts.slice(2).join(' - ').trim();
+            }
+
+            return msg;
+        },
+
         handleLiveLog(status) {
             if (!status.active) {
                 this.lastLogLine = '';
@@ -624,7 +640,7 @@ document.addEventListener('alpine:init', () => {
             if (currentLog === this.lastLogLine) return;
             this.lastLogLine = currentLog;
 
-            const cleanMsg = currentLog.replace(/\[.*?\]/g, '').trim();
+            const cleanMsg = this.cleanLogMessage(currentLog.replace(/\[.*?\]/g, '').trim());
             const lower = cleanMsg.toLowerCase();
 
             if (lower.includes('soundcloud profile') || lower.includes('dj profile')) {
@@ -647,8 +663,16 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            if (lower.includes('identifying segment')) {
+                const match = cleanMsg.match(/(\d+(?:\.\d+)?)s/);
+                const seconds = match ? parseFloat(match[1]) : null;
+                const prettyTime = seconds !== null ? this.formatTime(seconds) : null;
+                const subtitle = prettyTime ? `Analysiere Segment bei ${prettyTime}` : 'Analysiere Segment...';
+                this.showToast('Analyse läuft', subtitle, 'info');
+                return;
+            }
+
             if (
-                lower.includes('identifying') ||
                 lower.includes('identified') ||
                 lower.includes('track match') ||
                 (lower.includes('found') && lower.includes('track')) ||

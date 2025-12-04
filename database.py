@@ -61,7 +61,9 @@ def init_db():
             tags TEXT,
             dj_id INTEGER,
             soundcloud_url TEXT,
-            FOREIGN KEY (dj_id) REFERENCES djs(id)
+            label_id INTEGER,
+            FOREIGN KEY (dj_id) REFERENCES djs(id),
+            FOREIGN KEY (label_id) REFERENCES labels(id)
         )
         """
     )
@@ -140,7 +142,8 @@ def init_db():
         "is_b2b": "INTEGER DEFAULT 0",
         "tags": "TEXT",
         "dj_id": "INTEGER",
-        "soundcloud_url": "TEXT"
+        "soundcloud_url": "TEXT",
+        "label_id": "INTEGER"
     }
 
     for col, dtype in new_set_cols.items():
