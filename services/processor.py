@@ -6,6 +6,7 @@ import yt_dlp
 from threading import Event
 from config import DOWNLOAD_DIR
 from services import importer
+from services import enrichment
 import database
 
 
@@ -129,7 +130,7 @@ def process_job(job, cancel_event: Event | None = None):
             job.log_msg(f"Import abgeschlossen: {count} neues Set")
         else:
             job.log_msg("Kein neues Set gefunden, eventuell bereits importiert.")
-        
+
         # 4. METADATA
         if job.metadata and new_ids:
             target_id = new_ids[-1]
@@ -140,6 +141,50 @@ def process_job(job, cancel_event: Event | None = None):
             if final_name: database.rename_set(target_id, final_name)
             database.update_set_metadata(target_id, upd)
             job.log_msg("Metadaten gespeichert.")
+
+        # 5. ENRICHMENT
+        if new_ids:
+            # SoundCloud enrichment for DJs (sets)
+            for set_id in new_ids:
+                set_row = database.get_set(set_id)
+                dj_name = None
+                if job.metadata and job.metadata.get("artist"):
+                    dj_name = job.metadata.get("artist")
+                elif set_row and set_row.get("artists"):
+                    dj_name = set_row.get("artists")
+                if dj_name:
+                    dj_info = enrichment.find_dj_on_soundcloud(dj_name)
+                    if dj_info:
+                        dj_id = database.upsert_dj(
+                            dj_name,
+                            image_url=dj_info.get("image_url"),
+                            soundcloud_url=dj_info.get("soundcloud_url"),
+                            soundcloud_id=dj_info.get("soundcloud_id"),
+                        )
+                        database.link_set_dj(set_id, dj_id)
+                        database.update_set_soundcloud(set_id, dj_info.get("soundcloud_url"), dj_id)
+                        job.log_msg(f"Found SoundCloud Profile: {dj_name}")
+
+            # Beatport enrichment for producers (tracks)
+            producer_cache: dict[str, dict | None] = {}
+            for set_id in new_ids:
+                tracks = database.get_tracks_by_set(set_id)
+                for track in tracks:
+                    artist_name = track.get("artist")
+                    if not artist_name:
+                        continue
+                    if artist_name not in producer_cache:
+                        producer_cache[artist_name] = enrichment.find_producer_on_beatport(artist_name)
+                    info = producer_cache.get(artist_name)
+                    if info:
+                        producer_id = database.upsert_producer(
+                            artist_name,
+                            image_url=info.get("image_url"),
+                            beatport_url=info.get("beatport_url"),
+                            beatport_id=info.get("beatport_id"),
+                        )
+                        database.assign_track_entities(track.get("id"), producer_id=producer_id, beatport_url=info.get("beatport_url"))
+                        job.log_msg(f"Found Beatport Profile: {artist_name}")
 
         return {"new_sets": count}
 
