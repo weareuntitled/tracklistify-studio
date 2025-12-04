@@ -15,8 +15,8 @@ document.addEventListener('alpine:init', () => {
         youtubeFeed: [],
 
         auth: {
-            username: null,
-            form: { username: '', password: '' },
+            user: null,
+            form: { email: '', password: '', name: '' },
             mode: 'login',
             error: '',
             dropdownOpen: false
@@ -625,9 +625,9 @@ document.addEventListener('alpine:init', () => {
                 const res = await fetch('/api/auth/profile');
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.ok) this.auth.username = data.username;
+                    if (data.ok) this.auth.user = data.user;
                 } else if (res.status === 401) {
-                    this.auth.username = null;
+                    this.auth.user = null;
                 }
             } catch(e) {}
         },
@@ -636,26 +636,28 @@ document.addEventListener('alpine:init', () => {
             this.auth.error = '';
             const res = await fetch(url, {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(this.auth.form)
             });
             const data = await res.json();
             if (res.ok && data.ok) {
-                this.auth.username = data.username;
-                this.auth.form = { username: '', password: '' };
+                this.auth.user = data.user;
+                this.auth.form = { email: '', password: '', name: '' };
                 this.auth.dropdownOpen = false;
-                this.showToast('Angemeldet', data.username, 'info');
+                const name = data.user.name || data.user.dj_name || data.user.email;
+                this.showToast('Angemeldet', name, 'info');
             } else {
                 this.auth.error = data.error || 'Fehler';
             }
         },
         async logout() {
             await fetch('/api/auth/logout', { method: 'POST' });
-            this.auth.username = null;
+            this.auth.user = null;
             this.auth.dropdownOpen = false;
         },
 
         ensureAuthenticated() {
-            if (this.auth.username) return true;
+            if (this.auth.user) return true;
             const next = encodeURIComponent(window.location.pathname + window.location.search);
             window.location.href = `/login?next=${next}`;
             return false;

@@ -19,6 +19,9 @@ IMPORT_JSON_ARCHIVE_DIR = os.path.join(JSON_OUTPUT_DIR, "processed")
 # Statische Dateien (Logo, JS)
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
+# User Store
+USERS_JSON_PATH = os.path.join(STORAGE_DIR, "users.json")
+
 # Sicherstellen, dass alle Ordner existieren
-for d in [UPLOAD_DIR, DOWNLOAD_DIR, SNIPPET_DIR, JSON_OUTPUT_DIR, STATIC_DIR]:
+for d in [UPLOAD_DIR, DOWNLOAD_DIR, SNIPPET_DIR, JSON_OUTPUT_DIR, STATIC_DIR, STORAGE_DIR]:
     os.makedirs(d, exist_ok=True)

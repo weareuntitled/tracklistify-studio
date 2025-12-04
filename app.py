@@ -1,59 +1,99 @@
 import os
 import json
+import uuid
 from flask import Flask, jsonify, request, render_template, send_from_directory, session, redirect
-from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from functools import lru_cache
 import yt_dlp  # WICHTIG: pip install yt-dlp
+from pydantic import ValidationError
 
 # Eigene Module
 from config import SNIPPET_DIR, STATIC_DIR, UPLOAD_DIR
 import database
 from job_manager import manager as job_manager
 from services.processor import resolve_audio_stream_url
+from services.user_store import (
+    FavoriteTogglePayload,
+    InvitePayload,
+    LoginPayload,
+    ProfileUpdatePayload,
+    RegisterPayload,
+    UserStore,
+)
 
 database.init_db()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key")
 
+user_store = UserStore()
+user_store.ensure_default_admin()
+
 # --- Caching ---
 @lru_cache(maxsize=500)
 def cached_resolve_audio(query):
     return resolve_audio_stream_url(query)
 
+
+def get_current_user():
+    user_id = session.get("user_id")
+    if not user_id:
+        return None
+    return user_store.get_by_id(user_id)
+
+
+def serialize_user(user):
+    return {
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "dj_name": user.dj_name,
+        "avatar_url": user.avatar_url,
+        "soundcloud_url": user.soundcloud_url,
+        "is_admin": user.is_admin,
+        "favorites": user.favorites,
+    }
+
 # --- Frontend Routes ---
 @app.route("/")
 def index():
-    return render_template("index.html")
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+    return render_template("index.html", user=user)
 
 
 @app.route("/login")
 def login_page():
     if "user_id" in session:
-        return redirect("/profile")
+        return redirect("/")
     return render_template("login.html")
 
 
 @app.route("/register")
 def register_page():
     if "user_id" in session:
-        return redirect("/profile")
+        return redirect("/")
     return render_template("register.html")
 
 
 @app.route("/profile")
 def profile_page():
-    if "user_id" not in session:
+    user = get_current_user()
+    if not user:
+        session.clear()
         return redirect("/login")
 
     user_collections = database.get_all_sets()
     liked_tracks = database.get_liked_tracks()
     stats = database.get_dashboard_stats()
 
+    display_name = user.name or user.dj_name or user.email
+
     return render_template(
         "profile.html",
-        username=session.get("username"),
+        username=display_name,
+        user=user,
         collections=user_collections,
         liked_tracks=liked_tracks,
         stats=stats,
@@ -282,49 +322,170 @@ def serve_js(filename):
 
 
 # --- API: Auth ---
+
+
+def set_session(user):
+    session["user_id"] = user.id
+    session["email"] = user.email
+    session["is_admin"] = user.is_admin
+
+
+def require_session_user():
+    user = get_current_user()
+    if not user:
+        return None, (jsonify({"ok": False, "error": "Nicht autorisiert"}), 401)
+    return user, None
+
+
 @app.route("/api/auth/register", methods=["POST"])
 def register():
-    data = request.get_json(force=True)
-    username = (data.get("username") or "").strip()
-    password = (data.get("password") or "").strip()
-    if not username or not password:
-        return jsonify({"ok": False, "error": "Username und Passwort erforderlich"}), 400
+    data = request.get_json(force=True) or {}
+    try:
+        payload = RegisterPayload.model_validate(data)
+    except ValidationError as exc:
+        message = exc.errors()[0]["msg"] if exc.errors() else "Ungültige Eingabe"
+        return jsonify({"ok": False, "error": message}), 400
 
-    if database.get_user(username):
-        return jsonify({"ok": False, "error": "User existiert bereits"}), 409
+    try:
+        user = user_store.add_user(payload.email, payload.password, name=payload.name)
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 409
 
-    pw_hash = generate_password_hash(password)
-    user_id = database.create_user(username, pw_hash)
-    session["user_id"] = user_id
-    session["username"] = username
-    return jsonify({"ok": True, "username": username})
+    set_session(user)
+    return jsonify({"ok": True, "user": serialize_user(user)})
 
 
 @app.route("/api/auth/login", methods=["POST"])
 def login():
-    data = request.get_json(force=True)
-    username = (data.get("username") or "").strip()
-    password = (data.get("password") or "").strip()
-    user = database.get_user(username)
-    if not user or not check_password_hash(user["password_hash"], password):
+    data = request.get_json(force=True) or {}
+    try:
+        payload = LoginPayload.model_validate(data)
+    except ValidationError as exc:
+        message = exc.errors()[0]["msg"] if exc.errors() else "Ungültige Eingabe"
+        return jsonify({"ok": False, "error": message}), 400
+
+    user = user_store.authenticate(payload.email, payload.password)
+    if not user:
         return jsonify({"ok": False, "error": "Ungültige Zugangsdaten"}), 401
 
-    session["user_id"] = user["id"]
-    session["username"] = user["username"]
-    return jsonify({"ok": True, "username": user["username"]})
+    set_session(user)
+    return jsonify({"ok": True, "user": serialize_user(user)})
 
 
 @app.route("/api/auth/profile")
 def profile():
-    if "user_id" not in session:
-        return jsonify({"ok": False}), 401
-    return jsonify({"ok": True, "username": session.get("username")})
+    user, error_response = require_session_user()
+    if error_response:
+        return error_response
+    return jsonify({"ok": True, "user": serialize_user(user)})
 
 
 @app.route("/api/auth/logout", methods=["POST"])
 def logout():
     session.clear()
     return jsonify({"ok": True})
+
+
+@app.route("/api/profile", methods=["PATCH"])
+def update_profile():
+    user, error_response = require_session_user()
+    if error_response:
+        return error_response
+
+    data = request.get_json(force=True) or {}
+    try:
+        payload = ProfileUpdatePayload.model_validate(data)
+    except ValidationError as exc:
+        message = exc.errors()[0]["msg"] if exc.errors() else "Ungültige Eingabe"
+        return jsonify({"ok": False, "error": message}), 400
+
+    updated = user_store.update_user(user.id, payload.model_dump(exclude_none=True))
+    if not updated:
+        return jsonify({"ok": False, "error": "User nicht gefunden"}), 404
+
+    return jsonify({"ok": True, "user": serialize_user(updated)})
+
+
+@app.route("/api/profile/favorites", methods=["POST"])
+def toggle_favorites():
+    user, error_response = require_session_user()
+    if error_response:
+        return error_response
+
+    data = request.get_json(force=True) or {}
+    try:
+        payload = FavoriteTogglePayload.model_validate(data)
+    except ValidationError as exc:
+        message = exc.errors()[0]["msg"] if exc.errors() else "Ungültige Eingabe"
+        return jsonify({"ok": False, "error": message}), 400
+
+    added = user_store.toggle_favorite(user.id, payload.item_id)
+    if added is None:
+        return jsonify({"ok": False, "error": "User nicht gefunden"}), 404
+
+    updated_user = user_store.get_by_id(user.id)
+    return jsonify({"ok": True, "added": added, "favorites": updated_user.favorites})
+
+
+def require_admin():
+    user, error_response = require_session_user()
+    if error_response:
+        return None, error_response
+    if not user.is_admin:
+        return None, (jsonify({"ok": False, "error": "Admin erforderlich"}), 403)
+    return user, None
+
+
+@app.route("/api/admin/users")
+def list_users():
+    _, error_response = require_admin()
+    if error_response:
+        return error_response
+    users = [serialize_user(u) for u in user_store.list_users()]
+    return jsonify({"ok": True, "users": users})
+
+
+@app.route("/api/admin/users/invite", methods=["POST"])
+def invite_user():
+    _, error_response = require_admin()
+    if error_response:
+        return error_response
+
+    data = request.get_json(force=True) or {}
+    try:
+        payload = InvitePayload.model_validate(data)
+    except ValidationError as exc:
+        message = exc.errors()[0]["msg"] if exc.errors() else "Ungültige Eingabe"
+        return jsonify({"ok": False, "error": message}), 400
+
+    temp_password = uuid.uuid4().hex[:10]
+    try:
+        user = user_store.add_user(
+            payload.email,
+            temp_password,
+            name=payload.name,
+            is_admin=payload.is_admin,
+        )
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 409
+
+    return jsonify(
+        {"ok": True, "user": serialize_user(user), "temporary_password": temp_password}
+    )
+
+
+@app.route("/api/admin/users/<user_id>", methods=["DELETE"])
+def delete_user(user_id):
+    current_user, error_response = require_admin()
+    if error_response:
+        return error_response
+
+    if current_user.id == user_id:
+        return jsonify({"ok": False, "error": "Selbst-Löschung nicht erlaubt"}), 400
+
+    deleted = user_store.delete_user(user_id)
+    status = 200 if deleted else 404
+    return jsonify({"ok": bool(deleted)}), status
 
 if __name__ == "__main__":
     database.init_db()

@@ -14,10 +14,20 @@
 <div class="max-w-6xl mx-auto px-4 py-10">
     <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-full bg-orange-100 text-orange-700 font-bold flex items-center justify-center uppercase text-lg">{{ (username or 'User')[0] }}</div>
+            {% set badge = (username or user.email or 'User') %}
+            {% if user.avatar_url %}
+                <img src="{{ user.avatar_url }}" alt="Avatar" class="w-12 h-12 rounded-full object-cover border border-orange-200" />
+            {% else %}
+                <div class="w-12 h-12 rounded-full bg-orange-100 text-orange-700 font-bold flex items-center justify-center uppercase text-lg">{{ badge[0] }}</div>
+            {% endif %}
             <div>
                 <p class="text-sm text-gray-500">Angemeldet als</p>
                 <h1 class="text-2xl font-bold text-gray-900">{{ username or 'User' }}</h1>
+                <p class="text-xs text-gray-500">{{ user.email }}</p>
+                {% if user.dj_name %}<p class="text-xs text-gray-500">DJ Alias: {{ user.dj_name }}</p>{% endif %}
+                {% if user.soundcloud_url %}
+                    <a class="text-xs text-orange-600 font-semibold" href="{{ user.soundcloud_url }}" target="_blank" rel="noreferrer">SoundCloud</a>
+                {% endif %}
             </div>
         </div>
         <a href="/" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-100">
@@ -28,7 +38,7 @@
         </a>
     </div>
 
-    <div class="grid md:grid-cols-3 gap-4 mb-8">
+    <div class="grid md:grid-cols-4 gap-4 mb-8">
         <div class="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
             <p class="text-xs text-gray-500 mb-1">Sets insgesamt</p>
             <p class="text-2xl font-bold text-gray-900">{{ stats.total_sets }}</p>
@@ -40,6 +50,10 @@
         <div class="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
             <p class="text-xs text-gray-500 mb-1">Likes</p>
             <p class="text-2xl font-bold text-gray-900">{{ stats.total_likes }}</p>
+        </div>
+        <div class="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+            <p class="text-xs text-gray-500 mb-1">Persönliche Favoriten</p>
+            <p class="text-2xl font-bold text-gray-900">{{ user.favorites | length }}</p>
         </div>
     </div>
 

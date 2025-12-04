@@ -68,16 +68,16 @@
         <button @click="auth.dropdownOpen = !auth.dropdownOpen"
                 class="flex items-center gap-2 px-3 py-2 rounded-full border border-gray-200 bg-white shadow-sm hover:shadow group transition"
                 :class="auth.dropdownOpen ? 'ring-2 ring-orange-200' : ''">
-            <template x-if="auth.username">
+            <template x-if="auth.user">
                 <div class="flex items-center gap-2">
-                    <div class="w-9 h-9 rounded-full bg-orange-100 text-orange-700 font-bold flex items-center justify-center uppercase group-hover:bg-orange-200" x-text="auth.username[0]"></div>
+                    <div class="w-9 h-9 rounded-full bg-orange-100 text-orange-700 font-bold flex items-center justify-center uppercase group-hover:bg-orange-200" x-text="(auth.user.name || auth.user.dj_name || auth.user.email)[0]"></div>
                     <div class="hidden sm:flex flex-col leading-none text-left">
-                        <span class="text-xs font-semibold text-gray-800" x-text="auth.username"></span>
+                        <span class="text-xs font-semibold text-gray-800" x-text="auth.user.name || auth.user.dj_name || auth.user.email"></span>
                         <span class="text-[11px] text-gray-400">Profil</span>
                     </div>
                 </div>
             </template>
-            <template x-if="!auth.username">
+            <template x-if="!auth.user">
                 <div class="flex items-center gap-2">
                     <div class="w-9 h-9 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center group-hover:text-orange-600 group-hover:bg-orange-50">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -97,11 +97,11 @@
 
         <div x-show="auth.dropdownOpen" x-transition
              class="absolute right-0 mt-3 w-56 rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden z-30">
-            <template x-if="auth.username">
+            <template x-if="auth.user">
                 <div>
                     <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
                         <p class="text-xs text-gray-500">Angemeldet als</p>
-                        <p class="text-sm font-semibold text-gray-800" x-text="auth.username"></p>
+                        <p class="text-sm font-semibold text-gray-800" x-text="auth.user.name || auth.user.dj_name || auth.user.email"></p>
                     </div>
                     <nav class="p-2 flex flex-col gap-1">
                         <a href="/profile" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-orange-50 text-sm text-gray-700">
@@ -120,7 +120,7 @@
                     </nav>
                 </div>
             </template>
-            <template x-if="!auth.username">
+            <template x-if="!auth.user">
                 <div class="p-3 flex flex-col gap-2">
                     <a href="/login" class="w-full inline-flex items-center justify-center px-3 py-2 text-sm font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600">Login</a>
                     <a href="/register" class="w-full inline-flex items-center justify-center px-3 py-2 text-sm font-semibold text-orange-600 bg-orange-50 rounded-lg hover:bg-orange-100">Registrieren</a>
