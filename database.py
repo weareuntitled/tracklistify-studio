@@ -129,7 +129,7 @@ def init_db():
     # --- MIGRATION: Neue Spalten hinzufügen ---
     cur.execute("PRAGMA table_info(sets)")
     existing_set_cols = [col[1] for col in cur.fetchall()]
-    
+
     new_set_cols = {
         "name": "TEXT",
         "source_file": "TEXT",
@@ -314,8 +314,14 @@ def get_all_sets():
     conn = get_conn()
     cur = conn.cursor()
     cur.execute("""
-        SELECT s.*, COUNT(t.id) as track_count
-        FROM sets s LEFT JOIN tracks t ON t.set_id = s.id 
+        SELECT s.*, COUNT(t.id) as track_count,
+               GROUP_CONCAT(DISTINCT d.name) as dj_names,
+               l.name AS label_name
+        FROM sets s
+        LEFT JOIN tracks t ON t.set_id = s.id
+        LEFT JOIN set_djs sd ON sd.set_id = s.id
+        LEFT JOIN djs d ON sd.dj_id = d.id
+        LEFT JOIN labels l ON s.label_id = l.id
         GROUP BY s.id ORDER BY s.created_at DESC
     """)
     rows = [dict(r) for r in cur.fetchall()]
@@ -330,10 +336,37 @@ def get_tracks_by_set(set_id):
     conn.close()
     return rows
 
+def get_tracks_by_set_with_relations(set_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT t.*, d.name AS dj_name, p.name AS producer_name, l.name AS label_name
+        FROM tracks t
+        LEFT JOIN djs d ON t.dj_id = d.id
+        LEFT JOIN producers p ON t.producer_id = p.id
+        LEFT JOIN labels l ON t.label_id = l.id
+        WHERE t.set_id = ?
+        ORDER BY t.position
+        """,
+        (set_id,),
+    )
+    rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
+    return rows
+
 def get_liked_tracks():
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT t.*, s.name as set_name FROM tracks t JOIN sets s ON t.set_id = s.id WHERE t.liked = 1 ORDER BY t.id DESC")
+    cur.execute("""
+        SELECT t.*, s.name as set_name, p.name AS producer_name, l.name AS label_name
+        FROM tracks t
+        JOIN sets s ON t.set_id = s.id
+        LEFT JOIN producers p ON t.producer_id = p.id
+        LEFT JOIN labels l ON t.label_id = l.id
+        WHERE t.liked = 1
+        ORDER BY t.id DESC
+    """)
     rows = [dict(r) for r in cur.fetchall()]
     conn.close()
     return rows
@@ -518,6 +551,30 @@ def get_dashboard_stats():
         WHERE t.liked = 1 GROUP BY s.id ORDER BY like_count DESC LIMIT 5
     """)
     top_sets = [dict(r) for r in cur.fetchall()]
+    cur.execute(
+        """
+        SELECT p.name, COUNT(*) as count
+        FROM tracks t
+        JOIN producers p ON t.producer_id = p.id
+        WHERE t.liked = 1 AND p.name IS NOT NULL
+        GROUP BY p.id
+        ORDER BY count DESC
+        LIMIT 8
+        """
+    )
+    top_producers = [dict(r) for r in cur.fetchall()]
+    cur.execute(
+        """
+        SELECT l.name, COUNT(*) as count
+        FROM tracks t
+        JOIN labels l ON t.label_id = l.id
+        WHERE t.liked = 1 AND l.name IS NOT NULL
+        GROUP BY l.id
+        ORDER BY count DESC
+        LIMIT 8
+        """
+    )
+    top_labels = [dict(r) for r in cur.fetchall()]
     cur.execute("SELECT id, name, created_at FROM sets ORDER BY created_at DESC LIMIT 5")
     recent_sets = [dict(r) for r in cur.fetchall()]
 
