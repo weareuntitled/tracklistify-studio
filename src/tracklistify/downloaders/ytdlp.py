@@ -143,7 +143,7 @@ class YtDlpDownloader(Downloader):
             ],
             "ffmpeg_location": self.ffmpeg_path,
             "outtmpl": os.path.join(temp_dir, "%(id)s.%(ext)s"),
-            "verbose": True,  # Always set to False to control output
+            "verbose": False,
             "logger": self._logger,
             "progress_hooks": [progress_hook],
             "no_warnings": True,  # Suppress unnecessary warnings
@@ -164,21 +164,9 @@ class YtDlpDownloader(Downloader):
         logger.info(f"Starting yt-dlp download: {url}")
 
         ydl_opts = {
-            "format": "bestaudio/best",
-            "postprocessors": [
-                {
-                    "key": "FFmpegExtractAudio",
-                    "preferredcodec": self.format,
-                    "preferredquality": self.quality,
-                }
-            ],
-            "ffmpeg_location": self.ffmpeg_path,
-            "outtmpl": os.path.join(temp_dir, "%(id)s.%(ext)s"),
-            "verbose": True,  # Always set to False to control output
+            **self.get_ydl_opts(),
             "quiet": True,
-            "logger": self._logger,
-            "progress_hooks": [progress_hook],
-            "no_warnings": True,  # Suppress unnecessary warnings
+            "verbose": False,
         }
 
         try:
