@@ -148,15 +148,32 @@ def import_json_files():
 
                 tracks = data.get("tracks") or data.get("tracklist") or []
                 for i, t in enumerate(tracks, 1):
-                    s = _parse_time_to_seconds(t.get("start") or t.get("start_seconds"))
-                    e = _parse_time_to_seconds(t.get("end") or t.get("end_seconds"))
+                    # Tracklistify exports use `song_name` while older imports may
+                    # still provide `title` – cover both to avoid empty names.
+                    title = t.get("title") or t.get("song_name") or t.get("name")
+
+                    # Prefer explicit start/end fields but gracefully fall back to
+                    # formatted timestamps and durations from Tracklistify exports.
+                    start_raw = (
+                        t.get("start")
+                        or t.get("start_seconds")
+                        or t.get("time_in_mix")
+                    )
+                    end_raw = t.get("end") or t.get("end_seconds")
+
+                    s = _parse_time_to_seconds(start_raw)
+                    if end_raw is not None:
+                        e = _parse_time_to_seconds(end_raw)
+                    else:
+                        duration = t.get("duration")
+                        e = s + _parse_time_to_seconds(duration) if duration else 0.0
 
                     cur.execute(
                         """
                         INSERT INTO tracks (set_id, position, artist, title, confidence, start_time, end_time, flag)
                         VALUES (?, ?, ?, ?, ?, ?, ?, 0)
                         """,
-                        (set_id, i, t.get("artist"), t.get("title"), t.get("confidence"), s, e),
+                        (set_id, i, t.get("artist"), title, t.get("confidence"), s, e),
                     )
 
             except Exception as e:
