@@ -10,10 +10,18 @@
             <div class="group">
                 <label class="block text-xs font-bold text-gray-400 uppercase mb-1">URL</label>
                 <div class="flex gap-2">
-                    <input type="text" x-model="inputs.url" @input="parseInputMetadata()" @keyup.enter="addToQueue('url')" 
-                           placeholder="YouTube / Mixcloud URL..." 
+                    <input type="text" x-model="inputs.url"
+                           placeholder="YouTube / Mixcloud URL..."
                            class="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none">
-                    <button @click="addToQueue('url')" class="px-4 py-2.5 bg-gray-100 hover:bg-orange-100 text-gray-600 hover:text-orange-600 rounded-xl font-bold transition-colors">Link</button>
+                    <button @click="fetchUrlMetadata(inputs.url)" :disabled="inputs.isLoadingMeta"
+                            class="px-4 py-2.5 bg-gray-100 hover:bg-orange-100 text-gray-600 hover:text-orange-600 rounded-xl font-bold transition-colors flex items-center gap-2 disabled:opacity-60">
+                        <template x-if="inputs.isLoadingMeta">
+                            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v4m0 8v4m8-8h-4M8 12H4m10.364-6.364l-2.828 2.828m0 8.072l2.828 2.828m2.828-13.728l-2.828 2.828m-8.072 0L4.808 6.808" />
+                            </svg>
+                        </template>
+                        <span>Metadaten prüfen</span>
+                    </button>
                 </div>
             </div>
             
@@ -21,7 +29,7 @@
 
             <div>
                 <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Lokal</label>
-                <input type="file" x-ref="fileInput" @change="parseInputMetadata()" 
+                <input type="file" x-ref="fileInput" @change="parseFileMetadata()"
                        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-orange-50 file:text-orange-600 hover:file:bg-orange-100 cursor-pointer">
             </div>
             

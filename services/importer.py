@@ -80,7 +80,7 @@ def _cleanup_processed_file(path, filename, actions):
 def import_json_files():
     """
     Liest JSON-Dateien ein und schreibt sie in die DB.
-    RÜCKGABE: Strukturiertes Ergebnis mit Status, importierten Set-IDs und Aktionen.
+    RÜCKGABE: Liste der neu angelegten Set-IDs (immer eine Liste, auch wenn leer).
     """
     result = {
         "status": "pending",
@@ -96,13 +96,13 @@ def import_json_files():
         result["status"] = "missing_directory"
         result["message"] = f"Output directory not found: {JSON_OUTPUT_DIR}"
         print(f"[Importer] {result['message']}")
-        return result
+        return result["new_set_ids"]
 
     json_files = [f for f in sorted(os.listdir(JSON_OUTPUT_DIR)) if f.endswith(".json")]
     if not json_files:
         result["status"] = "no_new_files"
         result["message"] = "No JSON files to import."
-        return result
+        return result["new_set_ids"]
 
     conn = get_conn()
     cur = conn.cursor()
@@ -184,4 +184,9 @@ def import_json_files():
         else:
             result["message"] = "No new files to import."
 
-    return result
+    # Defensive: always return a list, even if the internal state was modified unexpectedly
+    new_set_ids = result.get("new_set_ids", [])
+    if not isinstance(new_set_ids, list):
+        new_set_ids = [] if new_set_ids is None else [new_set_ids]
+    result["new_set_ids"] = new_set_ids
+    return new_set_ids

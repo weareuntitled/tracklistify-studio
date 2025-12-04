@@ -92,20 +92,24 @@ def process_job(job):
         # 3. IMPORT
         job.phase = "importing"
         job.log_msg("Datenbank Import...")
-        
+
         # HIER WAR DER FEHLER: Wir fangen ihn ab
         result = importer.import_json_files()
         print(f"Importer Result: {result} (Type: {type(result)})") # Debug Print
 
-        new_ids = []
-        count = 0
-        
         if isinstance(result, list):
             new_ids = result
-            count = len(new_ids)
-        elif isinstance(result, int):
-            count = result
-            job.log_msg("ACHTUNG: Importer gab Zahl zurück, Metadata Skip.")
+        elif isinstance(result, dict) and isinstance(result.get("new_set_ids"), list):
+            new_ids = result.get("new_set_ids", [])
+        else:
+            new_ids = []
+            job.log_msg("ACHTUNG: Importer gab unerwartetes Format zurück, Metadata Skip.")
+
+        if not isinstance(new_ids, list):
+            job.log_msg("Importer lieferte keine Liste zurück, setze auf leer.")
+            new_ids = []
+
+        count = len(new_ids)
         
         # 4. METADATA
         if job.metadata and new_ids:
