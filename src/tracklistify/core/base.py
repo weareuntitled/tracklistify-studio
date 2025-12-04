@@ -324,7 +324,7 @@ class AsyncApp:
             ValueError: If tracks list is empty
         """
         if len(tracks) == 0:
-            self.logger.error("Cannot save output: No tracks provided")
+            logger.error("Cannot save output: No tracks provided")
             return
 
         # Get title from the original title or use a default
@@ -352,19 +352,19 @@ class AsyncApp:
                 saved_files = output.save_all()
                 if saved_files:
                     for file in saved_files:
-                        self.logger.debug(f"Saved tracklist to: {file}")
+                        logger.debug(f"Saved tracklist to: {file}")
                 else:
-                    self.logger.error("Failed to save tracklist in any format")
+                    logger.error("Failed to save tracklist in any format")
             else:
                 if saved_file := output.save(format):
-                    self.logger.info(f"Saved {format} tracklist to: {saved_file}")
+                    logger.info(f"Saved {format} tracklist to: {saved_file}")
                 else:
-                    self.logger.error(f"Failed to save tracklist in format: {format}")
+                    logger.error(f"Failed to save tracklist in format: {format}")
 
         except Exception as e:
-            self.logger.error(f"Error saving tracklist: {e}")
+            logger.error(f"Error saving tracklist: {e}")
             if self.config.debug:
-                self.logger.error(traceback.format_exc())
+                logger.error(traceback.format_exc())
 
     async def cleanup(self):
         """Cleanup resources"""
