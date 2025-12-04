@@ -19,6 +19,7 @@ A Flask-based helper app that wraps the `tracklistify` analyzer with a simple qu
 > The repo includes the `tracklistify` package itself (see `pyproject.toml`), so you do **not** need a separate checkout. Installing the repo in editable mode gives you the `tracklistify` CLI used by the processor.
 
 ## Setup
+### Common steps (Windows, macOS, Linux)
 ```bash
 # Clone
 git clone https://github.com/betmoar/tracklistify-studio.git
@@ -26,12 +27,22 @@ cd tracklistify-studio
 
 # Create and activate a virtual environment (example for venv)
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 
-# Install Python dependencies
+# Install Python dependencies (provides the local `tracklistify` CLI)
 pip install -r requirements.txt
-pip install -e .  # provides the local `tracklistify` CLI
+pip install -e .
 ```
+
+### Windows quick start via `start_helper.bat`
+After running the installation commands above once, you can start the app with the helper script:
+
+```powershell
+# From the repo root
+start_helper.bat
+```
+
+The script activates `.venv`, starts the Flask server, and opens `http://127.0.0.1:5000` in your browser.
 
 ## Directory layout
 - `tracklistify.db` – SQLite database with sets and tracks
@@ -79,6 +90,7 @@ The endpoints mirror the UI features and return JSON suitable for automation.
 - **Analyzer exits with errors:** check the job log in the queue view; if Tracklistify aborted, clear broken downloads and re-run the job after fixing the dependency/config issue.
 - **No sets imported:** confirm `.tracklistify/output` contains JSON and that `services/importer.py` hasn’t already deduplicated the same `source_file` path. Delete/move stale files after successful imports to avoid reprocessing.
 - **Database location:** `tracklistify.db` lives in the repo root. Delete it to reset the library; it will be recreated on next start.
+- **`No module named tracklistify.__main__`:** ensure `pip install -e .` was run inside the `.venv` before starting the helper or `app.py`.
 
 ## Development notes
 - Tailwind/Alpine templates live in `templates/` with component includes under `templates/components/`.
