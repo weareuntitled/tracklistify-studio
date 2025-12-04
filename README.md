@@ -1,113 +1,131 @@
-Tracklistify Studio (Helper Edition)
-Tracklistify Studio ist eine lokale Hybrid-Webanwendung für DJs und Musiksammler. Sie automatisiert die Analyse von DJ-Sets, erkennt Tracks (via Audio-Fingerprinting), verwaltet Metadaten und hilft beim Aufbau einer kuratierten Musikbibliothek ("Merkliste").
+# Tracklistify Studio (Helper Edition)
 
-(Hier könnte später ein Screenshot des Dashboards stehen)
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![Status](https://img.shields.io/badge/Status-Beta-orange)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-🚀 Features
-Smart Import & Analyse:
+**Tracklistify Studio** ist eine lokale Hybrid-Webanwendung für DJs und Musiksammler. Sie automatisiert die Analyse von DJ-Sets, erkennt Tracks (via Audio-Fingerprinting), verwaltet Metadaten und hilft beim Aufbau einer kuratierten Musikbibliothek ("Merkliste").
 
-Importiere Sets direkt via YouTube/Mixcloud URL oder lokale Audiodateien.
+> [!NOTE]
+> **Datenschutz:** Die Analyse läuft komplett lokal auf deinem Rechner. Deine Audio-Dateien und Datenbank verlassen deinen PC nicht.
 
-Automatische Erkennung von Metadaten (Artist, Event, Name) aus Dateinamen oder Videotiteln.
+---
 
-Hintergrund-Verarbeitung in einer Warteschlange (Queue) – arbeite weiter, während analysiert wird.
+## 🚀 Features
 
-Audio Player & Preloading:
+* **Smart Import & Analyse:**
+    * Importiere Sets direkt via **YouTube/Mixcloud URL** oder lokale Audiodateien.
+    * **Auto-Tagging:** Automatische Erkennung von Artist, Event und Set-Name aus Dateinamen oder Videotiteln (Smart Regex Parsing).
+    * Hintergrund-Verarbeitung in einer **Warteschlange (Queue)** – arbeite weiter, während analysiert wird.
+* **Audio Player & Preloading:**
+    * **Instant Playback:** Streaming-URLs werden im Hintergrund vorgeladen (Aggressive Preloading), sodass Tracks ohne Verzögerung starten.
+    * **Midas Touch Scrubbing:** Optimierter Player für einfache Navigation im Set.
+    * **Visuelles Feedback:** Deterministische Waveform-Visualisierung auf Canvas-Basis.
+* **Set Management:**
+    * Metadaten-Editor für Sets (B2B, Event, Tags).
+    * **Dashboard:** Statistiken zu deinen Top-Artists und Discovery-Raten.
+    * Rechtsklick-Kontextmenüs für schnelle Aktionen.
+* **Track Discovery:**
+    * "Merkliste" (Likes) Funktion mit eigenem Shopping-View.
+    * Direkte Shop-Links zu **Bandcamp** (Primary), Beatport, SoundCloud und YouTube.
+    * **Rescan-Queue:** Markiere falsch erkannte Tracks zur späteren Überprüfung.
 
-Instant Playback: Streaming-URLs werden im Hintergrund vorgeladen (Aggressive Preloading), sodass Tracks sofort starten.
+---
 
-Visualizer: Ästhetische Waveform-Visualisierung basierend auf Track-Daten.
+## 🛠️ Architektur
 
-Midas Touch Scrubbing: Optimierter Player für einfache Navigation im Set.
+```mermaid
+graph TD;
+    User[Frontend / Browser] -->|Fetch API| App[Flask App.py];
+    App <-->|Read/Write| DB[(SQLite DB)];
+    App -->|Add Job| JobMgr[Job Manager];
+    JobMgr -->|Queue| Worker[Processor Worker];
+    Worker -->|1. Resolve/Download| YTDLP[yt-dlp];
+    Worker -->|2. Analyze Audio| TL[Tracklistify Core];
+    Worker -->|3. Save Results| DB;
+    Worker -->|4. Cleanup| Delete[Delete Temp Audio];
+```
 
-Set Management:
+---
 
-Metadaten-Editor für Sets (B2B, Event, Tags).
+## 📦 Installation
 
-Dashboard mit Statistiken (Top Artists, Discovery Rate).
+### 1. Voraussetzungen
+* **Python 3.10+**
+* **FFmpeg:** Muss im System-PATH installiert sein (für Audio-Konvertierung).
 
-Track Discovery:
+### 2. Setup
 
-"Merkliste" (Likes) Funktion.
-
-Direkte Links zu Bandcamp (Primary), Beatport, SoundCloud und YouTube.
-
-Rescan-Queue für nicht erkannte Tracks.
-
-🛠️ Voraussetzungen
-Bevor du startest, stelle sicher, dass folgende Tools installiert sind:
-
-Python 3.10+
-
-FFmpeg: Zwingend erforderlich für Audio-Konvertierung und Analyse.
-
-Windows: Anleitung (Muss im System-PATH sein).
-
-Mac: brew install ffmpeg
-
-Linux: sudo apt install ffmpeg
-
-📦 Installation
-Repository klonen:
-
-Bash
-
-git clone https://github.com/DEIN_USER/tracklistify-studio.git
+```bash
+# Repository klonen
+git clone [https://github.com/DEIN_USER/tracklistify-studio.git](https://github.com/DEIN_USER/tracklistify-studio.git)
 cd tracklistify-studio
-Virtuelle Umgebung erstellen (Empfohlen):
 
-Bash
-
-# Windows
+# Virtuelle Umgebung erstellen (Windows)
 python -m venv .venv
 .venv\Scripts\activate
 
-# Mac/Linux
-python3 -m venv .venv
-source .venv/bin/activate
-Abhängigkeiten installieren:
-
-Bash
-
+# Abhängigkeiten installieren
 pip install -r requirements.txt
-# Falls requirements.txt fehlt, installiere die Kern-Pakete manuell:
+# Falls requirements.txt fehlt:
 pip install flask yt-dlp tracklistify
-Hinweis: Stelle sicher, dass du auch das tracklistify Kern-Modul installiert hast (falls es ein separates Paket ist).
+```
 
-▶️ Starten
-Windows (Einfach)
-Doppelklicke auf die Datei start_helper.bat.
+---
 
-Manuell (Terminal)
-Bash
+## ▶️ Starten
 
+### Windows (One-Click)
+Starte die Datei **`start_helper.bat`**.
+
+### Manuell (Terminal)
+```bash
 python app.py
-Der Server startet standardmäßig auf http://127.0.0.1:5000.
+```
+Der Server startet standardmäßig auf `http://127.0.0.1:5000`.
 
-📂 Projektstruktur
-Plaintext
+---
 
+## 📂 Projektstruktur
+
+```text
 tracklistify/
-├── app.py                 # Flask Server & API Routes
-├── job_manager.py         # Hintergrund-Queue Logik
-├── database.py            # SQLite Datenbank-Layer
+├── app.py                 # Flask Controller & API Routes
+├── job_manager.py         # Threaded Queue Management
+├── database.py            # SQLite Model & Queries
 ├── config.py              # Pfad-Konfigurationen
 ├── services/
 │   ├── processor.py       # Worker: Download, Analyse, Cleanup
-│   └── importer.py        # Importiert JSON-Ergebnisse in DB
+│   └── importer.py        # Importiert JSON-Ergebnisse
 ├── static/
-│   └── js/app.js          # Frontend Logik (Alpine.js)
-└── templates/             # HTML Views (Jinja2)
-    ├── index.html         # Hauptlayout
-    └── components/        # Modulare UI-Komponenten
-🗺️ Roadmap
-[ ] Spotify Export: Erstelle Playlists direkt aus deinen Likes.
+│   ├── js/app.js          # Frontend Logik (Alpine.js)
+│   └── tracklistify_logo.png
+└── templates/             # Jinja2 Views
+    ├── base.html          # Base Layout (Tailwind Load)
+    ├── index.html         # Main Layout Container
+    └── components/        # Modulare UI-Teile
+        ├── dashboard.html
+        ├── footer_player.html
+        ├── queue_view.html
+        ├── rescan_view.html
+        └── ...
+```
 
-[ ] Artist Database: Detaillierte Profile für gefundene Künstler.
+---
 
-[ ] Drag & Drop: Einfacheres Hinzufügen von Dateien.
+## 🗺️ Roadmap
 
-[ ] Keyboard Shortcuts: Schnelleres Navigieren im Player.
+- [x] Audio Player mit Waveform-Visualisierung (Canvas)
+- [x] Warteschlange (Queue) System mit Status-Pill
+- [x] Smart Metadata Parsing (Regex für Uploads)
+- [x] Dashboard & Statistiken
+- [ ] **Spotify Export:** Erstelle Playlists direkt aus deinen Likes.
+- [ ] **Artist Database:** Detaillierte Profile & Social Links für gefundene Künstler.
+- [ ] **Drag & Drop:** Einfacheres Hinzufügen von Dateien im Browser.
 
-⚠️ Disclaimer
-Dieses Tool nutzt yt-dlp zum Streamen und Analysieren von Audio. Bitte beachte die Urheberrechte und Nutzungsbedingungen der jeweiligen Plattformen (YouTube, Mixcloud, etc.). Die heruntergeladenen Dateien werden nach der Analyse automatisch gelöscht (Hybrid-Ansatz), um Speicherplatz zu sparen und lokale Kopien zu minimieren.
+---
+
+## ⚠️ Disclaimer
+
+> [!WARNING]
+> **Rechtlicher Hinweis:** Dieses Tool nutzt `yt-dlp` zum Streamen und Analysieren von Audio. Bitte beachte die Urheberrechte und Nutzungsbedingungen der jeweiligen Plattformen (YouTube, Mixcloud, etc.). Die heruntergeladenen Dateien werden nach der Analyse automatisch gelöscht (Hybrid-Ansatz), um Speicherplatz zu sparen und lokale Kopien zu minimieren.
