@@ -7,8 +7,10 @@ document.addEventListener('alpine:init', () => {
         filteredSets: [], 
         search: '',
         activeSet: null, 
-        tracks: [], 
-        likedTracks: [], 
+        tracks: [],
+        likedTracks: [],
+        purchasedTracks: [],
+        favoriteProducers: [],
         rescanCandidates: [],
         youtubeFeed: [],
 
@@ -88,8 +90,10 @@ document.addEventListener('alpine:init', () => {
         // INITIALIZATION
         // =====================================================================
         init() {
-            this.fetchSets(); 
-            this.fetchLikes(); 
+            this.fetchSets();
+            this.fetchLikes();
+            this.fetchPurchases();
+            this.fetchProducerLikes();
             this.fetchRescan();
             this.fetchDashboard();
             this.fetchProfile();
@@ -266,10 +270,12 @@ document.addEventListener('alpine:init', () => {
             this.ui.showLikes = false; 
         },
         
-        showLikesView() { 
-            this.currentView = 'likes'; 
-            this.ui.showLikes = false; 
-            this.fetchLikes(); 
+        showLikesView() {
+            this.currentView = 'likes';
+            this.ui.showLikes = false;
+            this.fetchLikes();
+            this.fetchPurchases();
+            this.fetchProducerLikes();
         },
         
         showSetView(set) {
@@ -561,6 +567,8 @@ document.addEventListener('alpine:init', () => {
         async fetchDashboard() { const res = await fetch('/api/dashboard'); this.dashboardStats = await res.json(); },
         async fetchSets() { const res = await fetch('/api/sets'); this.sets = await res.json(); this.filteredSets = this.sets; },
         async fetchLikes() { const res = await fetch('/api/tracks/likes'); this.likedTracks = await res.json(); },
+        async fetchPurchases() { const res = await fetch('/api/tracks/purchases'); this.purchasedTracks = await res.json(); },
+        async fetchProducerLikes() { const res = await fetch('/api/producers/likes'); this.favoriteProducers = await res.json(); },
         async fetchRescan() { const res = await fetch('/api/tracks/rescan_candidates'); this.rescanCandidates = await res.json(); },
         async fetchYoutube() {
             const res = await fetch('/api/youtube/feeds');
@@ -605,13 +613,48 @@ document.addEventListener('alpine:init', () => {
             if (this.currentView === 'likes' && !track.liked) {
                 this.likedTracks = this.likedTracks.filter(t => t.id !== track.id);
             }
-            
-            await fetch(`/api/tracks/${track.id}/like`, { 
-                method: 'POST', 
-                body: JSON.stringify({liked: track.liked ? 1 : 0}) 
+
+            await fetch(`/api/tracks/${track.id}/like`, {
+                method: 'POST',
+                body: JSON.stringify({liked: track.liked ? 1 : 0})
             });
-            
+
             if (this.currentView !== 'likes') this.fetchLikes();
+        },
+
+        async togglePurchase(track) {
+            track.purchased = !track.purchased;
+
+            if (!track.purchased) {
+                this.purchasedTracks = this.purchasedTracks.filter(t => t.id !== track.id);
+            }
+
+            await fetch(`/api/tracks/${track.id}/purchase`, {
+                method: 'POST',
+                body: JSON.stringify({purchased: track.purchased ? 1 : 0})
+            });
+
+            this.fetchPurchases();
+        },
+
+        isProducerFavorite(producerId) {
+            if (!producerId) return false;
+            return this.favoriteProducers.some(p => p.id === producerId);
+        },
+
+        async toggleProducerFavorite(item) {
+            const producerId = item?.producer_id || item?.id;
+            if (!producerId) return;
+
+            const currentFavorite = this.isProducerFavorite(producerId);
+            const nextStatus = !currentFavorite;
+
+            await fetch(`/api/producers/${producerId}/like`, {
+                method: 'POST',
+                body: JSON.stringify({ liked: nextStatus ? 1 : 0 })
+            });
+
+            await this.fetchProducerLikes();
         },
         
         async toggleFlag(track) {
