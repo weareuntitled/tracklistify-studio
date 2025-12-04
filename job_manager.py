@@ -6,8 +6,7 @@ from datetime import datetime
 import traceback
 from threading import Event
 
-import database
-from services import importer
+
 from services.processor import JobCancelled
 
 class Job:
@@ -31,6 +30,15 @@ class Job:
 
 class JobManager:
     def __init__(self):
+        # Ensure the database exists before any worker activity
+        try:
+            database.init_db()
+        except Exception as exc:
+            print(f"[JobManager] DB init failed: {exc}")
+
+        # Import any leftover analysis results from previous runs
+        self._import_pending_outputs()
+
         self.jobs = {}
         self.queue = []
         self.current_job_id = None
@@ -77,23 +85,6 @@ class JobManager:
                 self.current_cancel_event.set()
                 return True
             return False
-
-    def _init_database(self):
-        try:
-            # Explicit import to avoid NameError in environments where globals are reloaded
-            import database  # type: ignore
-            database.init_db()
-        except Exception as exc:
-            print(f"[JobManager] DB init failed: {exc}")
-
-    def _import_pending_outputs(self):
-        try:
-            imported = importer.import_json_files()
-            count = len(imported) if isinstance(imported, list) else 0
-            if count:
-                print(f"[JobManager] Imported {count} pending set(s) on startup.")
-        except Exception as exc:
-            print(f"[JobManager] Import of pending outputs failed: {exc}")
 
     def _serialize(self, job):
         label = job.payload
