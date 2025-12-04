@@ -1,0 +1,74 @@
+<header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 z-20 shadow-sm shrink-0 relative">
+    
+    <div class="flex items-center gap-4 cursor-pointer group" @click="showDashboard()" title="Zum Dashboard">
+        <div class="relative">
+            <img src="/static/tracklistify_logo.png" alt="Logo" class="h-9 w-auto object-contain transition-transform duration-200 group-hover:scale-110">
+            <div x-show="currentView === 'dashboard'" class="absolute -bottom-1 -right-1 w-2 h-2 bg-orange-500 rounded-full border border-white"></div>
+        </div>
+        <div class="hidden md:block">
+            <h1 class="text-base font-bold text-gray-800 tracking-tight group-hover:text-orange-600 transition-colors">Tracklistify <span class="text-orange-500">Studio</span></h1>
+        </div>
+    </div>
+
+    <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        <button @click="showQueueView()" 
+                class="hidden sm:flex items-center justify-center px-4 py-1.5 rounded-full border transition-all duration-300 cursor-pointer hover:shadow-md active:scale-95 group min-w-[180px] relative overflow-hidden"
+                :class="queueStatus.active ? 'bg-white border-gray-200' : 'bg-white border-gray-100'">
+            
+            <template x-if="queueStatus.active">
+                <div class="absolute inset-0 opacity-20 origin-left transition-transform duration-300 ease-linear"
+                     :class="getPhaseColor(queueStatus.active.phase)"
+                     :style="'transform: scaleX(' + (queueStatus.active.progress / 100) + ')'"></div>
+            </template>
+
+            <div class="relative z-10 flex items-center gap-2">
+                <template x-if="queueStatus.active">
+                    <div class="flex items-center gap-2">
+                        <span class="relative flex h-2.5 w-2.5">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" :class="getPhaseColor(queueStatus.active.phase)"></span>
+                          <span class="relative inline-flex rounded-full h-2.5 w-2.5" :class="getPhaseColor(queueStatus.active.phase)"></span>
+                        </span>
+                        <div class="flex flex-col items-start leading-none">
+                            <span class="text-xs font-bold text-gray-700" x-text="getPhaseLabel(queueStatus.active.phase)"></span>
+                            <span class="text-[9px] text-gray-400 font-mono" x-text="Math.round(queueStatus.active.progress) + '%'"></span>
+                        </div>
+                    </div>
+                </template>
+                <template x-if="!queueStatus.active">
+                    <span class="text-xs font-medium text-gray-400 group-hover:text-gray-600">System bereit</span>
+                </template>
+            </div>
+        </button>
+    </div>
+
+    <div class="flex items-center gap-2">
+        <div class="hidden md:flex items-center gap-2 mr-2 group" title="Lautstärke">
+             <svg class="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+             <input type="range" min="0" max="1" step="0.05" x-model="audio.volume" @input="updateVolume" class="w-16 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500">
+        </div>
+
+        <button @click="showRescanView()" 
+                class="relative p-2 text-gray-400 hover:text-orange-600 transition-all duration-200 rounded-full hover:bg-orange-50 active:scale-95" 
+                title="Rescan Queue">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 01-2-2M5 11V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            <template x-if="rescanCandidates.length > 0">
+                <span class="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white" 
+                      x-text="rescanCandidates.length"></span>
+            </template>
+        </button>
+
+        <button @click="ui.showLikes = !ui.showLikes" 
+                class="relative p-2 transition-all rounded-xl active:scale-95"
+                :class="ui.showLikes ? 'text-pink-600 bg-pink-50' : 'text-gray-400 hover:text-pink-500 hover:bg-pink-50'" 
+                title="Merkliste">
+            <svg class="w-6 h-6" :fill="ui.showLikes ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            <template x-if="likedTracks.length > 0">
+                <span class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-pink-500 ring-2 ring-white"></span>
+            </template>
+        </button>
+    </div>
+</header>

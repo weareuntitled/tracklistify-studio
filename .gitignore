@@ -1,0 +1,8 @@
+.venv/
+venv/
+downloads/
+storage/
+__pycache__/
+*.pyc
+*.db
+.vscode/

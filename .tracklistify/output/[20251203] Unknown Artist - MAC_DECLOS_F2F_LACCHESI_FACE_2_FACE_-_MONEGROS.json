@@ -1,0 +1,185 @@
+{
+    "mix_info": {
+        "title": "MAC_DECLOS_F2F_LACCHESI_FACE_2_FACE_-_MONEGROS",
+        "date": "2025-12-03",
+        "track_count": 24
+    },
+    "track_count": 24,
+    "analysis_info": {
+        "timestamp": "2025-12-03T17:02:24.002728",
+        "track_count": 24,
+        "average_confidence": 82.40076790391667,
+        "min_confidence": 53.829669800000005,
+        "max_confidence": 99.94840622000001
+    },
+    "tracks": [
+        {
+            "song_name": "Lizard (Dan Cooper Remix)",
+            "artist": "Mauro Picotto",
+            "time_in_mix": "00:00:00",
+            "confidence": 64.4354586,
+            "duration": null
+        },
+        {
+            "song_name": "Intensivstation Der Baesse (Auf Die Fresse Mix)",
+            "artist": "Andreas Kremer",
+            "time_in_mix": "00:01:10",
+            "confidence": 85.917115,
+            "duration": null
+        },
+        {
+            "song_name": "Impression",
+            "artist": "Mython",
+            "time_in_mix": "00:02:20",
+            "confidence": 65.5187368,
+            "duration": null
+        },
+        {
+            "song_name": "Expand",
+            "artist": "Mattone",
+            "time_in_mix": "00:06:25",
+            "confidence": 69.52321520000001,
+            "duration": null
+        },
+        {
+            "song_name": "Disruption",
+            "artist": "Rill",
+            "time_in_mix": "00:08:45",
+            "confidence": 79.42879160000001,
+            "duration": null
+        },
+        {
+            "song_name": "Perpetual (Benny Mix)",
+            "artist": "Mac Declos",
+            "time_in_mix": "00:16:20",
+            "confidence": 72.4083658,
+            "duration": null
+        },
+        {
+            "song_name": "Learn to Breathe",
+            "artist": "Boy In Nature",
+            "time_in_mix": "00:17:30",
+            "confidence": 99.94840622000001,
+            "duration": null
+        },
+        {
+            "song_name": "Savagery Patterns",
+            "artist": "Numbers And Parameters",
+            "time_in_mix": "00:18:05",
+            "confidence": 53.829669800000005,
+            "duration": null
+        },
+        {
+            "song_name": "Out of the Blue",
+            "artist": "System F",
+            "time_in_mix": "00:19:15",
+            "confidence": 85.590636618,
+            "duration": null
+        },
+        {
+            "song_name": "No Limit",
+            "artist": "2 Unlimited",
+            "time_in_mix": "00:21:00",
+            "confidence": 97.341656666,
+            "duration": null
+        },
+        {
+            "song_name": "Sandstorm",
+            "artist": "Darude",
+            "time_in_mix": "00:21:35",
+            "confidence": 97.558486448,
+            "duration": null
+        },
+        {
+            "song_name": "Eins Zwei Polizei",
+            "artist": "Mo-Do",
+            "time_in_mix": "00:22:10",
+            "confidence": 97.65521290000001,
+            "duration": null
+        },
+        {
+            "song_name": "Perfect Organism",
+            "artist": "Prime Mover",
+            "time_in_mix": "00:22:45",
+            "confidence": 95.74449052,
+            "duration": null
+        },
+        {
+            "song_name": "Down by Law",
+            "artist": "Off Grid",
+            "time_in_mix": "00:27:25",
+            "confidence": 99.85644817400001,
+            "duration": null
+        },
+        {
+            "song_name": "Echo",
+            "artist": "dxrvo",
+            "time_in_mix": "00:28:00",
+            "confidence": 99.934911728,
+            "duration": null
+        },
+        {
+            "song_name": "I Can’t Feel My Legs",
+            "artist": "Colin Benders",
+            "time_in_mix": "00:30:55",
+            "confidence": 71.4992762,
+            "duration": null
+        },
+        {
+            "song_name": "Sinara",
+            "artist": "Phil Berg",
+            "time_in_mix": "00:31:30",
+            "confidence": 72.1173762,
+            "duration": null
+        },
+        {
+            "song_name": "Simple Acts",
+            "artist": "Electric Rescue",
+            "time_in_mix": "00:34:25",
+            "confidence": 75.9278298,
+            "duration": null
+        },
+        {
+            "song_name": "Om Spiral Magnetic Infinity",
+            "artist": "DJ KADEN BR",
+            "time_in_mix": "00:35:35",
+            "confidence": 81.7336798,
+            "duration": null
+        },
+        {
+            "song_name": "Muladhara (The Scan Remix)",
+            "artist": "The Sixth Sense & The Scan",
+            "time_in_mix": "00:39:40",
+            "confidence": 89.59543679999999,
+            "duration": null
+        },
+        {
+            "song_name": "Butyric Acid (Danny Wabbit Remix)",
+            "artist": "HUJUS",
+            "time_in_mix": "00:42:35",
+            "confidence": 86.44930120000001,
+            "duration": null
+        },
+        {
+            "song_name": "Groove Therapy (Luigi Madonna Remix)",
+            "artist": "Shaun Moses",
+            "time_in_mix": "00:55:25",
+            "confidence": 87.5223638,
+            "duration": null
+        },
+        {
+            "song_name": "On the Move (Original)",
+            "artist": "Barthezz",
+            "time_in_mix": "00:57:10",
+            "confidence": 92.11587902,
+            "duration": null
+        },
+        {
+            "song_name": "Dance If You Cannot (feat. Daisy Dee) [Euromix by Two Men]",
+            "artist": "Alter Ego",
+            "time_in_mix": "00:58:55",
+            "confidence": 55.9656848,
+            "duration": null
+        }
+    ]
+}

@@ -1,0 +1,69 @@
+<div class="flex-1 flex flex-col min-w-0 bg-white relative h-full animate-row">
+    
+    <div class="h-16 border-b border-gray-200 flex items-center justify-between px-6 shrink-0 bg-white sticky top-0 z-20">
+        <h2 class="text-lg font-bold text-gray-900">Studio Dashboard</h2>
+        <span class="text-xs text-gray-400 font-mono">Analytics</span>
+    </div>
+
+    <div class="flex-1 overflow-auto bg-gray-50 p-8">
+        <div class="max-w-6xl mx-auto space-y-8">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center justify-between hover:border-orange-200 transition-colors">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Sets</p>
+                        <p class="text-3xl font-extrabold text-gray-900 mt-1" x-text="dashboardStats.total_sets"></p>
+                    </div>
+                    <div class="w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center text-orange-600">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center justify-between hover:border-green-200 transition-colors">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Tracks</p>
+                        <p class="text-3xl font-extrabold text-gray-900 mt-1" x-text="dashboardStats.total_tracks"></p>
+                    </div>
+                    <div class="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center text-green-600">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+                        <h3 class="font-bold text-gray-800">Top Artists</h3>
+                    </div>
+                    <div class="divide-y divide-gray-50">
+                        <template x-for="(item, idx) in dashboardStats.top_artists" :key="idx">
+                            <div class="px-6 py-3 flex justify-between items-center hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs font-bold text-gray-300 w-4" x-text="idx + 1"></span>
+                                    <span class="text-sm font-medium text-gray-900" x-text="item.artist"></span>
+                                </div>
+                                <span class="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-full" x-text="item.count"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+                        <h3 class="font-bold text-gray-800">Kürzlich hinzugefügt</h3>
+                    </div>
+                    <div class="divide-y divide-gray-50">
+                        <template x-for="set in dashboardStats.recent_sets" :key="set.id">
+                            <button @click="loadSet(set.id)" class="w-full px-6 py-3 flex justify-between items-center hover:bg-gray-50 transition-colors text-left">
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-medium text-gray-900 truncate max-w-xs" x-text="set.name"></span>
+                                    <span class="text-[10px] text-gray-400" x-text="formatDate(set.created_at)"></span>
+                                </div>
+                                <svg class="w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

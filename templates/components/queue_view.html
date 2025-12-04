@@ -1,0 +1,50 @@
+<div class="flex-1 flex flex-col min-w-0 bg-white relative h-full animate-row">
+    <div class="h-16 border-b border-gray-200 flex items-center justify-between px-6 shrink-0 bg-white sticky top-0 z-20">
+        <h2 class="text-lg font-bold text-gray-900">Aktive Prozesse</h2>
+    </div>
+
+    <div class="flex-1 overflow-auto bg-gray-50 p-8">
+        <div class="max-w-4xl mx-auto space-y-8">
+            
+            <template x-if="queueStatus.active">
+                <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden relative">
+                    <div class="absolute top-0 left-0 h-1.5 transition-all duration-300" 
+                         :class="getPhaseColor(queueStatus.active.phase)"
+                         :style="'width: ' + queueStatus.active.progress + '%'"></div>
+                    
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg"
+                                     :class="getPhaseColor(queueStatus.active.phase)">
+                                    <svg x-show="queueStatus.active.phase === 'downloading'" class="w-6 h-6 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                    <svg x-show="queueStatus.active.phase === 'analyzing'" class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                                    <svg x-show="queueStatus.active.phase === 'importing'" class="w-6 h-6 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-900" x-text="getPhaseLabel(queueStatus.active.phase)"></h3>
+                                    <p class="text-sm text-gray-500 font-medium" x-text="queueStatus.active.label"></p>
+                                </div>
+                            </div>
+                            <span class="font-mono font-bold text-2xl text-gray-300" x-text="Math.round(queueStatus.active.progress) + '%'"></span>
+                        </div>
+                        
+                        <div class="bg-gray-900 rounded-lg p-4 font-mono text-xs text-gray-300 shadow-inner flex gap-3">
+                             <span class="text-green-500 font-bold shrink-0">>_</span>
+                             <span x-text="queueStatus.active.log"></span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <div x-show="!queueStatus.active" class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
+                    <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900">Alles erledigt</h3>
+                <p class="text-gray-500 mt-1">Keine aktiven Jobs.</p>
+            </div>
+
+            </div>
+    </div>
+</div>

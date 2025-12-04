@@ -1,0 +1,76 @@
+<aside class="w-72 bg-gray-50/80 border-r border-gray-200 flex flex-col backdrop-blur-sm z-10">
+    
+    <div class="p-4 border-b border-gray-200 bg-white/60">
+        <button @click="ui.showAddModal = true" class="w-full group flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 hover:bg-orange-600 text-white text-sm font-bold rounded-xl shadow-sm hover:shadow-lg hover:shadow-orange-200/50 transition-all duration-200 transform hover:-translate-y-0.5">
+            <svg class="w-5 h-5 text-white/70 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+            Set hinzufügen
+        </button>
+    </div>
+    
+    <div class="p-3">
+        <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </span>
+            <input type="text" x-model="search" placeholder="Sets filtern..." 
+                   class="w-full pl-10 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all">
+        </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-2 pb-2 space-y-0.5 custom-scrollbar">
+        <template x-for="set in filteredSets" :key="set.id">
+            <div @contextmenu.prevent="openSetContextMenu($event, set)">
+                <button @click="loadSet(set.id)" 
+                        class="w-full text-left px-3 py-3 rounded-xl text-sm transition-all duration-150 group relative overflow-hidden border border-transparent"
+                        :class="activeSet && activeSet.id === set.id ? 'bg-white border-gray-200 shadow-sm' : 'hover:bg-white/50 hover:border-gray-100 text-gray-600'">
+                    
+                    <div x-show="activeSet && activeSet.id === set.id" class="absolute left-0 top-0 bottom-0 w-1 bg-orange-500 rounded-l-lg"></div>
+                    
+                    <div class="pl-2 flex justify-between items-start">
+                        <span class="font-semibold text-gray-900 truncate pr-2 flex-1" x-text="set.name"></span>
+                    </div>
+                    
+                    <div class="pl-2 text-[11px] text-gray-400 mt-1 flex justify-between items-center">
+                        <span x-text="formatDate(set.created_at)"></span>
+                        <span class="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-500" x-text="set.track_count"></span>
+                    </div>
+                </button>
+            </div>
+        </template>
+        
+        <div x-show="sets.length === 0" class="text-center py-12 text-gray-400 text-sm px-4 opacity-60">
+            Noch keine Sets.
+        </div>
+    </div>
+</aside>
+
+<div x-show="ui.contextMenu.show" 
+     @click.away="ui.contextMenu.show = false"
+     x-cloak
+     class="fixed bg-white border border-gray-200 shadow-xl rounded-xl py-1 w-48 z-50 overflow-hidden animate-row"
+     :style="'top: ' + ui.contextMenu.y + 'px; left: ' + ui.contextMenu.x + 'px'">
+    
+    <div class="px-4 py-2 text-[10px] font-bold text-gray-400 bg-gray-50 border-b border-gray-100 uppercase tracking-wider mb-1">Set Optionen</div>
+    
+    <button @click="openEditSetModal()" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2 transition-colors">
+        <svg class="w-4 h-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        Info / Tags
+    </button>
+
+    <button @click="rescanSetContext()" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2 transition-colors">
+        <svg class="w-4 h-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+        Neu analysieren
+    </button>
+
+    <button @click="renameSetContext()" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2 transition-colors">
+        <svg class="w-4 h-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+        Umbenennen
+    </button>
+    
+    <div class="border-t border-gray-100 my-1"></div>
+    
+    <button @click="deleteSetContext()" class="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
+        <svg class="w-4 h-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+        Löschen
+    </button>
+</div>
