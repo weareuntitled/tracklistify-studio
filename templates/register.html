@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full bg-gray-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrieren | Tracklistify Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+<div class="w-full max-w-md">
+    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <p class="text-xs text-gray-500">Neuer Account</p>
+                <h1 class="text-2xl font-bold text-gray-900">Registrieren</h1>
+            </div>
+            <a href="/" class="text-sm text-orange-600 font-semibold hover:underline">Zum Dashboard</a>
+        </div>
+
+        <form id="registerForm" class="space-y-4">
+            <div>
+                <label class="text-sm font-semibold text-gray-700">Username</label>
+                <input name="username" required class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-200" />
+            </div>
+            <div>
+                <label class="text-sm font-semibold text-gray-700">Passwort</label>
+                <input name="password" type="password" required class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-200" />
+            </div>
+            <button class="w-full py-2 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600">Account anlegen</button>
+            <p id="registerError" class="text-sm text-red-600"></p>
+        </form>
+
+        <p class="mt-4 text-sm text-gray-600 text-center">Schon registriert? <a href="/login" class="text-orange-600 font-semibold hover:underline">Login</a></p>
+    </div>
+</div>
+
+<script>
+    const form = document.getElementById('registerForm');
+    const errorEl = document.getElementById('registerError');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        errorEl.textContent = '';
+        const formData = new FormData(form);
+        const payload = {
+            username: formData.get('username').trim(),
+            password: formData.get('password').trim()
+        };
+
+        const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (res.ok && data.ok) {
+            window.location.href = '/profile';
+        } else {
+            errorEl.textContent = data.error || 'Registrierung fehlgeschlagen';
+        }
+    });
+</script>
+</body>
+</html>

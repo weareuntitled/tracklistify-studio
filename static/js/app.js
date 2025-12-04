@@ -16,7 +16,8 @@ document.addEventListener('alpine:init', () => {
             username: null,
             form: { username: '', password: '' },
             mode: 'login',
-            error: ''
+            error: '',
+            dropdownOpen: false
         },
         
         dashboardStats: {
@@ -586,6 +587,7 @@ document.addEventListener('alpine:init', () => {
             if (res.ok && data.ok) {
                 this.auth.username = data.username;
                 this.auth.form = { username: '', password: '' };
+                this.auth.dropdownOpen = false;
                 this.showToast('Angemeldet', data.username, 'info');
             } else {
                 this.auth.error = data.error || 'Fehler';
@@ -594,6 +596,7 @@ document.addEventListener('alpine:init', () => {
         async logout() {
             await fetch('/api/auth/logout', { method: 'POST' });
             this.auth.username = null;
+            this.auth.dropdownOpen = false;
         },
         
         async toggleLike(track) {
