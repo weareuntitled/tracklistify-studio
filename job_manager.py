@@ -45,6 +45,13 @@ class JobManager:
         self.current_cancel_event: Event | None = None
         self.lock = threading.Lock()
         self.running = True
+
+        # Ensure the database exists before any worker activity
+        self._init_database()
+
+        # Import any leftover analysis results from previous runs
+        self._import_pending_outputs()
+
         self.worker_thread = threading.Thread(target=self._worker, daemon=True)
         self.worker_thread.start()
 
