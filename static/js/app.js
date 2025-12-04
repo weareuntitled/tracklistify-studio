@@ -261,17 +261,38 @@ document.addEventListener('alpine:init', () => {
             this.fetchLikes(); 
         },
         
-        showSetView(set) { 
-            this.loadSet(set.id); 
+        showSetView(set) {
+            this.loadSet(set);
         },
 
         // =====================================================================
         // SET MANAGEMENT
         // =====================================================================
-        async loadSet(id) {
-            this.activeSet = this.sets.find(s => s.id === id);
+        async loadSet(setOrId) {
+            const isObject = setOrId && typeof setOrId === 'object';
+            const id = isObject ? setOrId.id : setOrId;
+
+            if (isObject) {
+                this.activeSet = setOrId;
+
+                // Ensure the sidebar list contains the set so the active state can be highlighted
+                const existing = this.sets.find(s => s.id === id);
+                if (!existing) {
+                    this.sets = [setOrId, ...this.sets];
+                    this.filteredSets = this.sets;
+                }
+            } else {
+                this.activeSet = this.sets.find(s => s.id === id);
+
+                // If the set is not loaded yet (e.g. opened from dashboard recents), fetch the list first
+                if (!this.activeSet) {
+                    await this.fetchSets();
+                    this.activeSet = this.sets.find(s => s.id === id);
+                }
+            }
+
             this.currentView = 'sets';
-            
+
             const res = await fetch(`/api/sets/${id}/tracks`);
             this.tracks = await res.json();
             
