@@ -170,10 +170,19 @@ def import_json_files():
 
                     cur.execute(
                         """
-                        INSERT INTO tracks (set_id, position, artist, title, confidence, start_time, end_time, flag)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+                        INSERT INTO tracks (set_id, position, artist, title, confidence, start_time, end_time, flag, beatport_url)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)
                         """,
-                        (set_id, i, t.get("artist"), title, t.get("confidence"), s, e),
+                        (
+                            set_id,
+                            i,
+                            t.get("artist"),
+                            title,
+                            t.get("confidence"),
+                            s,
+                            e,
+                            t.get("beatport_url"),
+                        ),
                     )
 
             except Exception as e:

@@ -151,7 +151,7 @@ def init_db():
     # Tracks Migration (wie gehabt)
     cur.execute("PRAGMA table_info(tracks)")
     existing_track_cols = [col[1] for col in cur.fetchall()]
-    
+
     track_cols = {
         "position": "INTEGER", "confidence": "REAL", "start_time": "REAL", "end_time": "REAL",
         "flag": "INTEGER DEFAULT 0", "orig_artist": "TEXT", "orig_title": "TEXT",

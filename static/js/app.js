@@ -608,16 +608,16 @@ document.addEventListener('alpine:init', () => {
             return 'Verarbeite...'; 
         },
         
-        getSearchLink(track, provider) { 
-             const q = encodeURIComponent(`${track.artist} ${track.title}`); 
-             const map = { 
-                 youtube: `https://www.youtube.com/results?search_query=${q}`, 
-                 beatport: `https://www.beatport.com/search?q=${q}`, 
-                 bandcamp: `https://bandcamp.com/search?q=${q}`, 
-                 soundcloud: `https://soundcloud.com/search?q=${q}`, 
-                 google: `https://www.google.com/search?q=${q}` 
-             }; 
-             return map[provider] || '#'; 
+        getSearchLink(track, provider) {
+             const q = encodeURIComponent(`${track.artist} ${track.title}`);
+             const map = {
+                 youtube: `https://www.youtube.com/results?search_query=${q}`,
+                 beatport: track.beatport_url || `https://www.beatport.com/search?q=${q}`,
+                 bandcamp: `https://bandcamp.com/search?q=${q}`,
+                 soundcloud: `https://soundcloud.com/search?q=${q}`,
+                 google: `https://www.google.com/search?q=${q}`
+             };
+             return map[provider] || '#';
         },
         
         copyTracklist() { 
