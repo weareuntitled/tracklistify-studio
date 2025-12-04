@@ -11,6 +11,8 @@ import database
 from job_manager import manager as job_manager
 from services.processor import resolve_audio_stream_url
 
+database.init_db()
+
 app = Flask(__name__)
 
 # --- Caching ---
@@ -150,6 +152,11 @@ def add_job():
 @app.route("/api/queue/status")
 def queue_status():
     return jsonify(job_manager.get_status())
+
+@app.route("/api/queue/stop", methods=["POST"])
+def queue_stop():
+    stopped = job_manager.stop_active()
+    return jsonify({"ok": True, "stopped": stopped})
 
 # --- API: Rescan & Audio ---
 @app.route("/api/tracks/rescan_candidates")

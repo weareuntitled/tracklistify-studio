@@ -3,9 +3,14 @@ import sys
 import subprocess
 import logging
 import yt_dlp
+from threading import Event
 from config import DOWNLOAD_DIR
 from services import importer
-import database 
+import database
+
+
+class JobCancelled(Exception):
+    pass
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,11 +25,20 @@ def resolve_audio_stream_url(query):
     except: pass
     return None
 
-def process_job(job):
+def process_job(job, cancel_event: Event | None = None):
     temp_filename = f"{job.id}"
     file_path = None
     
     print(f"--- JOB START: {job.id} ---") # Debug Print im Terminal
+
+    def _check_cancel(proc=None):
+        if cancel_event and cancel_event.is_set():
+            if proc:
+                try:
+                    proc.terminate()
+                except Exception:
+                    pass
+            raise JobCancelled("Abgebrochen")
 
     try:
         # 1. DOWNLOAD
@@ -37,6 +51,7 @@ def process_job(job):
             
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='ignore')
             for line in proc.stdout:
+                _check_cancel(proc)
                 if "[download]" in line and "%" in line:
                     try: job.progress = float(line.split("%")[0].split()[-1])
                     except: pass
@@ -66,6 +81,7 @@ def process_job(job):
 
         analyzer_output = []
         for line in proc_ana.stdout:
+            _check_cancel(proc_ana)
             l = line.strip()
             if l:
                 analyzer_output.append(l)
@@ -93,6 +109,8 @@ def process_job(job):
         job.phase = "importing"
         job.log_msg("Datenbank Import...")
 
+        _check_cancel()
+
         # HIER WAR DER FEHLER: Wir fangen ihn ab
         result = importer.import_json_files()
         print(f"Importer Result: {result} (Type: {type(result)})") # Debug Print
@@ -107,13 +125,17 @@ def process_job(job):
             job.log_msg("ACHTUNG: Importer gab unerwartetes Format zurück, Metadata Skip.")
 
         count = len(new_ids)
+        if count:
+            job.log_msg(f"Import abgeschlossen: {count} neues Set")
+        else:
+            job.log_msg("Kein neues Set gefunden, eventuell bereits importiert.")
         
         # 4. METADATA
         if job.metadata and new_ids:
             target_id = new_ids[-1]
             meta = job.metadata
             final_name = f"{meta['artist']} - {meta['name']}" if (meta.get('artist') and meta.get('name')) else meta.get('name')
-            
+
             upd = {"name": final_name, "artists": meta.get('artist'), "event": meta.get('event'), "is_b2b": meta.get('is_b2b'), "tags": meta.get('tags')}
             if final_name: database.rename_set(target_id, final_name)
             database.update_set_metadata(target_id, upd)
@@ -121,6 +143,9 @@ def process_job(job):
 
         return {"new_sets": count}
 
+    except JobCancelled as e:
+        job.log_msg(str(e))
+        raise
     except Exception as e:
         job.log_msg(f"ERROR: {e}")
         import traceback
@@ -130,4 +155,5 @@ def process_job(job):
         try:
             if file_path and os.path.exists(file_path):
                 os.remove(file_path)
-        except: pass
+        except:
+            pass

@@ -205,7 +205,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 const res = await fetch('/api/queue/status');
                 const status = await res.json();
-                
+
                 // Job fertig geworden?
                 if (this.queueStatus.active && !status.active) {
                     this.fetchSets(); 
@@ -230,6 +230,16 @@ document.addEventListener('alpine:init', () => {
                 }
                 this.queueStatus = status;
             } catch(e) {}
+        },
+
+        async stopQueue() {
+            try {
+                await fetch('/api/queue/stop', { method: 'POST' });
+                this.showToast("Verarbeitung gestoppt", "Aktiver Job wird abgebrochen.", "info");
+                this.pollQueue();
+            } catch(e) {
+                console.error(e);
+            }
         },
 
         // =====================================================================

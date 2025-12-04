@@ -4,6 +4,11 @@ import time
 import os
 from datetime import datetime
 import traceback
+from threading import Event
+
+import database
+from services import importer
+from services.processor import JobCancelled
 
 class Job:
     def __init__(self, job_type, payload, metadata=None):
@@ -29,8 +34,16 @@ class JobManager:
         self.jobs = {}
         self.queue = []
         self.current_job_id = None
+        self.current_cancel_event: Event | None = None
         self.lock = threading.Lock()
         self.running = True
+
+        # Ensure the database exists before any worker activity
+        self._init_database()
+
+        # Import any leftover analysis results from previous runs
+        self._import_pending_outputs()
+
         self.worker_thread = threading.Thread(target=self._worker, daemon=True)
         self.worker_thread.start()
 
@@ -46,15 +59,41 @@ class JobManager:
         with self.lock:
             active = self.jobs[self.current_job_id] if self.current_job_id else None
             pending = [self.jobs[jid] for jid in self.queue]
-            done = [j for j in self.jobs.values() if j.status in ['completed', 'failed']]
+            done = [j for j in self.jobs.values() if j.status in ['completed', 'failed', 'cancelled']]
             done.sort(key=lambda x: x.created_at, reverse=True)
-            
+
             return {
                 "active": self._serialize(active) if active else None,
                 "queue_count": len(pending),
                 "history": [self._serialize(j) for j in done[:5]],
                 "queue": [self._serialize(j) for j in pending]
             }
+
+    def stop_active(self):
+        with self.lock:
+            # Warteschlange leeren
+            self.queue = []
+            if self.current_cancel_event:
+                self.current_cancel_event.set()
+                return True
+            return False
+
+    def _init_database(self):
+        try:
+            # Explicit import to avoid NameError in environments where globals are reloaded
+            import database  # type: ignore
+            database.init_db()
+        except Exception as exc:
+            print(f"[JobManager] DB init failed: {exc}")
+
+    def _import_pending_outputs(self):
+        try:
+            imported = importer.import_json_files()
+            count = len(imported) if isinstance(imported, list) else 0
+            if count:
+                print(f"[JobManager] Imported {count} pending set(s) on startup.")
+        except Exception as exc:
+            print(f"[JobManager] Import of pending outputs failed: {exc}")
 
     def _serialize(self, job):
         label = job.payload
@@ -86,18 +125,27 @@ class JobManager:
     def _run_job(self, jid):
         job = self.jobs[jid]
         job.status = "processing"
+        cancel_event = Event()
+        self.current_cancel_event = cancel_event
         try:
             from services.processor import process_job
-            process_job(job)
+            process_job(job, cancel_event)
             job.status = "completed"
             job.phase = "done"
             job.progress = 100
             job.log_msg("Fertiggestellt.")
+        except JobCancelled as e:
+            job.status = "cancelled"
+            job.phase = "cancelled"
+            job.error = str(e)
+            job.log_msg("Abgebrochen durch Nutzer.")
         except Exception as e:
             job.status = "failed"
             job.phase = "error"
             job.error = str(e)
             job.log_msg(f"Fehler: {str(e)}")
             traceback.print_exc()
+        finally:
+            self.current_cancel_event = None
 
 manager = JobManager()
