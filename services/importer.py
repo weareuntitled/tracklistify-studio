@@ -2,6 +2,7 @@ import os
 import json
 import datetime
 import shutil
+from typing import Dict
 from config import (
     JSON_OUTPUT_DIR,
     DOWNLOAD_DIR,
