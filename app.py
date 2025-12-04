@@ -27,11 +27,22 @@ from config import SNIPPET_DIR, STATIC_DIR, UPLOAD_DIR
 import database
 from job_manager import manager as job_manager
 from services.processor import resolve_audio_stream_url
+from services.user_store import (
+    FavoriteTogglePayload,
+    InvitePayload,
+    LoginPayload,
+    ProfileUpdatePayload,
+    RegisterPayload,
+    UserStore,
+)
 
 database.init_db()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key")
+
+user_store = UserStore()
+user_store.ensure_default_admin()
 
 # --- Caching ---
 @lru_cache(maxsize=500)
@@ -59,35 +70,43 @@ def safe_path(base: str, *paths: str) -> str:
 # --- Frontend Routes ---
 @app.route("/")
 def index():
-    return render_template("index.html")
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+    return render_template("index.html", user=user)
 
 
 @app.route("/login")
 def login_page():
     if "user_id" in session:
-        return redirect("/profile")
+        return redirect("/")
     return render_template("login.html")
 
 
 @app.route("/register")
 def register_page():
     if "user_id" in session:
-        return redirect("/profile")
+        return redirect("/")
     return render_template("register.html")
 
 
 @app.route("/profile")
 def profile_page():
-    if "user_id" not in session:
+    user = get_current_user()
+    if not user:
+        session.clear()
         return redirect("/login")
 
     user_collections = database.get_all_sets()
     liked_tracks = database.get_liked_tracks()
     stats = database.get_dashboard_stats()
 
+    display_name = user.name or user.dj_name or user.email
+
     return render_template(
         "profile.html",
-        username=session.get("username"),
+        username=display_name,
+        user=user,
         collections=user_collections,
         liked_tracks=liked_tracks,
         stats=stats,
@@ -325,20 +344,34 @@ def serve_js(filename):
 
 
 # --- API: Auth ---
+
+
+def set_session(user):
+    session["user_id"] = user.id
+    session["email"] = user.email
+    session["is_admin"] = user.is_admin
+
+
+def require_session_user():
+    user = get_current_user()
+    if not user:
+        return None, (jsonify({"ok": False, "error": "Nicht autorisiert"}), 401)
+    return user, None
+
+
 @app.route("/api/auth/register", methods=["POST"])
 def register():
     data = parse_body(RegisterRequest)
     username = data.username
     password = data.password
 
-    if database.get_user(username):
-        return jsonify({"ok": False, "error": "User existiert bereits"}), 409
+    try:
+        user = user_store.add_user(payload.email, payload.password, name=payload.name)
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 409
 
-    pw_hash = generate_password_hash(password)
-    user_id = database.create_user(username, pw_hash)
-    session["user_id"] = user_id
-    session["username"] = username
-    return jsonify({"ok": True, "username": username})
+    set_session(user)
+    return jsonify({"ok": True, "user": serialize_user(user)})
 
 
 @app.route("/api/auth/login", methods=["POST"])
@@ -350,16 +383,16 @@ def login():
     if not user or not check_password_hash(user["password_hash"], password):
         return jsonify({"ok": False, "error": "Ungültige Zugangsdaten"}), 401
 
-    session["user_id"] = user["id"]
-    session["username"] = user["username"]
-    return jsonify({"ok": True, "username": user["username"]})
+    set_session(user)
+    return jsonify({"ok": True, "user": serialize_user(user)})
 
 
 @app.route("/api/auth/profile")
 def profile():
-    if "user_id" not in session:
-        return jsonify({"ok": False}), 401
-    return jsonify({"ok": True, "username": session.get("username")})
+    user, error_response = require_session_user()
+    if error_response:
+        return error_response
+    return jsonify({"ok": True, "user": serialize_user(user)})
 
 
 @app.route("/api/auth/logout", methods=["POST"])
