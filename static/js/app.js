@@ -11,14 +11,17 @@ document.addEventListener('alpine:init', () => {
         likedTracks: [], 
         rescanCandidates: [],
         
-        dashboardStats: { 
-            total_sets: 0, 
-            total_tracks: 0, 
-            total_likes: 0, 
-            discovery_rate: 0, 
-            top_liked_artists: [], 
-            top_sets: [], 
-            recent_sets: [] 
+        dashboardStats: {
+            total_sets: 0,
+            total_tracks: 0,
+            total_likes: 0,
+            discovery_rate: 0,
+            top_liked_artists: [],
+            top_artists: [],
+            top_sets: [],
+            recent_sets: [],
+            top_producers: [],
+            top_djs: []
         },
         
         // =====================================================================
@@ -219,9 +222,14 @@ document.addEventListener('alpine:init', () => {
                     if (currentLog !== this.lastLogLine) {
                         this.lastLogLine = currentLog;
                         
-                        if (currentLog.includes("Found") || currentLog.includes("Identified") || currentLog.includes("=>")) {
+                        const cleanMsg = currentLog.replace(/\[.*?\]/g, '').trim();
+
+                        if (/Found Beatport Profile/i.test(cleanMsg)) {
+                            this.showToast("Producer Identified", cleanMsg, "producer");
+                        } else if (/Found SoundCloud Profile/i.test(cleanMsg)) {
+                            this.showToast("DJ Profile Linked", cleanMsg, "dj");
+                        } else if (currentLog.includes("Found") || currentLog.includes("Identified") || currentLog.includes("=>")) {
                             // Track erkannt
-                            let cleanMsg = currentLog.replace(/\[.*?\]/g, '').trim(); 
                             this.showToast("Track erkannt", cleanMsg, "track");
                         } else if (currentLog.includes("Download:")) {
                             this.showToast("Download gestartet", status.active.label, "info");
