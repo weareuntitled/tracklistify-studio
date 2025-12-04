@@ -61,20 +61,37 @@ def process_job(job):
         job.progress = 0
         job.log_msg("Starte Analyse...")
         
-        cmd_ana = [sys.executable, "-m", "tracklistify", file_path]
-        proc_ana = subprocess.Popen(cmd_ana, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='ignore')
-        
+        cmd_ana = [sys.executable, "-m", "tracklistify.cli", file_path]
+        proc_ana = subprocess.Popen(
+            cmd_ana,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding='utf-8',
+            errors='ignore'
+        )
+
+        ana_output = []
         for line in proc_ana.stdout:
             l = line.strip()
             if l:
+                ana_output.append(l)
                 # Nur wichtige Lines ins UI loggen, alles ins Terminal
-                print(f"[Tracklistify] {l}") 
-                if "Identifying" in l or "Found" in l: 
+                print(f"[Tracklistify] {l}")
+                if "Identifying" in l or "Found" in l:
                     job.log_msg(l)
                     if job.progress < 90: job.progress += 2
-        
+
         proc_ana.wait()
         print(f"Analyse Exit Code: {proc_ana.returncode}") # Debug Print
+
+        if proc_ana.returncode != 0:
+            summary = "\n".join(ana_output[-5:]) if ana_output else "Keine Ausgabe erhalten."
+            job.error = f"Analyzer exited with code {proc_ana.returncode}"
+            job.phase = "error"
+            job.log_msg(job.error)
+            job.log_msg(summary)
+            raise RuntimeError(job.error)
 
         # 3. IMPORT
         job.phase = "importing"
@@ -86,8 +103,15 @@ def process_job(job):
 
         new_ids = []
         count = 0
-        
-        if isinstance(result, list):
+
+        if isinstance(result, dict):
+            new_ids = result.get("new_set_ids") or []
+            count = result.get("imported", len(new_ids))
+            for msg in result.get("messages", []):
+                job.log_msg(msg)
+            for err in result.get("errors", []):
+                job.log_msg(f"Import error: {err}")
+        elif isinstance(result, list):
             new_ids = result
             count = len(new_ids)
         elif isinstance(result, int):

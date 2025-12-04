@@ -1,136 +1,89 @@
 ![Tracklistify banner](docs/assets/banner.png)
 
-<div align="center">
+# Tracklistify Studio
 
-[![GitHub stars](https://img.shields.io/github/stars/betmoar/tracklistify?style=social)](https://github.com/betmoar/tracklistify/stargazers)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](docs/CONTRIBUTING.md)
-[![Made with ❤️](https://img.shields.io/badge/Made%20with-❤️-red.svg)](https://github.com/betmoar/tracklistify)
+A Flask-based helper app that wraps the `tracklistify` analyzer with a simple queue, downloader, and dashboard UI. Studio lets you drop in YouTube/Mixcloud/SoundCloud links or upload audio files, runs the Tracklistify CLI in the background, and imports the generated JSON into a local SQLite library with snippets and playback support.
 
-### [Changelog](docs/CHANGELOG.md) · [Issues](https://github.com/betmoar/tracklistify/issues) · [Contributing](docs/CONTRIBUTING.md)
+## What this repo contains
+- **Flask UI (`app.py`, `templates/`, `static/`)** – dashboard, queue, likes, and rescan views built with Tailwind + Alpine.
+- **Job pipeline (`job_manager.py`, `services/processor.py`)** – downloads audio via `yt-dlp`, runs `python -m tracklistify`, and streams analyzer logs back to the UI.
+- **Importer (`services/importer.py`)** – ingests Tracklistify JSON from `.tracklistify/output` into `tracklistify.db` with metadata guessing.
+- **Storage layout (`config.py`)** – creates data directories under the repo so everything works out of the box.
 
-</div>
+## Prerequisites
+- Python 3.11+
+- `ffmpeg` available on your `PATH`
+- `yt-dlp` (Python package) for downloads/metadata
+- A working internet connection for provider calls (Shazam/ACRCloud via the Tracklistify CLI)
 
-# Tracklistify
+> The repo includes the `tracklistify` package itself (see `pyproject.toml`), so you do **not** need a separate checkout. Installing the repo in editable mode gives you the `tracklistify` CLI used by the processor.
 
-A powerful and flexible automatic tracklist generator for DJ mixes and audio streams. Identifies tracks in your mixes using multiple providers (Shazam, ACRCloud) and generates formatted playlists with high accuracy.
-
-## Key Features
-
-### 🎵 **Multi-Provider Track Identification**
-
-  - Shazam and ACRCloud integration
-  - Smart provider fallback system
-  - High accuracy with confidence scoring
-  - Support for multiple platforms (YouTube, Mixcloud, SoundCloud)
-
-### 📊 **Versatile Output Formats**
-
-  - JSON with detailed metadata
-  - Markdown formatted tracklists
-  - M3U playlists
-  - CSV and XML exports
-  - Rekordbox compatible format
-
-### 🚀 **Advanced Processing**
-
-  - Automatic format conversion
-  - Batch processing for multiple files
-  - Intelligent caching system
-  - Progress tracking with detailed status
-  - Configurable audio quality settings
-
-### ⚙️ **Robust Architecture**
-
-  - Asynchronous processing
-  - Smart rate limiting
-  - Advanced error recovery
-  - Comprehensive logging system
-  - Docker support
-
-## Requirements
-
-- Python 3.11 or higher
-- ffmpeg
-- git
-- uv (package and project manager)
-
-### Important Note:
-
-- Tracklistify is managed by uv, so you will need to install it.
-- Follow the [uv installation guide](https://docs.astral.sh/uv/getting-started/installation/) for your platform.
-
-## Quick Start
-
-### **1. Installation**
-
-   ```bash
-   # Clone the repository
-   git clone https://github.com/betmoar/tracklistify.git
-   cd tracklistify
-
-   # Install dependencies using uv
-   uv sync
-   ```
-
-### **2. Configuration**
-
-   ```bash
-   # Copy example environment file
-   cp .env.example .env
-   ```
-
-### **3. Basic Usage**
-
-   ```bash
-   # Identify tracks in a file or URL
-   uv run tracklistify <input>
-
-   # Examples:
-   tracklistify path/to/mix.mp3
-   tracklistify https://youtube.com/watch?v=example
-   ```
-
-## Advanced Usage
-
-### Output Formats
-
+## Setup
 ```bash
-# Specify output format
-tracklistify -f json input.mp3    # JSON output
-tracklistify -f markdown input.mp3 # Markdown output
-tracklistify -f m3u input.mp3     # M3U playlist
-tracklistify -f csv input.mp3     # CSV export
-tracklistify -f all input.mp3     # Generate all formats
+# Clone
+git clone https://github.com/betmoar/tracklistify-studio.git
+cd tracklistify-studio
+
+# Create and activate a virtual environment (example for venv)
+python -m venv .venv
+source .venv/bin/activate
+
+# Install Python dependencies
+pip install -r requirements.txt
+pip install -e .  # provides the local `tracklistify` CLI
 ```
 
-### Batch Processing
+## Directory layout
+- `tracklistify.db` – SQLite database with sets and tracks
+- `storage/uploads` – uploaded audio files from the UI
+- `storage/downloads` – temporary downloads created by `yt-dlp`
+- `.tracklistify/output` – JSON emitted by the Tracklistify analyzer (importer reads from here)
+- `.tracklistify/snippets` – audio snippets used by the player
+- `static/` – bundled JS/CSS assets
 
+All folders are created automatically when `config.py` is imported.
+
+## Running the app
 ```bash
-# Process multiple files
-tracklistify -b path/to/folder/*.mp3
-
-# With specific output format
-tracklistify -b -f json path/to/folder/*.mp3
+# From an activated virtualenv
+python app.py
 ```
+The server initializes the database, kicks off the background job worker, imports any JSON already present in `.tracklistify/output`, and serves the UI at `http://127.0.0.1:5000`.
 
-### Additional Options
+### Processing a set
+1. Open the UI and choose **Add to queue**.
+2. Submit a **URL** (YouTube/Mixcloud/SoundCloud/etc.) or upload an **audio file**. Optional metadata (artist, name, event, tags) is stored after import.
+3. The queue view shows phases (`downloading → analyzing → importing`) and live logs from Tracklistify so you can spot provider/ffmpeg errors while a job runs.
+4. Imported sets appear in the sidebar; tracks can be liked/flagged, and problematic entries can be marked for rescan.
 
+### Manual import
+If you generated Tracklistify JSON yourself, drop the files into `.tracklistify/output` and call:
 ```bash
-# Show progress with detailed status
-tracklistify --progress input.mp3
-
-# Specify provider
-tracklistify --provider shazam input.mp3
-
-# Set output directory
-tracklistify -o path/to/output input.mp3
+python - <<'PY'
+from services import importer
+print(importer.import_json_files())
+PY
 ```
+You can also trigger it from the UI via **Rescan → Import JSON** (`POST /api/sets/import`).
 
-## Contributing
+## API hints
+- `GET /api/queue/status` – current job + recent history
+- `POST /api/queue/add` – enqueue a URL or uploaded file
+- `POST /api/resolve_metadata` – quick metadata guess via `yt-dlp`
+- `GET /api/sets`, `GET /api/sets/<id>/tracks` – data for the main views
 
-Contributions are welcome! Please read our [Contributing Guide](docs/CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+The endpoints mirror the UI features and return JSON suitable for automation.
+
+## Troubleshooting
+- **`yt-dlp` or `ffmpeg` missing:** ensure both are installed and reachable on `PATH`. Download/analysis will fail otherwise.
+- **Analyzer exits with errors:** check the job log in the queue view; if Tracklistify aborted, clear broken downloads and re-run the job after fixing the dependency/config issue.
+- **No sets imported:** confirm `.tracklistify/output` contains JSON and that `services/importer.py` hasn’t already deduplicated the same `source_file` path. Delete/move stale files after successful imports to avoid reprocessing.
+- **Database location:** `tracklistify.db` lives in the repo root. Delete it to reset the library; it will be recreated on next start.
+
+## Development notes
+- Tailwind/Alpine templates live in `templates/` with component includes under `templates/components/`.
+- Background work runs inside the Flask process; `JobManager` spawns a single worker thread at import time (`job_manager.manager`).
+- Tests can be added under `tests/` and executed with `pytest` once dependencies are installed.
 
 ## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT – see [LICENSE](LICENSE).
