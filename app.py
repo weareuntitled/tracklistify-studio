@@ -1,6 +1,6 @@
 import os
 import json
-from flask import Flask, jsonify, request, render_template, send_from_directory, session
+from flask import Flask, jsonify, request, render_template, send_from_directory, session, redirect
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from functools import lru_cache
@@ -27,6 +27,38 @@ def cached_resolve_audio(query):
 def index():
     return render_template("index.html")
 
+
+@app.route("/login")
+def login_page():
+    if "user_id" in session:
+        return redirect("/profile")
+    return render_template("login.html")
+
+
+@app.route("/register")
+def register_page():
+    if "user_id" in session:
+        return redirect("/profile")
+    return render_template("register.html")
+
+
+@app.route("/profile")
+def profile_page():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    user_collections = database.get_all_sets()
+    liked_tracks = database.get_liked_tracks()
+    stats = database.get_dashboard_stats()
+
+    return render_template(
+        "profile.html",
+        username=session.get("username"),
+        collections=user_collections,
+        liked_tracks=liked_tracks,
+        stats=stats,
+    )
+
 # --- API: Sets & Tracks ---
 @app.route("/api/sets")
 def list_sets():
@@ -34,7 +66,7 @@ def list_sets():
 
 @app.route("/api/sets/<int:sid>/tracks")
 def list_tracks(sid):
-    return jsonify(database.get_tracks_by_set(sid))
+    return jsonify(database.get_tracks_by_set_with_relations(sid))
 
 @app.route("/api/sets/<int:sid>/rename", methods=["POST"])
 def rename_set(sid):
@@ -70,6 +102,28 @@ def like_track(tid):
 @app.route("/api/tracks/likes")
 def liked_tracks():
     return jsonify(database.get_liked_tracks())
+
+@app.route("/api/tracks/<int:tid>/purchase", methods=["POST"])
+def purchase_track(tid):
+    data = request.get_json(force=True)
+    purchased = 1 if data.get("purchased") else 0
+    database.toggle_track_purchase(tid, purchased)
+    return jsonify({"ok": True})
+
+@app.route("/api/tracks/purchases")
+def purchased_tracks():
+    return jsonify(database.get_purchased_tracks())
+
+@app.route("/api/producers/<int:pid>/like", methods=["POST"])
+def like_producer(pid):
+    data = request.get_json(force=True)
+    liked = 1 if data.get("liked") else 0
+    database.toggle_producer_like(pid, liked)
+    return jsonify({"ok": True})
+
+@app.route("/api/producers/likes")
+def liked_producers():
+    return jsonify(database.get_favorite_producers())
 
 @app.route("/api/tracks/<int:tid>/flag", methods=["POST"])
 def flag_track(tid):

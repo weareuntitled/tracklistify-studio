@@ -22,6 +22,7 @@
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Track</th>
                         <th class="w-20 px-2 py-3 text-right text-xs font-bold text-gray-400 uppercase">Conf</th>
                         <th class="w-40 px-2 py-3 text-center text-xs font-bold text-gray-400 uppercase">Shops</th>
+                        <th class="w-20 px-2 py-3 text-center text-xs font-bold text-gray-400 uppercase">Gekauft</th>
                         <th class="w-12 px-2 py-3 text-center text-xs font-bold text-gray-400 uppercase">Fav</th>
                     </tr>
                 </thead>
@@ -67,6 +68,14 @@
 
                             <td class="px-2 py-3 text-right"><span class="text-[10px] font-bold text-gray-400" :class="getConfColor(track.confidence)" x-text="formatConf(track.confidence)"></span></td>
                             <td class="px-2 py-3 text-center"><div class="flex justify-center gap-2 opacity-40 group-hover:opacity-100 transition-opacity"><a :href="getSearchLink(track, 'youtube')" target="_blank" class="hover:text-red-600 text-gray-400"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg></a><a :href="getSearchLink(track, 'beatport')" target="_blank" class="hover:text-green-500 text-gray-400"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm6.3 14.4h-3.6v-4.8h-5.4v4.8h-3.6v-9.6h12.6v9.6z"/></svg></a></div></td>
+                            <td class="px-2 py-3 text-center">
+                                <button @click.stop="togglePurchase(track)"
+                                        class="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-colors border"
+                                        :class="track.purchased ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-white text-gray-400 border-gray-200 hover:border-emerald-200 hover:text-emerald-600'">
+                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M7 4a3 3 0 0 1 6 0h4a1 1 0 0 1 .98 1.198l-1.5 7A1 1 0 0 1 15.5 13H8.7l-.2 1h8a1 1 0 1 1 0 2H7a1 1 0 0 1-.98-1.198l1-5A1 1 0 0 1 8 8h6.28l.24-1H7a1 1 0 0 1 0-2h.06A3.001 3.001 0 0 1 7 4Z"/></svg>
+                                    <span x-text="track.purchased ? 'Gekauft' : 'Merken'"></span>
+                                </button>
+                            </td>
                             <td class="px-2 py-3 text-center"><button @click.stop="toggleLike(track)" class="transform active:scale-110 transition-transform text-gray-300 hover:text-pink-500" :class="track.liked ? 'text-pink-500' : ''"><svg class="w-5 h-5" :fill="track.liked ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg></button></td>
 
                         </tr>
