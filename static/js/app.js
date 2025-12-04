@@ -180,6 +180,8 @@ document.addEventListener('alpine:init', () => {
         // QUEUE & JOBS
         // =====================================================================
         async addToQueue(type) {
+            if (!this.ensureAuthenticated()) return;
+
             const fd = new FormData();
             fd.append('type', type);
             
@@ -206,7 +208,8 @@ document.addEventListener('alpine:init', () => {
             this.ui.showAddModal = false;
             this.showQueueView();
 
-            await fetch('/api/queue/add', { method: 'POST', body: fd });
+            const res = await fetch('/api/queue/add', { method: 'POST', body: fd });
+            if (res.status === 401) return this.ensureAuthenticated();
 
             // UI Reset
             this.inputs.url = '';
@@ -623,6 +626,8 @@ document.addEventListener('alpine:init', () => {
                 if (res.ok) {
                     const data = await res.json();
                     if (data.ok) this.auth.username = data.username;
+                } else if (res.status === 401) {
+                    this.auth.username = null;
                 }
             } catch(e) {}
         },
@@ -648,8 +653,17 @@ document.addEventListener('alpine:init', () => {
             this.auth.username = null;
             this.auth.dropdownOpen = false;
         },
+
+        ensureAuthenticated() {
+            if (this.auth.username) return true;
+            const next = encodeURIComponent(window.location.pathname + window.location.search);
+            window.location.href = `/login?next=${next}`;
+            return false;
+        },
         
         async toggleLike(track) {
+            if (!this.ensureAuthenticated()) return;
+
             track.liked = !track.liked;
             // Update Local List
             if (this.currentView === 'likes' && !track.liked) {
@@ -700,19 +714,23 @@ document.addEventListener('alpine:init', () => {
         },
         
         async toggleFlag(track) {
+            if (!this.ensureAuthenticated()) return;
+
             const newFlag = track.flag === 3 ? 0 : 3;
             track.flag = newFlag;
             
-            await fetch(`/api/tracks/${track.id}/flag`, { 
-                method: 'POST', 
-                body: JSON.stringify({flag: newFlag}) 
-            });
+            await fetch(`/api/tracks/${track.id}/flag`, {
+                method: 'POST',
+                body: JSON.stringify({flag: newFlag})
+            }).then(res => { if (res.status === 401) this.ensureAuthenticated(); });
             this.fetchRescan();
         },
-        
+
         async runRescan() {
+            if (!this.ensureAuthenticated()) return;
+
             if(!confirm("Alle markierten Tracks neu verarbeiten?")) return;
-            await fetch('/api/tracks/rescan_run', { method: 'POST' });
+            await fetch('/api/tracks/rescan_run', { method: 'POST' }).then(res => { if (res.status === 401) this.ensureAuthenticated(); });
             this.fetchRescan();
         },
         
