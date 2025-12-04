@@ -11,14 +11,17 @@ document.addEventListener('alpine:init', () => {
         likedTracks: [], 
         rescanCandidates: [],
         
-        dashboardStats: { 
-            total_sets: 0, 
-            total_tracks: 0, 
-            total_likes: 0, 
-            discovery_rate: 0, 
-            top_liked_artists: [], 
-            top_sets: [], 
-            recent_sets: [] 
+        dashboardStats: {
+            total_sets: 0,
+            total_tracks: 0,
+            total_likes: 0,
+            discovery_rate: 0,
+            top_artists: [],
+            top_liked_artists: [],
+            top_producers: [],
+            top_djs: [],
+            top_sets: [],
+            recent_sets: []
         },
         
         // =====================================================================

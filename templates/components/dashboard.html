@@ -64,6 +64,64 @@
                     </div>
                 </div>
             </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                        <h3 class="font-bold text-gray-800">My Top Producers</h3>
+                        <span class="text-[10px] text-gray-400 uppercase tracking-wide">Usage</span>
+                    </div>
+                    <div class="divide-y divide-gray-50">
+                        <template x-for="(producer, idx) in dashboardStats.top_producers" :key="idx">
+                            <div class="px-6 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden text-xs font-semibold text-gray-600">
+                                        <template x-if="producer.avatar_url">
+                                            <img :src="producer.avatar_url" :alt="producer.name" class="w-full h-full object-cover" />
+                                        </template>
+                                        <template x-if="!producer.avatar_url">
+                                            <span x-text="(producer.name || '?').charAt(0).toUpperCase()"></span>
+                                        </template>
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-medium text-gray-900" x-text="producer.name"></span>
+                                        <span class="text-[10px] text-gray-400" x-text="producer.usage_count ? `${producer.usage_count} uses` : '—'"></span>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full" x-text="producer.usage_count ?? '—'"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                        <h3 class="font-bold text-gray-800">My Top DJs</h3>
+                        <span class="text-[10px] text-gray-400 uppercase tracking-wide">Usage</span>
+                    </div>
+                    <div class="divide-y divide-gray-50">
+                        <template x-for="(dj, idx) in dashboardStats.top_djs" :key="idx">
+                            <div class="px-6 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden text-xs font-semibold text-gray-600">
+                                        <template x-if="dj.avatar_url">
+                                            <img :src="dj.avatar_url" :alt="dj.name" class="w-full h-full object-cover" />
+                                        </template>
+                                        <template x-if="!dj.avatar_url">
+                                            <span x-text="(dj.name || '?').charAt(0).toUpperCase()"></span>
+                                        </template>
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-medium text-gray-900" x-text="dj.name"></span>
+                                        <span class="text-[10px] text-gray-400" x-text="dj.usage_count ? `${dj.usage_count} uses` : '—'"></span>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full" x-text="dj.usage_count ?? '—'"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

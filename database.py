@@ -176,6 +176,42 @@ def delete_set(set_id):
 def get_dashboard_stats():
     conn = get_conn()
     cur = conn.cursor()
+
+    def table_exists(name):
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (name,))
+        return cur.fetchone() is not None
+
+    def get_top_entities(table_name, limit=8):
+        if not table_exists(table_name):
+            return []
+
+        cur.execute(f"PRAGMA table_info({table_name})")
+        cols = {row[1] for row in cur.fetchall()}
+
+        name_col_candidates = ("name", "display_name", "artist_name", "full_name")
+        avatar_col_candidates = ("avatar_url", "image_url", "avatar", "profile_image")
+        usage_col_candidates = ("usage_count", "usage_frequency", "uses", "count", "frequency")
+
+        name_col = next((c for c in name_col_candidates if c in cols), None)
+        avatar_col = next((c for c in avatar_col_candidates if c in cols), None)
+        usage_col = next((c for c in usage_col_candidates if c in cols), None)
+
+        if not name_col:
+            return []
+
+        select_parts = [f"{name_col} as name"]
+        if avatar_col:
+            select_parts.append(f"{avatar_col} as avatar_url")
+        if usage_col:
+            select_parts.append(f"{usage_col} as usage_count")
+
+        order_clause = f" ORDER BY {usage_col} DESC" if usage_col else ""
+        cur.execute(
+            f"SELECT {', '.join(select_parts)} FROM {table_name}{order_clause} LIMIT ?",
+            (limit,),
+        )
+        return [dict(r) for r in cur.fetchall()]
+
     cur.execute("SELECT COUNT(*) FROM sets")
     total_sets = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM tracks")
@@ -192,7 +228,19 @@ def get_dashboard_stats():
     top_sets = [dict(r) for r in cur.fetchall()]
     cur.execute("SELECT id, name, created_at FROM sets ORDER BY created_at DESC LIMIT 5")
     recent_sets = [dict(r) for r in cur.fetchall()]
+
+    top_producers = get_top_entities("enriched_producers")
+    top_djs = get_top_entities("enriched_djs")
     conn.close()
-    return {"total_sets": total_sets, "total_tracks": total_tracks, "total_likes": total_likes, 
-            "discovery_rate": round((total_likes/total_tracks*100),1) if total_tracks else 0,
-            "top_liked_artists": top_artists, "top_sets": top_sets, "recent_sets": recent_sets}
+    return {
+        "total_sets": total_sets,
+        "total_tracks": total_tracks,
+        "total_likes": total_likes,
+        "discovery_rate": round((total_likes / total_tracks * 100), 1) if total_tracks else 0,
+        "top_liked_artists": top_artists,
+        "top_artists": top_artists,
+        "top_producers": top_producers,
+        "top_djs": top_djs,
+        "top_sets": top_sets,
+        "recent_sets": recent_sets,
+    }
