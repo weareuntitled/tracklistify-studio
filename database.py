@@ -110,6 +110,28 @@ def init_db():
         """
     )
 
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS track_purchases (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            track_id INTEGER UNIQUE,
+            purchased_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS producer_likes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            producer_id INTEGER UNIQUE,
+            liked_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (producer_id) REFERENCES producers(id) ON DELETE CASCADE
+        )
+        """
+    )
+
     cur.execute("""
         CREATE TABLE IF NOT EXISTS beatport_profiles (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -387,9 +409,70 @@ def get_liked_tracks():
     conn.close()
     return rows
 
+def get_purchased_tracks():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT t.*, s.name AS set_name, p.name AS producer_name, l.name AS label_name, tp.purchased_at
+        FROM track_purchases tp
+        JOIN tracks t ON tp.track_id = t.id
+        JOIN sets s ON t.set_id = s.id
+        LEFT JOIN producers p ON t.producer_id = p.id
+        LEFT JOIN labels l ON t.label_id = l.id
+        ORDER BY tp.purchased_at DESC
+        """
+    )
+    rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
+    return rows
+
 def toggle_track_like(track_id, liked_status):
     conn = get_conn()
     conn.execute("UPDATE tracks SET liked = ? WHERE id = ?", (liked_status, track_id))
+    conn.commit()
+    conn.close()
+
+def toggle_track_purchase(track_id, purchased_status):
+    conn = get_conn()
+    cur = conn.cursor()
+    if purchased_status:
+        cur.execute(
+            "INSERT OR IGNORE INTO track_purchases (track_id, purchased_at) VALUES (?, datetime('now'))",
+            (track_id,),
+        )
+    else:
+        cur.execute("DELETE FROM track_purchases WHERE track_id = ?", (track_id,))
+
+    cur.execute("UPDATE tracks SET purchased = ? WHERE id = ?", (1 if purchased_status else 0, track_id))
+    conn.commit()
+    conn.close()
+
+def get_favorite_producers():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT p.*, pl.liked_at
+        FROM producer_likes pl
+        JOIN producers p ON pl.producer_id = p.id
+        ORDER BY pl.liked_at DESC
+        """
+    )
+    rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
+    return rows
+
+def toggle_producer_like(producer_id, liked_status):
+    conn = get_conn()
+    cur = conn.cursor()
+    if liked_status:
+        cur.execute(
+            "INSERT OR IGNORE INTO producer_likes (producer_id, liked_at) VALUES (?, datetime('now'))",
+            (producer_id,),
+        )
+    else:
+        cur.execute("DELETE FROM producer_likes WHERE producer_id = ?", (producer_id,))
     conn.commit()
     conn.close()
 
