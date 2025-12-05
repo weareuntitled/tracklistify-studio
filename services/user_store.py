@@ -1,12 +1,16 @@
+import os
 import uuid
 from typing import List, Optional
 
+from dotenv import load_dotenv
 from pydantic import BaseModel, EmailStr, Field, ValidationError, field_validator
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from config import USERS_JSON_PATH
 from services.atomic_storage import AtomicJSONStorage
 
+# Load environment variables (.env) immediately
+load_dotenv()
 
 class User(BaseModel):
     id: str
@@ -196,7 +200,17 @@ class UserStore:
         return True
 
     def ensure_default_admin(self) -> User:
-        existing = self.get_by_email("admin")
+        # Lade Credentials aus .env oder nutze Fallback (nur lokal sicher)
+        email = os.getenv("ADMIN_EMAIL", "admin@tracklistify.com")
+        password = os.getenv("ADMIN_PASSWORD", "123456")
+
+        # Prüfe, ob genau dieser Admin schon da ist
+        existing = self.get_by_email(email)
         if existing:
             return existing
-        return self.add_user("admin", "123456", name="Admin", is_admin=True)
+
+        try:
+            return self.add_user(email, password, name="Admin", is_admin=True)
+        except ValueError:
+            # Falls add_user fehlschlägt, weil User existiert (Race Condition), holen wir ihn
+            return self.get_by_email(email)
