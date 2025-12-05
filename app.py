@@ -141,8 +141,8 @@ def profile_page():
 
 # --- API: Auth ---
 
-@app.route("/api/auth/register", methods=["POST"])
-def register():
+@app.route("/api/auth/register", methods=["POST"], endpoint="api_auth_register")
+def register_api():
     payload = parse_body(RegisterPayload)
     try:
         user = user_store.add_user(payload.email, payload.password, name=payload.name)
