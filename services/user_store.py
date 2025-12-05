@@ -201,8 +201,18 @@ class UserStore:
 
     def ensure_default_admin(self) -> User:
         # Lade Credentials aus .env oder nutze Fallback (nur lokal sicher)
-        email = os.getenv("ADMIN_EMAIL", "admin@tracklistify.com")
-        password = os.getenv("ADMIN_PASSWORD", "123456")
+        raw_email = os.getenv("ADMIN_EMAIL")
+        raw_password = os.getenv("ADMIN_PASSWORD")
+
+        class _AdminEmailModel(BaseModel):
+            email: EmailStr
+
+        try:
+            email = _AdminEmailModel(email=raw_email).email if raw_email else "admin@tracklistify.com"
+        except ValidationError:
+            email = "admin@tracklistify.com"
+
+        password = raw_password.strip() if raw_password and raw_password.strip() else "123456"
 
         # Prüfe, ob genau dieser Admin schon da ist
         existing = self.get_by_email(email)
