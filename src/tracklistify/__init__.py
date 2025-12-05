@@ -7,34 +7,37 @@ information is retrieved from the _version.py file if available, otherwise it fa
 back to the package metadata.
 """
 
+from importlib import metadata as importlib_metadata
+from importlib.metadata import PackageNotFoundError
+
 # Local/package imports
 from .utils.logger import get_logger
 
 # Configure package-level logger
 package_logger = get_logger(__name__)
 
+__version__ = "0.0.0"
+__title__ = "tracklistify"
+__author__ = ""
+__license__ = ""
+
 
 def get_metadata():
-    """
-    Extract version and metadata from package distribution.
+    """Extract version and metadata from package distribution when available."""
 
-    This function is used in the generated `__init__.py` to extract the package
-    version and metadata from the distribution. It is used as a fallback when the
-    `importlib.metadata` module is not available.
+    global __version__, __title__, __author__, __license__
 
-    Returns
-    -------
-    list
-        A list of strings containing the version, title, author, and license of
-        the package.
-    """
-    from importlib.metadata import metadata
+    try:
+        _meta = importlib_metadata.metadata("tracklistify")
+    except PackageNotFoundError:
+        return ["__version__", "__title__", "__author__", "__license__"]
 
-    _meta = metadata("tracklistify")
+    __version__ = _meta.get("Version", __version__)
+    __title__ = _meta.get("Name", __title__)
+    __author__ = _meta.get("Author", __author__)
+    __license__ = _meta.get("License", __license__)
 
-    __all__ = ["__version__", "__title__", "__author__", "__license__"]
-
-    return __all__
+    return ["__version__", "__title__", "__author__", "__license__"]
 
 
 __all__ = get_metadata()

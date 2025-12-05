@@ -79,6 +79,7 @@ addopts = "-ra -q -v"
 testpaths = [
     "tests"
 ]
+pythonpath = ["src", "."]
 
 [tool.coverage.run]
 # Only measure our package code, not tests

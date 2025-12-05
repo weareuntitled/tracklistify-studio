@@ -1,7 +1,12 @@
 import sqlite3
-from config import DB_PATH
-import feedparser
 import urllib.parse
+
+from config import DB_PATH
+
+try:
+    import feedparser
+except ModuleNotFoundError:  # pragma: no cover - handled gracefully in fetch_youtube_feed
+    feedparser = None
 
 def get_conn():
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
@@ -839,6 +844,9 @@ def fetch_youtube_feed(artists, max_items=6):
     items = []
     seen = set()
     if not artists:
+        return items
+
+    if feedparser is None:
         return items
 
     for artist in artists:
