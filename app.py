@@ -1,6 +1,6 @@
 import os
 from functools import lru_cache
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import yt_dlp  # WICHTIG: pip install yt-dlp
 from flask import (
@@ -84,6 +84,47 @@ def parse_body(model_cls):
         return model_cls.model_validate(data)
     except ValidationError as exc:
         raise BadRequest(exc.errors())
+
+
+def parse_profile_payload() -> ProfileUpdatePayload:
+    """Parses profile update payload from JSON or multipart form data."""
+    content_type = request.content_type or ""
+
+    if "multipart/form-data" in content_type:
+        avatar_url: Optional[str] = None
+        avatar_file = request.files.get("avatar")
+        if avatar_file and avatar_file.filename:
+            filename = secure_filename(avatar_file.filename)
+            avatar_dir = os.path.join(STATIC_DIR, "avatars")
+            os.makedirs(avatar_dir, exist_ok=True)
+            save_path = safe_path(avatar_dir, filename)
+            avatar_file.save(save_path)
+            avatar_url = f"/static/avatars/{filename}"
+
+        form_data: Dict[str, Optional[str]] = {
+            "name": request.form.get("display_name") or request.form.get("name"),
+            "dj_name": request.form.get("dj_name"),
+            "soundcloud_url": request.form.get("soundcloud_url"),
+        }
+
+        if avatar_url is not None:
+            form_data["avatar_url"] = avatar_url
+
+        normalized: Dict[str, Optional[str]] = {}
+        for key, value in form_data.items():
+            if value is None:
+                continue
+            if isinstance(value, str):
+                value = value.strip()
+                if value == "":
+                    continue
+            normalized[key] = value
+        try:
+            return ProfileUpdatePayload.model_validate(normalized)
+        except ValidationError as exc:
+            raise BadRequest(exc.errors())
+
+    return parse_body(ProfileUpdatePayload)
 
 def safe_path(base: str, *paths: str) -> str:
     """Prevents directory traversal attacks."""
@@ -182,10 +223,13 @@ def profile():
         return error_response
         
     if request.method == "POST":
-        payload = parse_body(ProfileUpdatePayload)
+        payload = parse_profile_payload()
         updated_user = user_store.update_user(user.id, payload.model_dump(exclude_unset=True))
         if updated_user:
-            return jsonify({"ok": True, "user": updated_user.model_dump()})
+            body = {"ok": True, "user": updated_user.model_dump()}
+            if updated_user.avatar_url:
+                body["avatar_url"] = updated_user.avatar_url
+            return jsonify(body)
         return jsonify({"ok": False, "error": "Update failed"}), 500
         
     return jsonify({"ok": True, "user": user.model_dump()})
