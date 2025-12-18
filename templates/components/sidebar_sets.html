@@ -44,7 +44,8 @@
     </div>
 </aside>
 
-<div x-show="ui.contextMenu.show" 
+<div x-show="ui.contextMenu.show"
+     x-ref="contextMenu"
      @click.away="closeContextMenu()"
      x-cloak
      class="fixed bg-white border border-gray-200 shadow-xl rounded-xl py-1 w-48 z-50 overflow-hidden animate-row"

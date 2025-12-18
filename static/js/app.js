@@ -536,6 +536,7 @@ document.addEventListener('alpine:init', () => {
         
         async togglePlay(track) {
             const player = this.$refs.player;
+            if (!player) return;
             player.volume = this.audio.volume;
 
             if (this.ui.playingId === track.id) {
@@ -545,7 +546,10 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.ui.loadingId = track.id;
+            this.audio.currentTime = 0;
+            this.audio.duration = 0;
             this.audio.progressPercent = 0;
+            this.audio.paused = true;
             this.activeTrack = track;
 
             let url = track.streamUrl;
@@ -577,7 +581,7 @@ document.addEventListener('alpine:init', () => {
         
         togglePlayPauseGlobal() {
             const player = this.$refs.player;
-            if (!this.activeTrack) return;
+            if (!player || !this.activeTrack) return;
             if (player.paused) { player.play(); this.audio.paused = false; }
             else { player.pause(); this.audio.paused = true; }
         },

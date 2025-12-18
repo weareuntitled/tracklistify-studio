@@ -40,7 +40,10 @@
     }
 </style>
 
-<div class="min-h-screen flex flex-col bg-gray-50" x-init="currentView = 'sets'">
+<div class="min-h-screen flex flex-col bg-gray-50" x-init="currentView = 'sets'"
+     @keydown.window.escape="closeContextMenu()"
+     @mousedown.window="handleContextMenuOutside($event)"
+     @resize.window="positionContextMenu()">
     {% include "components/header.html" %}
 
     <div class="flex-1 flex overflow-hidden">
@@ -51,6 +54,8 @@
 
     {% include "components/footer_player.html" %}
     {% include "components/modals.html" %}
+
+    <audio x-ref="player" @loadedmetadata="updateProgress" @timeupdate="updateProgress" @ended="onAudioEnded" @pause="onAudioPaused" @play="onAudioPlaying" @error="onAudioError"></audio>
 </div>
 
 <div class="toast-stack">
@@ -61,6 +66,4 @@
         </div>
     </template>
 </div>
-
-<audio x-ref="player" @timeupdate="updateProgress" @ended="onAudioEnded" @pause="onAudioPaused" @play="onAudioPlaying" @error="onAudioError"></audio>
 {% endblock %}
