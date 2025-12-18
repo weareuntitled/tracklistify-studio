@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de" class="h-full bg-white">
+<html lang="de" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,75 +20,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
     <script src="/static/js/app.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --swiss-bg: #ffffff;
-            --swiss-ink: #0b0b0b;
-            --swiss-muted: #e5e7eb;
-            --swiss-accent: #ff5500;
-            --swiss-radius: 0;
-            --swiss-font: 'Inter', 'Helvetica Neue', Arial, sans-serif;
-        }
-
-        body {
-            font-family: var(--swiss-font);
-            background: var(--swiss-bg);
-            color: var(--swiss-ink);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            line-height: 1.5;
-        }
-
-        h1, h2, h3, h4, h5, h6 { font-weight: 700; }
-        [x-cloak] { display: none !important; }
-        *, *:focus { border-radius: var(--swiss-radius) !important; box-shadow: none !important; }
-
-        .swiss-shell { display: flex; flex: 1; min-height: 100vh; border: 2px solid var(--swiss-ink); background: var(--swiss-bg); box-shadow: 18px 18px 0 var(--swiss-muted); }
-        .swiss-sidebar { width: 18rem; border-right: 2px solid var(--swiss-ink); display: flex; flex-direction: column; background: var(--swiss-bg); }
-        .swiss-section { border-bottom: 1px solid var(--swiss-muted); padding: 1.25rem; display: grid; gap: 0.75rem; }
-        .swiss-header { border-bottom: 2px solid var(--swiss-ink); padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center; background: var(--swiss-bg); gap: 1rem; }
-        .swiss-brand { display: grid; gap: 0.2rem; line-height: 1; }
-        .swiss-brand span:first-child { font-size: 0.7rem; letter-spacing: 0.24em; }
-        .swiss-brand span:last-child { font-size: 0.95rem; font-weight: 800; }
-
-        .swiss-input, .swiss-select { width: 100%; padding: 0.65rem 0.75rem; border: 1.5px solid var(--swiss-muted); background: var(--swiss-bg); color: var(--swiss-ink); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; transition: border-color 0.2s ease, background 0.2s ease; }
-        .swiss-input:focus-visible, .swiss-select:focus-visible { border-color: var(--swiss-accent); outline: none; background: color-mix(in srgb, var(--swiss-bg) 90%, var(--swiss-accent)); }
-
-        .swiss-button, button, .nav-button { border: 1.5px solid var(--swiss-ink); background: var(--swiss-bg); color: var(--swiss-ink); font-weight: 800; letter-spacing: 0.08em; padding: 0.65rem 0.85rem; transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease, border-color 0.2s ease; }
-        .swiss-button:hover, button:hover, .nav-button:hover { background: var(--swiss-accent); color: var(--swiss-bg); border-color: var(--swiss-ink); }
-        .swiss-button:active, button:active, .nav-button:active { transform: translateY(1px); background: var(--swiss-ink); color: var(--swiss-bg); }
-        .nav-button { display: inline-flex; align-items: center; gap: 0.5rem; }
-
-        .accent-hover:hover { background: color-mix(in srgb, var(--swiss-bg) 80%, var(--swiss-accent)); }
-        .contrast-hover:hover { background: var(--swiss-ink); color: var(--swiss-bg); }
-        .border { border-color: var(--swiss-ink) !important; }
-        .border-b, .border-t, .border-r, .border-l { border-color: var(--swiss-muted) !important; }
-        .divide-swiss > :not([hidden]) ~ :not([hidden]) { border-top: 1px solid var(--swiss-muted); }
-
-        .contrast-active { background: var(--swiss-ink); color: var(--swiss-bg) !important; border-color: var(--swiss-ink); }
-        .contrast-active svg { color: var(--swiss-bg); }
-
-        .pill { border: 1px solid var(--swiss-ink); padding: 0.2rem 0.5rem; font-size: 0.7rem; }
-        .muted { color: color-mix(in srgb, var(--swiss-ink) 60%, var(--swiss-muted)); }
-
-        .grid-icon span { width: 6px; height: 6px; background: var(--swiss-ink); display: block; }
-
-        .alert-text { color: var(--swiss-accent); }
-
-        .tile { border: 1.5px solid var(--swiss-muted); padding: 1rem; background: var(--swiss-bg); display: grid; gap: 0.35rem; }
-        .tile strong { font-size: 0.75rem; letter-spacing: 0.14em; }
-        .tile .value { font-size: 1.4rem; font-weight: 800; }
-
-        .table-grid { width: 100%; border-collapse: collapse; }
-        .table-grid th, .table-grid td { border: 1px solid var(--swiss-muted); padding: 0.75rem 0.5rem; text-align: left; }
-        .table-grid thead { background: color-mix(in srgb, var(--swiss-bg) 92%, var(--swiss-muted)); }
-        .table-grid tbody tr:hover { background: color-mix(in srgb, var(--swiss-bg) 92%, var(--swiss-accent)); }
-
-        a { color: var(--swiss-ink); font-weight: 700; letter-spacing: 0.08em; }
-        a:hover { color: var(--swiss-accent); }
-
-        .avatar-ring { border-radius: 9999px !important; border: 2px solid var(--swiss-ink); }
-    </style>
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body class="h-full flex flex-col" x-data="tracklistify()">
 <div class="swiss-shell">
