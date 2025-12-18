@@ -13,6 +13,9 @@ document.addEventListener('alpine:init', () => {
         favoriteProducers: [],
         rescanCandidates: [],
         youtubeFeed: [],
+        folders: [],
+        draggingSet: null,
+        folderHoverId: null,
 
         auth: {
             user: null,
@@ -106,6 +109,7 @@ document.addEventListener('alpine:init', () => {
             this.fetchDashboard();
             this.fetchProfile();
             this.fetchYoutube();
+            this.loadFolders();
 
             // Volume wiederherstellen
             const vol = localStorage.getItem('tracklistify_volume');
@@ -581,7 +585,12 @@ document.addEventListener('alpine:init', () => {
         // TRACK ACTIONS & API FETCHERS
         // =====================================================================
         async fetchDashboard() { const res = await fetch('/api/dashboard'); this.dashboardStats = await res.json(); },
-        async fetchSets() { const res = await fetch('/api/sets'); this.sets = await res.json(); this.filteredSets = this.sets; },
+        async fetchSets() { 
+            const res = await fetch('/api/sets'); 
+            this.sets = await res.json(); 
+            this.filteredSets = this.sets; 
+            this.syncFolderAssignments(); 
+        },
         async fetchLikes() { const res = await fetch('/api/tracks/likes'); this.likedTracks = await res.json(); },
         async fetchPurchases() { const res = await fetch('/api/tracks/purchases'); this.purchasedTracks = await res.json(); },
         async fetchProducerLikes() { const res = await fetch('/api/producers/likes'); this.favoriteProducers = await res.json(); },
@@ -760,6 +769,136 @@ document.addEventListener('alpine:init', () => {
             });
 
             this.fetchPurchases();
+        },
+
+        // =====================================================================
+        // FOLDER MANAGEMENT
+        // =====================================================================
+        async loadFolders() {
+            try {
+                const res = await fetch('/api/folders');
+                if (res.ok) {
+                    const data = await res.json();
+                    this.folders = Array.isArray(data) ? data : (data.folders || []);
+                    this.ensureFolderStructure();
+                    this.syncFolderAssignments();
+                    this.persistFoldersLocally();
+                    return;
+                }
+            } catch (e) {}
+
+            const cached = localStorage.getItem('tracklistify_folders');
+            this.folders = cached ? JSON.parse(cached) : [];
+            this.ensureFolderStructure();
+            this.syncFolderAssignments();
+        },
+
+        ensureFolderStructure() {
+            this.folders = (this.folders || []).map(folder => ({
+                id: folder.id ?? `local-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                name: folder.name || 'Ordner',
+                sets: (folder.sets || []).map(item => typeof item === 'object' ? item.id : item)
+            }));
+        },
+
+        persistFoldersLocally() {
+            try {
+                localStorage.setItem('tracklistify_folders', JSON.stringify(this.folders));
+            } catch (e) {}
+        },
+
+        syncFolderAssignments() {
+            if (!this.sets || !this.sets.length) return;
+
+            const setMap = new Map(this.sets.map(s => [s.id, s]));
+            this.sets.forEach(set => set.folder_id = null);
+
+            (this.folders || []).forEach(folder => {
+                folder.sets = (folder.sets || []).map(item => typeof item === 'object' ? item.id : item).filter(id => setMap.has(id));
+                folder.sets.forEach(setId => {
+                    const target = setMap.get(setId);
+                    if (target) target.folder_id = folder.id;
+                });
+            });
+
+            this.persistFoldersLocally();
+        },
+
+        async createFolder() {
+            const defaultName = `Ordner ${this.folders.length + 1}`;
+            const name = prompt('Ordnername', defaultName) || defaultName;
+            const optimisticFolder = { id: `local-${Date.now()}`, name, sets: [] };
+            let created = optimisticFolder;
+
+            try {
+                const res = await fetch('/api/folders', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ name }) 
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    created = data.folder || data;
+                    created.sets = created.sets || [];
+                }
+            } catch (e) {}
+
+            this.folders = [created, ...this.folders];
+            this.ensureFolderStructure();
+            this.persistFoldersLocally();
+        },
+
+        onDragSet(set, event) {
+            this.draggingSet = set;
+            this.folderHoverId = null;
+            if (event && event.dataTransfer) {
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', set.id);
+            }
+        },
+
+        onDragEnd() {
+            this.draggingSet = null;
+            this.folderHoverId = null;
+        },
+
+        onFolderDragEnter(folder, event) {
+            event.preventDefault();
+            this.folderHoverId = folder.id;
+        },
+
+        onFolderDragLeave(folder) {
+            if (this.folderHoverId === folder.id) this.folderHoverId = null;
+        },
+
+        onFolderDragOver(event) {
+            event.preventDefault();
+        },
+
+        async onDropToFolder(folder, event) {
+            event.preventDefault();
+            const set = this.draggingSet;
+            this.draggingSet = null;
+            this.folderHoverId = null;
+            if (!set) return;
+
+            (this.folders || []).forEach(f => {
+                f.sets = (f.sets || []).filter(id => id !== set.id);
+            });
+
+            folder.sets = folder.sets || [];
+            if (!folder.sets.includes(set.id)) folder.sets.push(set.id);
+            set.folder_id = folder.id;
+
+            try {
+                await fetch(`/api/folders/${folder.id}/sets`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ set_id: set.id }) 
+                });
+            } catch (e) {}
+
+            this.persistFoldersLocally();
         },
 
         isProducerFavorite(producerId) {

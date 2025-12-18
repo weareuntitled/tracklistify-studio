@@ -378,7 +378,7 @@
 </div>
 
 <!-- Add Set Modal -->
-<div x-show="ui.showAddModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center">
+<div x-show="ui.showAddModal" x-cloak class="fixed inset-0 z-[80] flex items-center justify-center">
     <div class="fixed inset-0 bg-black/70" @click="ui.showAddModal = false"></div>
     <div class="bg-white border w-full max-w-lg p-6 space-y-4 z-10">
         <div class="text-sm font-bold">IMPORT SET</div>
@@ -422,7 +422,7 @@
 </div>
 
 <!-- Profile Modal -->
-<div x-show="ui.showProfileModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center">
+<div x-show="ui.showProfileModal" x-cloak class="fixed inset-0 z-[80] flex items-center justify-center">
     <div class="fixed inset-0 bg-black/70" @click="ui.showProfileModal = false"></div>
     <div class="bg-white border w-full max-w-md p-6 space-y-3 z-10">
         <div class="text-sm font-bold">EDIT PROFILE</div>
@@ -444,7 +444,7 @@
 </div>
 
 <!-- Admin Modal -->
-<div x-show="admin.show" x-cloak class="fixed inset-0 z-50 flex items-center justify-center">
+<div x-show="admin.show" x-cloak class="fixed inset-0 z-[80] flex items-center justify-center">
     <div class="fixed inset-0 bg-black/70" @click="admin.show = false"></div>
     <div class="bg-white border w-full max-w-2xl p-6 space-y-4 z-10">
         <div class="flex items-center justify-between text-sm font-bold">
