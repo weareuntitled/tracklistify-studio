@@ -1,22 +1,720 @@
-const debounce = (fn, delay = 200) => {
-    let timeout;
-    return (...args) => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => fn(...args), delay);
-    };
-};
+document.addEventListener('alpine:init', () => {
+    Alpine.data('tracklistify', () => ({
+        // =====================================================================
+        // DATA STORAGE
+        // =====================================================================
+        sets: [], 
+        filteredSets: [], 
+        search: '',
+        activeSet: null, 
+        tracks: [],
+        likedTracks: [],
+        purchasedTracks: [],
+        favoriteProducers: [],
+        rescanCandidates: [],
+        youtubeFeed: [],
+        folders: [],
+        activeFolderId: null,
+        draggingSet: null,
+        folderHoverId: null,
+        trashHover: false,
 
-class API {
-    constructor(base = '/api') {
-        this.base = base;
-    }
+        auth: {
+            user: null,
+            form: { email: '', password: '', name: '' },
+            mode: 'login',
+            error: '',
+            dropdownOpen: false
+        },
+        
+        dashboardStats: {
+            total_sets: 0,
+            total_tracks: 0,
+            total_likes: 0,
+            discovery_rate: 0,
+            top_liked_artists: [],
+            top_artists: [],
+            top_sets: [],
+            recent_sets: [],
+            top_producers: [],
+            top_djs: []
+        },
 
-    async request(path, options = {}) {
-        const url = `${this.base}${path}`;
-        const config = { headers: {}, ...options };
-        if (config.body && !(config.body instanceof FormData)) {
-            config.headers['Content-Type'] = 'application/json';
-        }
+        profile: { display_name: '', dj_name: '', soundcloud_url: '', avatar_url: '' },
+
+        admin: {
+            show: false,
+            users: [],
+            invite: { username: '', password: '', generated: '' }
+        },
+        
+        // =====================================================================
+        // UI STATE
+        // =====================================================================
+        currentView: 'dashboard',
+        queueStatus: { active: null, queue: [], history: [] },
+        
+        // Inputs für Upload Modal
+        inputs: {
+            url: '',
+            file: null,
+            metaName: '',
+            metaArtist: '',
+            metaEvent: '',
+            metaTags: '',
+            is_b2b: false,
+            isLoadingMeta: false
+        },
+        
+        // Inputs für Edit Modal
+        editSetData: { id: null, name: '', artists: '', event: '', is_b2b: false, tags: '' },
+        
+        ui: {
+            showAddModal: false, 
+            showRescanModal: false, 
+            showEditSetModal: false, 
+            showLikes: false,
+            playingId: null, 
+            loadingId: null,
+            hoverTrackId: null,
+            contextMenu: { show: false, x: 0, y: 0, target: null, type: null },
+            uploadTab: 'url'
+        },
+        
+        toasts: [],
+        lastLogLine: '', 
+
+        // =====================================================================
+        // PLAYER & PRELOADER STATE
+        // =====================================================================
+        activeTrack: null,
+        audio: { 
+            currentTime: 0, 
+            duration: 0, 
+            progressPercent: 0, 
+            volume: 0.5, 
+            paused: true 
+        },
+        
+        preloadQueue: [],
+        activePreloads: 0,
+        maxPreloads: 6,
+
+        // =====================================================================
+        // INITIALIZATION
+        // =====================================================================
+        init() {
+            this.fetchSets();
+            this.fetchLikes();
+            this.fetchPurchases();
+            this.fetchProducerLikes();
+            this.fetchRescan();
+            this.fetchDashboard();
+            this.fetchProfile();
+            this.fetchYoutube();
+            this.loadFolders();
+
+            // Volume wiederherstellen
+            const vol = localStorage.getItem('tracklistify_volume');
+            if (vol !== null) this.audio.volume = parseFloat(vol);
+
+            // Globaler Poll Loop (Status Updates)
+            setInterval(() => {
+                this.pollQueue();
+                // Wenn Rescan View offen ist, öfter aktualisieren
+                if (this.currentView === 'rescan' || this.ui.showRescanModal) {
+                    this.fetchRescan();
+                }
+            }, 1500);
+
+            // Suche Watcher
+            this.$watch('search', val => {
+                this.updateFilteredSets();
+            });
+            
+            // Player Init
+            this.$nextTick(() => {
+                if(this.$refs.player) this.$refs.player.volume = this.audio.volume;
+            });
+        },
+
+        // =====================================================================
+        // METADATA PARSING (Server & Client)
+        // =====================================================================
+        
+        // 1. Server: Holt Infos von YouTube/Mixcloud via yt-dlp
+        async fetchUrlMetadata(url) {
+            if (!url || !(url.startsWith('http') || url.startsWith('www'))) return;
+            this.inputs.isLoadingMeta = true;
+            try {
+                const res = await fetch('/api/resolve_metadata', {
+                    method: 'POST',
+                    body: JSON.stringify({ url })
+                });
+                const data = await res.json();
+
+                if (data.ok) {
+                    // Nur überschreiben, wenn Felder leer oder wir sicher sind
+                    if (!this.inputs.metaName) this.inputs.metaName = data.name || '';
+                    if (!this.inputs.metaArtist) this.inputs.metaArtist = data.artist || '';
+                    if (!this.inputs.metaEvent) this.inputs.metaEvent = data.event || '';
+
+                    this.showToast("Infos gefunden", data.name || "Metadaten geladen", "info");
+                } else {
+                    this.showToast("Keine Metadaten", data.error || "Konnte Infos nicht laden", "info");
+                }
+            } catch(e) {
+                console.error(e);
+                this.showToast("Fehler", "Metadaten konnten nicht geladen werden", "error");
+            } finally {
+                this.inputs.isLoadingMeta = false;
+            }
+        },
+
+        // 2. Client: Regex Parser für lokale Dateinamen
+        parseFileMetadata() {
+            if (this.$refs.fileInput && this.$refs.fileInput.files[0]) {
+                const raw = this.$refs.fileInput.files[0].name.replace(/\.[^/.]+$/, "");
+                let clean = raw.replace(/_/g, ' ').replace(/\(.*?\)/g, '').replace(/\[.*?\]/g, '').trim();
+                
+                // Muster: Artist - Title @ Event
+                const parts = clean.split(/\s+-\s+|\s+@\s+|\s+\|\s+/);
+                
+                if (parts.length >= 2) {
+                    this.inputs.metaArtist = parts[0].trim();
+                    this.inputs.metaName = parts[1].trim();
+                    if (parts.length >= 3) this.inputs.metaEvent = parts[2].trim();
+                } else {
+                    this.inputs.metaName = clean;
+                }
+            }
+        },
+
+        // =====================================================================
+        // QUEUE & JOBS
+        // =====================================================================
+        async addToQueue(type) {
+            if (!this.ensureAuthenticated()) return;
+
+            const fd = new FormData();
+            fd.append('type', type);
+            
+            const meta = { 
+                name: this.inputs.metaName, 
+                artist: this.inputs.metaArtist, 
+                event: this.inputs.metaEvent, 
+                tags: this.inputs.metaTags, 
+                is_b2b: this.inputs.is_b2b 
+            };
+            fd.append('metadata', JSON.stringify(meta));
+
+            if (type === 'url') {
+                if (!this.inputs.url) return;
+                fd.append('value', this.inputs.url);
+            } else {
+                const f = this.$refs.fileInput;
+                if (!f.files.length) return;
+                fd.append('file', f.files[0]);
+                f.value = '';
+                this.inputs.file = null;
+            }
+
+            // Direkt Modal schließen und zur Queue springen
+            this.ui.showAddModal = false;
+            this.showQueueView();
+
+            const res = await fetch('/api/queue/add', { method: 'POST', body: fd });
+            if (res.status === 401) return this.ensureAuthenticated();
+
+            // UI Reset
+            this.inputs.url = '';
+            this.inputs.metaName = '';
+            this.inputs.metaArtist = '';
+            this.inputs.metaEvent = '';
+            this.inputs.metaTags = '';
+
+            // Zur Queue wechseln
+            this.pollQueue();
+        },
+
+        async pollQueue() {
+            try {
+                const res = await fetch('/api/queue/status');
+                const status = await res.json();
+
+                // Job fertig geworden?
+                if (this.queueStatus.active && !status.active) {
+                    this.fetchSets(); 
+                    this.fetchDashboard();
+                    this.showToast("Verarbeitung fertig", "Set wurde importiert.", "success");
+                }
+                
+                // Live Log Toasties
+                this.handleLiveLog(status);
+
+                this.queueStatus = status;
+            } catch(e) {}
+        },
+
+        async stopQueue() {
+            try {
+                await fetch('/api/queue/stop', { method: 'POST' });
+                this.showToast("Verarbeitung gestoppt", "Aktiver Job wird abgebrochen.", "info");
+                this.pollQueue();
+            } catch(e) {
+                console.error(e);
+            }
+        },
+
+        // =====================================================================
+        // NAVIGATION & VIEWS
+        // =====================================================================
+        showDashboard() { 
+            this.currentView = 'dashboard'; 
+            this.activeSet = null; 
+            this.fetchDashboard(); 
+        },
+        
+        showQueueView() { 
+            this.currentView = 'queue'; 
+            this.activeSet = null; 
+            this.ui.showLikes = false; 
+        },
+        
+        showRescanView() {
+            this.currentView = 'rescan';
+            this.activeSet = null;
+            this.fetchRescan();
+            this.ui.showLikes = false;
+        },
+
+        showLikesView() {
+            this.currentView = 'likes';
+            this.ui.showLikes = false;
+            this.fetchLikes();
+            this.fetchPurchases();
+            this.fetchProducerLikes();
+        },
+
+        showCollections() {
+            this.currentView = 'collections';
+            this.fetchLikes();
+        },
+
+        showSetView(set) {
+            this.loadSet(set);
+        },
+
+        // =====================================================================
+        // SET MANAGEMENT
+        // =====================================================================
+        async loadSet(setOrId) {
+            const isObject = setOrId && typeof setOrId === 'object';
+            const id = isObject ? setOrId.id : setOrId;
+
+            // Ensure we always have the latest sidebar list (e.g. after DB reset)
+            if (!this.sets.length) {
+                await this.fetchSets();
+            }
+
+            if (isObject) {
+                this.activeSet = setOrId;
+
+                // Ensure the sidebar list contains the set so the active state can be highlighted
+                const existing = this.sets.find(s => s.id === id);
+                if (!existing) {
+                    this.sets = [setOrId, ...this.sets];
+                    this.filteredSets = this.sets;
+                }
+            } else {
+                this.activeSet = this.sets.find(s => s.id === id);
+
+                // If the set is not loaded yet (e.g. opened from dashboard recents), fetch the list first
+                if (!this.activeSet) {
+                    await this.fetchSets();
+                    this.activeSet = this.sets.find(s => s.id === id);
+                }
+            }
+
+            this.currentView = 'sets';
+
+            const res = await fetch(`/api/sets/${id}/tracks`);
+            this.tracks = await res.json();
+            
+            // Turbo anwerfen
+            this.startPreloading();
+        },
+
+        // Context Menu
+        openSetContextMenu(e, set) {
+            this.openContextMenu(e, 'set', set);
+        },
+
+        openFolderContextMenu(e, folder) {
+            this.openContextMenu(e, 'folder', folder);
+        },
+
+        openContextMenu(event, type, target) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.ui.contextMenu.target = target;
+            this.ui.contextMenu.type = type;
+            this.ui.contextMenu.x = event.clientX;
+            this.ui.contextMenu.y = event.clientY;
+            this.ui.contextMenu.show = true;
+
+            this.$nextTick(() => this.positionContextMenu());
+        },
+
+        positionContextMenu() {
+            if (!this.ui.contextMenu.show) return;
+            const menu = this.$refs.contextMenu;
+            if (!menu) return;
+
+            const rect = menu.getBoundingClientRect();
+            const margin = 8;
+            let nextX = this.ui.contextMenu.x;
+            let nextY = this.ui.contextMenu.y;
+
+            if (nextX + rect.width + margin > window.innerWidth) {
+                nextX = Math.max(margin, window.innerWidth - rect.width - margin);
+            }
+            if (nextY + rect.height + margin > window.innerHeight) {
+                nextY = Math.max(margin, window.innerHeight - rect.height - margin);
+            }
+
+            this.ui.contextMenu.x = nextX;
+            this.ui.contextMenu.y = nextY;
+        },
+
+        handleContextMenuOutside(event) {
+            if (!this.ui.contextMenu.show) return;
+            const menu = this.$refs.contextMenu;
+            if (menu && menu.contains(event.target)) return;
+            this.closeContextMenu();
+        },
+
+        closeContextMenu() {
+            this.ui.contextMenu.show = false;
+            this.ui.contextMenu.target = null;
+            this.ui.contextMenu.type = null;
+        },
+
+        // Edit Modal
+        openEditSetModal() {
+            const set = this.ui.contextMenu.target;
+            this.closeContextMenu();
+            if (!set) return;
+            this.editSetData = { 
+                id: set.id, 
+                name: set.name, 
+                artists: set.artists || '', 
+                event: set.event || '', 
+                is_b2b: !!set.is_b2b, 
+                tags: set.tags || '' 
+            };
+            this.ui.showEditSetModal = true;
+        },
+
+        async saveSetMetadata() {
+            await fetch(`/api/sets/${this.editSetData.id}/metadata`, { 
+                method: 'POST', 
+                body: JSON.stringify(this.editSetData) 
+            });
+            this.fetchSets();
+            
+            // Update Active Set wenn wir gerade drin sind
+            if (this.activeSet && this.activeSet.id === this.editSetData.id) {
+                this.activeSet = { ...this.activeSet, ...this.editSetData };
+            }
+            this.ui.showEditSetModal = false;
+            this.showToast("Änderungen gespeichert.", "", "success");
+        },
+
+        async renameSetContext() {
+            const set = this.ui.contextMenu.target; 
+            this.closeContextMenu();
+            if (!set) return;
+            const n = prompt("Neuer Name für das Set:", set.name);
+            
+            if(n && n !== set.name) { 
+                await fetch(`/api/sets/${set.id}/rename`, { 
+                    method: 'POST', body: JSON.stringify({name: n}) 
+                }); 
+                this.fetchSets(); 
+                if(this.activeSet && this.activeSet.id === set.id) this.activeSet.name = n;
+            }
+        },
+
+        async deleteSet(set, options = {}) {
+            const target = set && set.id ? set : this.sets.find(s => s.id === set);
+            if (!target) return false;
+
+            const { prompt = false } = options;
+            if (prompt && !confirm(`Set "${target.name || target.id}" wirklich löschen?`)) return false;
+
+            await fetch(`/api/sets/${target.id}`, { method: 'DELETE' });
+            this.sets = this.sets.filter(s => s.id !== target.id);
+            this.filteredSets = this.filteredSets.filter(s => s.id !== target.id);
+            this.folders = (this.folders || []).map(folder => ({
+                ...folder,
+                sets: (folder.sets || []).filter(id => id !== target.id)
+            }));
+            this.persistFoldersLocally();
+
+            if (this.activeSet && this.activeSet.id === target.id) {
+                this.activeSet = null;
+                this.tracks = [];
+            }
+
+            this.syncFolderAssignments();
+            this.showDashboard();
+            return true;
+        },
+
+        async deleteSetContext() {
+            const set = this.ui.contextMenu.target;
+            this.closeContextMenu();
+            await this.confirmAndDeleteSet(set);
+        },
+
+        async rescanSetContext() {
+            const set = this.ui.contextMenu.target; 
+            this.closeContextMenu(); 
+            if (!set) return;
+            const val = set.audio_file || set.source_url; 
+            
+            if(!val) return alert("Keine Audio-Datei oder URL hinterlegt.");
+            
+            const fd = new FormData(); 
+            fd.append('type', 'url'); 
+            fd.append('value', val); 
+            
+            // Alte Metadaten behalten
+            const meta = { 
+                name: set.name, 
+                artist: set.artists, 
+                event: set.event, 
+                tags: set.tags 
+            };
+            fd.append('metadata', JSON.stringify(meta));
+            
+            await fetch('/api/queue/add', { method: 'POST', body: fd }); 
+            this.pollQueue(); 
+            this.showToast("Set zur Warteschlange hinzugefügt.", "", "info");
+        },
+
+        async moveSetToFolderFromMenu(folder) {
+            const set = this.ui.contextMenu.target;
+            this.closeContextMenu();
+            if (!set || !folder) return;
+            await this.assignSetToFolder(set, folder);
+        },
+
+        promptMoveSetContext() {
+            const set = this.ui.contextMenu.target;
+            this.closeContextMenu();
+            if (!set) return;
+            if (!this.folders.length) {
+                this.showToast('Keine Ordner', 'Lege zuerst einen Ordner an.', 'info');
+                return;
+            }
+
+            const name = prompt('Set in welchen Ordner verschieben?', this.folders[0].name);
+            const folder = this.folders.find(f => f.name.toLowerCase() === (name || '').toLowerCase());
+            if (folder) this.assignSetToFolder(set, folder);
+        },
+
+        async confirmAndDeleteSet(set, message) {
+            if (!set) return false;
+            const confirmMessage = message || `Set "${set.name}" wirklich löschen?`;
+            const confirmed = confirm(confirmMessage);
+            if (!confirmed) return false;
+
+            await fetch(`/api/sets/${set.id}`, { method: 'DELETE' });
+            this.sets = this.sets.filter(s => s.id !== set.id);
+            this.filteredSets = this.filteredSets.filter(s => s.id !== set.id);
+            this.removeSetFromFolders(set.id);
+            if (this.activeSet && this.activeSet.id === set.id) {
+                this.activeSet = null;
+                this.tracks = [];
+            }
+            this.showDashboard();
+            return true;
+        },
+
+        // =====================================================================
+        // AUDIO PLAYER & PRELOADER
+        // =====================================================================
+        updateVolume(e) {
+            const val = parseFloat(e.target.value);
+            this.audio.volume = val;
+            if(this.$refs.player) this.$refs.player.volume = val;
+            localStorage.setItem('tracklistify_volume', val);
+        },
+        
+        async togglePlay(track) {
+            const player = this.$refs.player;
+            player.volume = this.audio.volume;
+
+            if (this.ui.playingId === track.id) {
+                if (player.paused) { player.play(); this.audio.paused = false; }
+                else { player.pause(); this.audio.paused = true; }
+                return;
+            }
+
+            this.ui.loadingId = track.id;
+            this.audio.progressPercent = 0;
+            this.activeTrack = track;
+
+            let url = track.streamUrl;
+            
+            // Fallback: Ad-hoc laden
+            if (!url) {
+                try {
+                    const res = await fetch('/api/resolve_audio', { 
+                        method: 'POST', 
+                        body: JSON.stringify({ query: `${track.artist} - ${track.title}` }) 
+                    });
+                    const data = await res.json();
+                    if (data.ok) url = data.url;
+                } catch(e) { console.error(e); }
+            }
+
+            if (url) {
+                track.streamUrl = url;
+                player.src = url;
+                player.play().then(() => {
+                    this.ui.playingId = track.id;
+                    this.audio.paused = false;
+                }).catch(() => this.showToast("Autoplay verhindert", "Browser Policy", "info"));
+            } else {
+                this.showToast("Stream nicht verfügbar", "Keine Quelle gefunden.", "info");
+            }
+            this.ui.loadingId = null;
+        },
+        
+        togglePlayPauseGlobal() {
+            const player = this.$refs.player;
+            if (!this.activeTrack) return;
+            if (player.paused) { player.play(); this.audio.paused = false; }
+            else { player.pause(); this.audio.paused = true; }
+        },
+        
+        updateProgress(e) {
+            const { currentTime, duration } = e.target;
+            this.audio.currentTime = currentTime;
+            this.audio.duration = duration;
+            this.audio.progressPercent = (currentTime / duration) * 100 || 0;
+            this.audio.paused = e.target.paused;
+        },
+        
+        seekGlobal(e) {
+            const player = this.$refs.player;
+            if (!player.duration) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const pct = Math.max(0, Math.min(1, x / rect.width));
+            player.currentTime = pct * player.duration;
+        },
+        
+        seek(e, track) {
+            // Scrubbing in der Liste
+            const player = this.$refs.player;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const pct = Math.max(0, Math.min(1, x / rect.width));
+            
+            if (this.ui.playingId === track.id) {
+                if (player.duration) player.currentTime = pct * player.duration;
+            } else {
+                this.togglePlay(track).then(() => {
+                    if (player.duration) player.currentTime = pct * player.duration;
+                });
+            }
+        },
+
+        // --- Preloading Engine ---
+        startPreloading() {
+            this.preloadQueue = [];
+            this.preloadQueue = this.tracks.filter(t => !t.streamUrl).map(t => t.id);
+            this.triggerPreloadWorker();
+        },
+        
+        prioritizePreload(trackId) {
+            // Hover Turbo
+            const track = this.tracks.find(t => t.id === trackId);
+            if (!track || track.streamUrl) return;
+            
+            const idx = this.preloadQueue.indexOf(trackId);
+            if (idx > -1) this.preloadQueue.splice(idx, 1);
+            
+            this.preloadQueue.unshift(trackId);
+            this.triggerPreloadWorker();
+        },
+        
+        triggerPreloadWorker() {
+            while (this.activePreloads < this.maxPreloads && this.preloadQueue.length > 0) {
+                this.preloadSingleTrack(this.preloadQueue.shift());
+            }
+        },
+        
+        async preloadSingleTrack(trackId) {
+            this.activePreloads++;
+            const track = this.tracks.find(t => t.id === trackId);
+            
+            if (!track || track.streamUrl) {
+                this.activePreloads--;
+                this.triggerPreloadWorker();
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/resolve_audio', { 
+                    method: 'POST', 
+                    body: JSON.stringify({ query: `${track.artist} - ${track.title}` }) 
+                });
+                const data = await res.json();
+                if (data.ok) track.streamUrl = data.url;
+            } catch(e) {} 
+            finally {
+                this.activePreloads--;
+                this.triggerPreloadWorker();
+            }
+        },
+
+        // =====================================================================
+        // TRACK ACTIONS & API FETCHERS
+        // =====================================================================
+        async fetchDashboard() { const res = await fetch('/api/dashboard'); this.dashboardStats = await res.json(); },
+        async fetchSets() { 
+            const res = await fetch('/api/sets'); 
+            this.sets = await res.json(); 
+            this.syncFolderAssignments(); 
+            this.updateFilteredSets();
+        },
+        async fetchLikes() { const res = await fetch('/api/tracks/likes'); this.likedTracks = await res.json(); },
+        async fetchPurchases() { const res = await fetch('/api/tracks/purchases'); this.purchasedTracks = await res.json(); },
+        async fetchProducerLikes() { const res = await fetch('/api/producers/likes'); this.favoriteProducers = await res.json(); },
+        async fetchRescan() { const res = await fetch('/api/tracks/rescan_candidates'); this.rescanCandidates = await res.json(); },
+        deriveYoutubeArtists(query = '') {
+            const filter = query ? query.toLowerCase() : null;
+            const names = new Set();
+
+            this.likedTracks.forEach(track => {
+                [track.artist, track.producer_name].forEach(name => {
+                    if (!name) return;
+                    const trimmed = name.trim();
+                    if (!trimmed) return;
+                    if (filter && !trimmed.toLowerCase().includes(filter)) return;
+                    names.add(trimmed);
+                });
+            });
+
+            return Array.from(names);
+        },
+        async fetchYoutube(artists = [], query = '') {
+            const artistList = artists.length ? artists : this.deriveYoutubeArtists(query);
 
         const response = await fetch(url, config);
         if (!response.ok) {
