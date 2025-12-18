@@ -1,4 +1,4 @@
-<div class="flex-1 flex flex-col min-w-0 bg-white relative h-full animate-row">
+<div class="flex-1 flex flex-col min-w-0 surface relative h-full animate-row">
     
     <div class="h-16 border-b border-gray-200 flex items-center justify-between px-6 shrink-0 bg-white sticky top-0 z-20">
         <div class="flex items-center gap-3">
@@ -12,11 +12,11 @@
         </button>
     </div>
 
-    <div class="flex-1 overflow-auto bg-gray-50 p-6">
+    <div class="flex-1 overflow-auto p-6">
         <div class="max-w-5xl mx-auto">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <table class="min-w-full divide-y divide-gray-100">
-                    <thead class="bg-gray-50">
+            <div class="surface shadow-sm overflow-hidden">
+                <table class="table-modern">
+                    <thead>
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Set</th>
                             <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-24">Time</th>
@@ -24,9 +24,9 @@
                             <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-32">Aktion</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-100">
+                    <tbody>
                         <template x-for="c in rescanCandidates" :key="c.id">
-                            <tr class="hover:bg-orange-50 transition-colors group">
+                            <tr class="transition-colors group">
                                 <td class="px-6 py-4 text-sm text-gray-600 font-medium truncate max-w-xs" x-text="c.set_name"></td>
                                 <td class="px-6 py-4 text-sm text-gray-500 font-mono text-right" x-text="formatTime(c.start_time)"></td>
                                 <td class="px-6 py-4 text-sm text-gray-900">

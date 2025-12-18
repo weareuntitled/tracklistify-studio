@@ -1,4 +1,4 @@
-<main class="flex-1 flex flex-col min-w-0 bg-white relative h-full">
+<main class="flex-1 flex flex-col min-w-0 surface relative h-full">
     <div class="h-16 border-b border-gray-200 flex items-center justify-between px-6 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-20">
         <div class="flex-1 min-w-0 pr-4">
             <h2 class="text-lg font-bold text-gray-900 truncate" x-text="activeSet ? activeSet.name : 'Wähle ein Set'"></h2>
@@ -13,8 +13,8 @@
 
     <div class="flex-1 overflow-auto bg-gray-50/30">
         <div x-show="activeSet">
-            <table class="min-w-full divide-y divide-gray-200 table-fixed">
-                <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
+            <table class="table-modern">
+                <thead class="sticky top-0 z-10 shadow-sm">
                     <tr>
                         <th class="w-12 px-2 py-3 text-center text-xs font-bold text-gray-400 uppercase">#</th>
                         <th class="w-12 px-2 py-3 text-center text-xs font-bold text-gray-400 uppercase">Play</th>
@@ -26,10 +26,10 @@
                         <th class="w-12 px-2 py-3 text-center text-xs font-bold text-gray-400 uppercase">Fav</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-100">
+                <tbody>
                     <template x-for="(track, index) in tracks" :key="track.id">
-                        <tr class="group hover:bg-orange-50/40 transition-colors animate-row"
-                            :class="ui.playingId === track.id ? 'bg-orange-50/60' : ''"
+                        <tr class="group transition-colors animate-row"
+                            :class="ui.playingId === track.id ? 'is-playing' : ''"
                             :style="{ animationDelay: (index * 10) + 'ms' }"
                             @mouseenter="ui.hoverTrackId = track.id" @mouseleave="ui.hoverTrackId = null">
                             
