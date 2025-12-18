@@ -131,6 +131,18 @@ document.addEventListener('alpine:init', () => {
             this.$watch('search', val => {
                 this.updateFilteredSets();
             });
+
+            if (!window.initialSetId && window.location && window.location.pathname && window.location.pathname.startsWith('/sets/')) {
+                const parts = window.location.pathname.split('/').filter(Boolean);
+                const last = parts[parts.length - 1];
+                const parsed = parseInt(last, 10);
+                if (!Number.isNaN(parsed)) window.initialSetId = parsed;
+            }
+
+            if (window.initialSetId) {
+                this.currentView = 'sets';
+                this.loadSet(window.initialSetId);
+            }
             
             // Player Init
             this.$nextTick(() => {

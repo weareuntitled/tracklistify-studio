@@ -194,6 +194,13 @@ def profile_page():
         stats=stats,
     )
 
+@app.route("/sets/<int:set_id>")
+def set_workspace(set_id):
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+    return render_template("set_view.html", user=user, set_id=set_id)
+
 
 # --- API: Auth ---
 

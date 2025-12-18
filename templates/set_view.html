@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+<script>
+    window.initialSetId = {{ set_id | tojson }};
+</script>
+
+<style>
+    .toast-stack {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        display: grid;
+        gap: 12px;
+        z-index: 100;
+        pointer-events: none;
+    }
+
+    .toast {
+        background: rgba(255, 255, 255, 0.98);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        padding: 12px 16px;
+        border-radius: 12px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+        min-width: 240px;
+        pointer-events: auto;
+    }
+
+    .toast .title {
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #0f172a;
+        font-size: 12px;
+    }
+
+    .toast .subtitle {
+        font-size: 12px;
+        color: #475569;
+    }
+</style>
+
+<div class="min-h-screen flex flex-col bg-gray-50" x-init="currentView = 'sets'">
+    {% include "components/header.html" %}
+
+    <div class="flex-1 flex overflow-hidden">
+        {% include "components/sidebar_sets.html" %}
+        {% include "components/main_view.html" %}
+        {% include "components/sidebar_likes.html" %}
+    </div>
+
+    {% include "components/footer_player.html" %}
+    {% include "components/modals.html" %}
+</div>
+
+<div class="toast-stack">
+    <template x-for="toast in toasts" :key="toast.id">
+        <div class="toast">
+            <div class="title" x-text="toast.title"></div>
+            <div class="subtitle" x-text="toast.subtitle"></div>
+        </div>
+    </template>
+</div>
+
+<audio x-ref="player" @timeupdate="updateProgress" @ended="onAudioEnded" @pause="onAudioPaused" @play="onAudioPlaying" @error="onAudioError"></audio>
+{% endblock %}
