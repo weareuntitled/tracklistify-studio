@@ -20,6 +20,7 @@ const registerTracklistify = (AlpineInstance) => {
         folderHoverId: null,
         trashHover: false,
         cardHoverId: null,
+        folderForm: { open: false, name: '' },
 
         auth: {
             user: null,
@@ -996,6 +997,7 @@ const registerTracklistify = (AlpineInstance) => {
         },
 
         resetFolderForm() {
+            if (!this.folderForm) this.folderForm = { open: false, name: '' };
             this.folderForm.name = this.defaultFolderName();
         },
 
