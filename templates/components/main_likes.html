@@ -66,6 +66,10 @@
                                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a5 5 0 015 5v1a5 5 0 11-10 0V7a5 5 0 015-5zm-6 18a6 6 0 0112 0v1H6v-1z"/></svg>
                                         <span x-text="isProducerFavorite(track.producer_id) ? 'Producer gespeichert' : 'Producer merken'"></span>
                                     </button>
+                                    <a :href="getSearchLink(track, 'bandcamp')" target="_blank"
+                                       class="px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded-lg border border-cyan-200 bg-cyan-50 text-cyan-700 hover:bg-cyan-100">
+                                        Bandcamp
+                                    </a>
                                     <a :href="getSearchLink(track, 'beatport')" target="_blank"
                                        class="px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded-lg border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100">
                                         Beatport
