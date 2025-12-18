@@ -7,9 +7,738 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/style.css">
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
-    <script defer src="/static/js/app.js"></script>
+    <style>
+        :root {
+            --bg: #05070c;
+            --bg-glow: radial-gradient(circle at 20% 20%, rgba(255, 107, 0, 0.16), transparent 30%),
+                        radial-gradient(circle at 80% 0%, rgba(76, 151, 255, 0.1), transparent 28%),
+                        radial-gradient(circle at 50% 90%, rgba(255, 255, 255, 0.04), transparent 30%);
+            --panel: rgba(15, 19, 28, 0.7);
+            --glass: rgba(255, 255, 255, 0.04);
+            --border: rgba(255, 255, 255, 0.08);
+            --muted: #9ca3af;
+            --text: #f3f4f6;
+            --accent: #ff6b00;
+            --accent-strong: #ff7f22;
+            --success: #16a34a;
+            --radius: 16px;
+            --shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+            --signal: #ff6b00;
+            --surface-strong: rgba(255, 255, 255, 0.06);
+            --surface-muted: rgba(255, 255, 255, 0.02);
+            --card-height: 320px;
+            --card-gap: 16px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg);
+            background-image: var(--bg-glow);
+            color: var(--text);
+            letter-spacing: 0.02em;
+        }
+
+        h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+        p { margin: 0; }
+        a { color: inherit; text-decoration: none; }
+        button { font-family: inherit; cursor: pointer; }
+        [x-cloak] { display: none !important; }
+        .muted { color: var(--muted); }
+        .accent-hover { transition: all 0.2s ease; }
+        .accent-hover:hover { border-color: var(--accent); background: var(--glass); }
+        .contrast-active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.2); }
+
+        .app-shell {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+            padding: 24px;
+            min-height: 100vh;
+        }
+
+        .glass-panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            backdrop-filter: blur(18px);
+            box-shadow: var(--shadow);
+        }
+
+        .library {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .library-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .brand {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .brand .eyebrow {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            color: var(--muted);
+        }
+
+        .brand .title {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+        }
+
+        .icon-button {
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--glass);
+            color: var(--text);
+            transition: all 0.2s ease;
+        }
+
+        .icon-button:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            transform: translateY(-1px);
+        }
+
+        .library-search {
+            padding: 0 20px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .input {
+            width: 100%;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text);
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+        }
+
+        .input:focus {
+            outline: 1px solid var(--accent);
+            border-color: var(--accent);
+        }
+
+        .hint {
+            font-size: 11px;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .folder-list {
+            display: grid;
+            gap: 10px;
+            padding: 0 20px 10px;
+        }
+
+        .folder {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.02);
+            transition: all 0.2s ease;
+        }
+
+        .folder.is-hovered, .folder-drop-target {
+            border-color: var(--accent);
+            background: rgba(255, 107, 0, 0.08);
+            box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.15);
+        }
+
+        .folder-quiet {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .folder.is-hovered {
+            border-color: var(--accent);
+            background: rgba(255, 107, 0, 0.08);
+        }
+
+        .folder .meta {
+            display: grid;
+            gap: 4px;
+        }
+
+        .folder .name {
+            font-weight: 700;
+            letter-spacing: 0.06em;
+        }
+
+        .folder .count {
+            font-size: 11px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .trash-zone {
+            margin: 10px 20px 20px;
+            padding: 14px;
+            border: 1px dashed var(--border);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            background: rgba(255, 255, 255, 0.02);
+            transition: all 0.2s ease;
+        }
+
+        .trash-zone.is-hovered {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(255, 107, 0, 0.08);
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .top-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo-mark {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-ring {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(255, 107, 0, 0.18), rgba(76, 151, 255, 0.18));
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+        }
+
+        .logo-text {
+            display: grid;
+            line-height: 1.1;
+        }
+
+        .logo-text span:first-child {
+            font-size: 12px;
+            letter-spacing: 0.14em;
+            color: var(--muted);
+        }
+
+        .logo-text span:last-child {
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: 0.2em;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .pill {
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.04);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .pill-link {
+            border-color: transparent;
+            color: var(--muted);
+            transition: color 0.2s ease;
+        }
+
+        .pill-link:hover { color: var(--accent); }
+
+        .cta {
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            border: none;
+            color: #0c0b0b;
+            font-weight: 800;
+            padding: 12px 18px;
+            border-radius: 12px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            box-shadow: 0 16px 40px rgba(255, 107, 0, 0.32);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .cta:hover { transform: translateY(-1px); box-shadow: 0 22px 48px rgba(255, 107, 0, 0.42); }
+        .cta:active { transform: translateY(0); }
+
+        .user-chip {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255, 107, 0, 0.24), rgba(76, 151, 255, 0.24));
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+        }
+
+        .stat-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            padding: 12px 16px 16px;
+        }
+
+        .stat {
+            padding: 16px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(12px);
+            display: grid;
+            gap: 6px;
+        }
+
+        .stat .label {
+            font-size: 11px;
+            letter-spacing: 0.14em;
+            color: var(--muted);
+        }
+
+        .stat .value {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+        }
+
+        .content {
+            padding: 0 16px 16px;
+            display: grid;
+            gap: 18px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 0 4px;
+        }
+
+        .section-header h2 {
+            font-size: 14px;
+        }
+
+        .set-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: var(--card-gap);
+        }
+
+        .set-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(15, 19, 28, 0.7));
+            display: flex;
+            flex-direction: column;
+            height: var(--card-height);
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .set-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(15, 19, 28, 0.9));
+        }
+
+        .set-card.is-dragging {
+            opacity: 0.35;
+            filter: contrast(0.85);
+            transform: scale(0.985);
+            border-color: var(--border);
+        }
+
+        .set-card.is-drop-target {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.3);
+            filter: contrast(1.05);
+        }
+
+        .set-thumb {
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            height: 160px;
+        }
+
+        .set-thumb::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, transparent 20%, rgba(0, 0, 0, 0.55));
+        }
+
+        .set-thumb .fallback {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            letter-spacing: 0.18em;
+            color: rgba(255, 255, 255, 0.7);
+            background: linear-gradient(135deg, rgba(255, 107, 0, 0.22), rgba(76, 151, 255, 0.22));
+        }
+
+        .set-meta {
+            padding: 14px 16px 16px;
+            display: grid;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .set-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            font-size: 11px;
+            letter-spacing: 0.12em;
+        }
+
+        .set-title {
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+        }
+
+        .set-artist {
+            font-size: 12px;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+        }
+
+        .set-progress {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 107, 0, 0.12);
+            border-radius: 999px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .set-progress span {
+            display: block;
+            height: 100%;
+            background: linear-gradient(90deg, var(--signal), var(--accent-strong));
+            box-shadow: 0 8px 18px rgba(255, 107, 0, 0.32);
+            transition: width 0.25s ease;
+        }
+
+        .set-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px 16px;
+            font-size: 12px;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+        }
+
+        .set-footer .tag {
+            padding: 6px 10px;
+            border-radius: 10px;
+            background: var(--surface-muted);
+            border: 1px solid var(--border);
+            color: var(--text);
+            letter-spacing: 0.08em;
+            font-weight: 700;
+            font-size: 11px;
+        }
+
+        .track-panel {
+            padding: 16px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .track-panel.focused {
+            border-color: rgba(255, 107, 0, 0.4);
+            box-shadow: 0 16px 40px rgba(255, 107, 0, 0.15);
+        }
+
+        .track-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .track-panel-header .title {
+            display: grid;
+            gap: 4px;
+        }
+
+        .track-panel-header .title span:first-child {
+            font-size: 12px;
+            letter-spacing: 0.14em;
+            color: var(--muted);
+        }
+
+        .track-panel-header .title span:last-child {
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+        }
+
+        .action-link {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            font-size: 11px;
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .tracklist {
+            display: grid;
+            gap: 10px;
+        }
+
+        .track {
+            display: grid;
+            grid-template-columns: 60px 1fr 140px 90px 100px;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+        }
+
+        .track:hover { border-color: var(--accent); }
+
+        .track .pos {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.08em;
+        }
+
+        .track .names {
+            display: grid;
+            gap: 4px;
+        }
+
+        .track .names .song {
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        .track .names .artist {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .track .controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .ghost-button {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-size: 11px;
+            transition: border-color 0.2s ease, color 0.2s ease;
+        }
+
+        .ghost-button:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .context-menu {
+            position: fixed;
+            z-index: 70;
+            background: rgba(12, 14, 20, 0.95);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 8px;
+            min-width: 200px;
+            box-shadow: var(--shadow);
+        }
+
+        .context-menu button {
+            width: 100%;
+            background: none;
+            border: none;
+            color: var(--text);
+            padding: 10px 12px;
+            border-radius: 10px;
+            text-align: left;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-size: 11px;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+
+        .context-menu button:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--accent);
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 80;
+            padding: 16px;
+        }
+
+        .modal {
+            width: 100%;
+            max-width: 640px;
+            background: rgba(12, 14, 20, 0.92);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .modal h3 {
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .modal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .label {
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        .modal-actions {
+            margin-top: 16px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .toast-stack {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 90;
+            display: grid;
+            gap: 10px;
+        }
+
+        .toast {
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.08);
+            letter-spacing: 0.06em;
+        }
+
+        .toast .title {
+            font-weight: 700;
+        }
+
+        .toast .subtitle {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        audio { display: none; }
+        @media (max-width: 1100px) {
+            .app-shell { grid-template-columns: 1fr; }
+            .library { order: 2; }
+            .main { order: 1; }
+            .set-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        @media (max-width: 720px) {
+            .track { grid-template-columns: 1fr; }
+            .app-shell { padding: 14px; }
+            .top-nav { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .set-grid { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body class="app-body"
       x-data="tracklistify()"
@@ -41,16 +770,17 @@
             </div>
             <div class="folder-list">
                 <template x-for="folder in folders" :key="folder.id">
-                    <div class="folder-card"
-                         :class="folderHoverId === folder.id ? 'is-hovered' : ''"
-                         @contextmenu.prevent="openFolderContextMenu($event, folder)"
-                         @dragenter.prevent="onFolderDragEnter(folder, $event)"
-                         @dragover.prevent="onFolderDragOver($event)"
-                         @dragleave="onFolderDragLeave(folder)"
-                         @drop.prevent="onDropToFolder(folder, $event)">
-                        <div class="folder-meta">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 7a2 2 0 012-2h2m14 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7m18 0l-3.34-4H8.34L5 7" /></svg>
-                            <span x-text="folder.name"></span>
+                    <div
+                        class="flex items-center justify-between gap-2 px-3 py-2 border text-[12px] font-bold transition-all duration-150"
+                        :class="folderHoverId === folder.id ? 'folder-drop-target contrast-active' : 'folder-quiet accent-hover'"
+                        @dragenter="onFolderDragEnter(folder, $event)"
+                        @dragleave="onFolderDragLeave(folder)"
+                        @dragover.prevent="onFolderDragOver($event)"
+                        @drop="onDropToFolder(folder, $event)"
+                    >
+                        <div class="flex items-center gap-2 truncate">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18v10H3V7zm3-3h12v3H6V4z"/></svg>
+                            <span class="truncate" x-text="folder.name"></span>
                         </div>
                         <span class="pill" x-text="(folder.sets?.length || 0) + 'x'"></span>
                     </div>
@@ -59,17 +789,41 @@
             </div>
         </div>
 
-        <div class="sidebar-section">
-            <div class="section-heading">
-                <span>Sets</span>
-                <span class="pill" x-text="filteredSets.length + ' items'"></span>
+        <div class="flex-1 overflow-y-auto divide-y divide-swiss">
+            <div class="px-4 py-4 space-y-3">
+                <div class="flex items-center justify-between text-[10px] font-bold">
+                    <span>FOLDERS</span>
+                    <button @click="createFolder()" class="swiss-button text-[10px] px-2 py-1">NEW</button>
+                </div>
+
+                <div class="space-y-2">
+                    <template x-for="folder in folders" :key="folder.id">
+                        <div class="px-3 py-2 border flex items-center justify-between text-[11px] gap-3 transition-colors"
+                             :class="folderHoverId === folder.id ? 'folder-drop-target contrast-active' : 'folder-quiet accent-hover'"
+                             @contextmenu.prevent="openFolderContextMenu($event, folder)"
+                             @dragenter.prevent="onFolderDragEnter(folder, $event)" @dragover.prevent="onFolderDragOver($event)" @dragleave="onFolderDragLeave(folder)"
+                             @drop.prevent="onDropToFolder(folder, $event)">
+                            <div class="flex items-center gap-2 truncate">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 7a2 2 0 012-2h2m14 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7m18 0l-3.34-4H8.34L5 7" /></svg>
+                                <span class="truncate" x-text="folder.name"></span>
+                            </div>
+                            <span class="pill text-[10px]" x-text="(folder.sets?.length || 0) + ' SETS'"></span>
+                        </div>
+                    </template>
+                    <div x-show="!folders.length" class="text-[11px] muted">NO FOLDERS</div>
+                </div>
+
+                <div class="border border-dashed px-3 py-4 text-center text-[11px] muted transition-colors"
+                     style="border-color: var(--swiss-muted);"
+                     :class="draggingSet ? 'contrast-active' : ''"
+                     @dragover.prevent @dragenter.prevent @drop.prevent="onDropToTrash($event)">
+                    DROP SET HERE TO DELETE
+                </div>
             </div>
             <div class="set-list">
                 <template x-for="set in filteredSets" :key="set.id">
-                    <button class="set-list-item"
-                            :class="activeSet && activeSet.id === set.id ? 'is-active' : ''"
-                            @click="loadSet(set)"
-                            @contextmenu.prevent="openSetContextMenu($event, set)"
+                    <button @click="focusOnSet(set)"
+                            @contextmenu.prevent="openContextMenu($event, 'set', set)"
                             draggable="true"
                             @dragstart="onDragSet(set, $event)"
                             @dragend="onDragEnd">
@@ -162,7 +916,7 @@
                                     draggable="true"
                                     @dragstart="onDragSet(item, $event)"
                                     @dragend="onDragEnd"
-                                    @click="loadSet(item.id)">
+                                    @click="focusOnSet(item.id)">
                                 <div class="flex flex-col">
                                     <span class="text-sm font-bold" x-text="item.name"></span>
                                     <span class="text-[10px] muted" x-text="formatDate(item.created_at)"></span>
@@ -198,32 +952,31 @@
 
         <div class="content">
             <div class="section-header">
-                <h2>Sets</h2>
-                <div class="flex items-center gap-3">
-                    <div class="flex items-center gap-2" x-show="uploadState.isProcessing">
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-orange-50 text-orange-600 border border-orange-200">Processing</span>
-                        <span class="text-[11px] text-gray-500" x-text="processingLabel()"></span>
-                    </div>
-                    <span class="hint">Right-click for quick actions</span>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <h2 x-text="ui.trackViewOnly ? 'Tracklist' : 'Sets'"></h2>
+                    <span class="hint" x-show="!ui.trackViewOnly">Right-click for quick actions</span>
+                    <span class="hint" x-show="ui.trackViewOnly && activeSet" x-text="activeSet.name"></span>
                 </div>
-        <section class="panel" x-show="currentView === 'sets'" x-cloak>
-            <div class="panel-header">
-                <div>
-                    <h2>Sets</h2>
-                    <span class="hint">Right-click for quick actions</span>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <button class="ghost-button" x-show="ui.trackViewOnly" @click="resetTrackView()">Show Set Grid</button>
+                    <button class="ghost-button" x-show="activeSet" @click="copyTracklist">Copy List</button>
                 </div>
-                <button class="ghost-button" @click="ui.uploadTab = 'url'; ui.showAddModal = true">Import</button>
             </div>
-            <div class="set-grid">
+            <div class="set-grid" x-show="!ui.trackViewOnly">
                 <template x-for="set in filteredSets" :key="set.id">
                     <div class="set-card"
                          draggable="true"
                          @dragstart="onDragSet(set, $event)"
                          @dragend="onDragEnd"
-                         @click="loadSet(set)"
-                         @contextmenu.prevent="openSetContextMenu($event, set)">
-                        <div class="set-thumb" :style="setCardBackground(set)">
-                            <div class="set-thumb-fallback" x-show="!hasSetThumbnail(set)" x-text="(set.artists || set.dj_names || set.name || 'SET').slice(0, 6).toUpperCase()"></div>
+                         @dragenter.prevent="onCardDragEnter(set)"
+                         @dragover.prevent="onCardDragOver($event)"
+                         @dragleave="onCardDragLeave(set)"
+                         @drop.prevent="onCardDrop(set, $event)"
+                         @click="focusOnSet(set)"
+                         @contextmenu.prevent="openSetContextMenu($event, set)"
+                         :class="setCardClasses(set)">
+                        <div class="set-thumb" :style="set.thumbnail ? `background-image:url(${set.thumbnail})` : ''">
+                            <div class="fallback" x-show="!set.thumbnail" x-text="(set.artists || set.dj_names || set.name || 'SET').slice(0, 6).toUpperCase()"></div>
                         </div>
                         <div class="set-meta">
                             <div class="set-pill">
@@ -232,25 +985,26 @@
                             </div>
                             <div class="set-title" x-text="set.name"></div>
                             <div class="set-artist" x-text="set.artists || set.dj_names || 'Unknown Artist'"></div>
+                            <div class="set-progress" aria-hidden="true">
+                                <span :style="`width:${setProgress(set)}%`"></span>
+                            </div>
                         </div>
                         <div class="set-footer">
                             <span x-text="formatDate(set.created_at)"></span>
-                            <span x-text="setFolderLabel(set)"></span>
+                            <span class="tag" x-text="set.event || setFolderLabel(set)"></span>
                         </div>
                     </div>
                 </template>
                 <div class="empty-card" x-show="filteredSets.length === 0" x-cloak>No sets yet</div>
             </div>
 
-            <div class="track-panel">
-                <div class="panel-header">
-                    <div>
-                        <h3>Active Set</h3>
-                        <span class="hint" x-text="activeSet ? activeSet.name : 'Select a set to view tracks'"></span>
+            <div class="track-panel" :class="ui.trackViewOnly && activeSet ? 'focused' : ''">
+                <div class="track-panel-header">
+                    <div class="title">
+                        <span>Active Set</span>
+                        <span x-text="activeSet ? activeSet.name : 'Select a set to view tracks'"></span>
                     </div>
-                    <div class="panel-actions">
-                        <button class="ghost-button" @click="copyTracklist" x-show="activeSet">Copy List</button>
-                    </div>
+                    <div class="controls" style="display:flex; gap:8px;"></div>
                 </div>
                 <div class="tracklist" x-show="activeSet" x-cloak>
                     <template x-for="(track, index) in tracks" :key="track.id">
@@ -373,46 +1127,48 @@
         <span x-text="ui.contextMenu.type === 'folder' ? 'FOLDER ACTIONS' : 'SET ACTIONS'"></span>
     </div>
     <template x-if="ui.contextMenu.type === 'set'">
-        <div class="context-menu-body">
-            <button @click="openEditSetModal()" class="context-menu-item">
-                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <div class="py-1 space-y-1">
+            <button @click="handleContextAction('edit')" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 <span>Info & Tags</span>
             </button>
-            <button @click="renameSetContext()" class="context-menu-item">
-                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                <span>Rename</span>
+            <button @click="handleContextAction('rename')" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                <span>Umbenennen</span>
             </button>
-            <button @click="promptMoveSetContext()" class="context-menu-item">
-                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h7" /></svg>
-                <span>Move to Folder</span>
+            <button @click="handleContextAction('move')" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h7" /></svg>
+                <span>In Ordner verschieben</span>
             </button>
-            <div x-show="folders.length" class="context-menu-subtitle">Move to…</div>
-            <template x-for="folder in folders" :key="folder.id">
-                <button @click="moveSetToFolderFromMenu(folder)" class="context-menu-item">
-                    <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 7a2 2 0 012-2h2m14 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7m18 0l-3.34-4H8.34L5 7" /></svg>
-                    <span class="truncate" x-text="folder.name"></span>
-                </button>
-            </template>
-            <button @click="rescanSetContext()" class="context-menu-item">
-                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                <span>Rescan</span>
+            <div x-show="folders.length" class="pt-1">
+                <div class="px-4 py-1 text-[10px] muted">Oder hierhin bewegen</div>
+                <template x-for="folder in folders" :key="folder.id">
+                    <button @click="moveSetToFolderFromMenu(folder)" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 7a2 2 0 012-2h2m14 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7m18 0l-3.34-4H8.34L5 7" /></svg>
+                        <span class="truncate" x-text="folder.name"></span>
+                    </button>
+                </template>
+            </div>
+            <button @click="handleContextAction('rescan')" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                <span>Neu analysieren</span>
             </button>
-            <button @click="deleteSetContext()" class="context-menu-item danger">
-                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                <span>Delete Set</span>
+            <button @click="handleContextAction('delete')" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2 text-red-600">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                <span>Set löschen</span>
             </button>
         </div>
     </template>
 
     <template x-if="ui.contextMenu.type === 'folder'">
-        <div class="context-menu-body">
-            <button @click="renameFolderContext()" class="context-menu-item">
-                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2" /></svg>
-                <span>Rename Folder</span>
+        <div class="py-1 space-y-1">
+            <button @click="handleContextAction('rename')" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2" /></svg>
+                <span>Ordner umbenennen</span>
             </button>
-            <button @click="deleteFolderContext()" class="context-menu-item danger">
-                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" /></svg>
-                <span>Delete Folder</span>
+            <button @click="handleContextAction('delete')" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2 text-red-600">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" /></svg>
+                <span>Ordner löschen</span>
             </button>
         </div>
     </template>
