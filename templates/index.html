@@ -1079,43 +1079,42 @@
 </div>
 
 <!-- Add Set Modal -->
-<div x-show="ui.showAddModal" x-cloak class="fixed inset-0 z-[80] flex items-center justify-center">
-    <div class="fixed inset-0 bg-black/70" @click="ui.showAddModal = false"></div>
-    <div class="bg-white border w-full max-w-lg p-6 space-y-4 z-10">
-        <div class="text-sm font-bold">IMPORT SET</div>
-        <div class="space-y-2">
-            <label class="text-[10px] font-bold">URL</label>
+<div x-show="ui.showAddModal" x-cloak class="modal-backdrop" @click.self="ui.showAddModal = false">
+    <div class="modal" style="max-width:640px; background: rgba(255,255,255,0.98); color:#111; border-color: var(--border);">
+        <div class="text-sm font-bold" style="color:#000;">IMPORT SET</div>
+        <div class="space-y-2" style="margin-top:8px;">
+            <label class="text-[10px] font-bold" style="color:#333;">URL</label>
             <div class="flex gap-2">
-                <input type="text" x-model="inputs.url" class="flex-1 swiss-input text-[11px]">
+                <input type="text" x-model="inputs.url" class="flex-1 swiss-input text-[11px]" style="color:#111;">
                 <button @click="fetchUrlMetadata(inputs.url)" class="swiss-button text-[11px]">FETCH</button>
             </div>
         </div>
-        <div class="modal-grid">
+        <div class="modal-grid" style="margin-top:14px;">
             <div style="display:grid; gap:6px;">
-                <label class="label">Artist / DJ</label>
-                <input type="text" class="input" x-model="inputs.metaArtist">
+                <label class="label" style="color:#444;">Artist / DJ</label>
+                <input type="text" class="input" x-model="inputs.metaArtist" style="color:#111;">
             </div>
             <div style="display:grid; gap:6px;">
-                <label class="label">Title</label>
-                <input type="text" class="input" x-model="inputs.metaName">
+                <label class="label" style="color:#444;">Title</label>
+                <input type="text" class="input" x-model="inputs.metaName" style="color:#111;">
             </div>
             <div style="display:grid; gap:6px;">
-                <label class="label">Event / Info</label>
-                <input type="text" class="input" x-model="inputs.metaEvent">
+                <label class="label" style="color:#444;">Event / Info</label>
+                <input type="text" class="input" x-model="inputs.metaEvent" style="color:#111;">
             </div>
             <div style="display:grid; gap:6px;">
-                <label class="label">Tags</label>
-                <input type="text" class="input" x-model="inputs.metaTags">
+                <label class="label" style="color:#444;">Tags</label>
+                <input type="text" class="input" x-model="inputs.metaTags" style="color:#111;">
             </div>
         </div>
-        <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
-            <label style="display:flex; align-items:center; gap:8px; letter-spacing:0.08em; font-size:12px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-top:12px;">
+            <label style="display:flex; align-items:center; gap:8px; letter-spacing:0.08em; font-size:12px; color:#222;">
                 <input type="checkbox" x-model="inputs.is_b2b">
                 B2B
             </label>
             <span class="hint" x-text="queueStatus.queue.length + ' waiting'"></span>
         </div>
-        <div class="modal-actions">
+        <div class="modal-actions" style="margin-top:16px;">
             <button class="ghost-button" @click="ui.showAddModal = false">Close</button>
             <button class="cta" @click="inputs.url ? addToQueue('url') : addToQueue('file')">Start</button>
         </div>
