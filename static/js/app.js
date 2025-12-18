@@ -20,6 +20,7 @@ const registerTracklistify = (AlpineInstance) => {
         folderHoverId: null,
         trashHover: false,
         cardHoverId: null,
+        folderForm: { open: false, name: '' },
 
         auth: {
             user: null,
@@ -56,6 +57,7 @@ const registerTracklistify = (AlpineInstance) => {
         currentView: 'dashboard',
         sidebarExpanded: true,
         queueStatus: { active: null, queue: [], history: [] },
+        uploadToastState: { lastProgress: null, lastPhase: null },
         
         // Inputs für Upload Modal
         inputs: {
@@ -77,6 +79,7 @@ const registerTracklistify = (AlpineInstance) => {
             showRescanModal: false, 
             showEditSetModal: false, 
             showLikes: false,
+            showNavMenu: false,
             playingId: null, 
             loadingId: null,
             hoverTrackId: null,
@@ -254,7 +257,28 @@ const registerTracklistify = (AlpineInstance) => {
                     this.fetchDashboard();
                     this.showToast("Verarbeitung fertig", "Set wurde importiert.", "success");
                 }
-                
+
+                // Fortschritt Toasties für Upload
+                if (status.active) {
+                    const progress = Math.round(status.active.progress || 0);
+                    const phase = status.active.phase || 'processing';
+                    const label = status.active.label || 'Upload';
+
+                    if (
+                        this.uploadToastState.lastProgress === null ||
+                        progress - this.uploadToastState.lastProgress >= 5 ||
+                        phase !== this.uploadToastState.lastPhase
+                    ) {
+                        const subtitle = `${label} · ${this.getPhaseLabel(phase)} ${progress}%`;
+                        this.showToast('Upload läuft', subtitle, 'info');
+                        this.uploadToastState.lastProgress = progress;
+                        this.uploadToastState.lastPhase = phase;
+                    }
+                } else {
+                    this.uploadToastState.lastProgress = null;
+                    this.uploadToastState.lastPhase = null;
+                }
+
                 // Live Log Toasties
                 this.handleLiveLog(status);
 
@@ -973,6 +997,7 @@ const registerTracklistify = (AlpineInstance) => {
         },
 
         resetFolderForm() {
+            if (!this.folderForm) this.folderForm = { open: false, name: '' };
             this.folderForm.name = this.defaultFolderName();
         },
 
