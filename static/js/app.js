@@ -844,12 +844,20 @@ document.addEventListener('alpine:init', () => {
 
             this.ui.showLikes = true;
             track.liked = !track.liked;
+            const setName = track.set_name || (this.activeSet ? this.activeSet.name : null);
             // Update Local List
             if (!track.liked) {
                 this.likedTracks = this.likedTracks.filter(t => t.id !== track.id);
             } else if (!this.likedTracks.find(t => t.id === track.id)) {
-                this.likedTracks.push({ ...track, set_name: track.set_name || (this.activeSet ? this.activeSet.name : track.set_name) });
+                this.likedTracks.push({ ...track, set_name: setName || track.set_name });
+            } else {
+                this.likedTracks = this.likedTracks.map(t => t.id === track.id ? { ...t, ...track, set_name: setName || t.set_name } : t);
             }
+
+            const trackInList = this.tracks.find(t => t.id === track.id);
+            if (trackInList) trackInList.liked = track.liked;
+
+            this.likedTracks = [...this.likedTracks];
 
             await fetch(`/api/tracks/${track.id}/like`, {
                 method: 'POST',

@@ -796,6 +796,50 @@
             gap: 16px;
         }
 
+        .likes-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            justify-content: flex-end;
+            align-items: stretch;
+            padding: 24px;
+            z-index: 80;
+            pointer-events: none;
+        }
+
+        .likes-overlay__backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(6px);
+            pointer-events: auto;
+        }
+
+        .likes-overlay__panel {
+            position: relative;
+            width: min(980px, calc(100% - 360px));
+            max-width: 1000px;
+            height: calc(100vh - 48px);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            background: #fff;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (max-width: 900px) {
+            .likes-overlay {
+                padding: 12px;
+            }
+
+            .likes-overlay__panel {
+                width: 100%;
+                height: calc(100vh - 32px);
+            }
+        }
+
         @media (max-width: 1100px) {
             .content-grid { grid-template-columns: 1fr; }
             .set-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
@@ -1060,6 +1104,13 @@
             </div>
         </section>
     </section>
+</div>
+
+<div class="likes-overlay" x-cloak x-show="ui.showLikes" x-transition.opacity>
+    <div class="likes-overlay__backdrop" @click="ui.showLikes = false"></div>
+    <div class="likes-overlay__panel">
+        {% include 'components/main_likes.html' %}
+    </div>
 </div>
 
 <div x-show="ui.contextMenu.show" x-ref="contextMenu" x-cloak
