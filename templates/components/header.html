@@ -1,73 +1,22 @@
-<header class="h-16 flex items-center justify-between px-4 sm:px-6 border-b border-white/10 bg-gradient-to-r from-white/5 via-white/0 to-white/5 backdrop-blur-lg shrink-0 relative">
-    <div class="flex items-center gap-3">
-        <div class="relative" @click.outside="ui.showNavMenu = false">
-            <button @click="ui.showNavMenu = !ui.showNavMenu" class="p-2 rounded-lg border border-white/10 text-slate-300 hover:text-white hover:border-orange-400/50 hover:bg-white/5 transition-colors duration-200">
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
-            </button>
-
-            <div x-show="ui.showNavMenu" x-transition class="absolute left-0 mt-3 w-56 rounded-2xl border border-white/10 bg-slate-900/90 shadow-2xl overflow-hidden z-30 backdrop-blur-xl">
-                <div class="px-4 py-3 bg-white/5 border-b border-white/5">
-                    <p class="text-[11px] uppercase tracking-[0.3em] text-slate-400">Navigation</p>
-                    <p class="text-sm font-semibold text-white">Wähle einen Bereich</p>
-                </div>
-                <nav class="p-2 flex flex-col gap-1 text-slate-100">
-                    <button @click="showDashboard(); ui.showNavMenu = false" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-sm transition">
-                        <svg class="w-4 h-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3" /></svg>
-                        Dashboard
-                    </button>
-                    <button @click="resetTrackView(); ui.showNavMenu = false" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-sm transition">
-                        <svg class="w-4 h-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18" /></svg>
-                        Sets
-                    </button>
-                    <button @click="showQueueView(); ui.showNavMenu = false" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-sm transition">
-                        <svg class="w-4 h-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8h18M7 12h10M10 16h4" /></svg>
-                        Queue
-                    </button>
-                    <button @click="showLikesView(); ui.showNavMenu = false" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-sm transition">
-                        <svg class="w-4 h-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
-                        Likes
-                    </button>
-                </nav>
-            </div>
+<header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 z-20 shadow-sm shrink-0 relative">
+    
+    <div class="flex items-center gap-3 cursor-pointer group" @click="showDashboard()" title="Zum Dashboard">
+        <div class="hidden md:flex flex-col leading-tight">
+            <span class="text-[11px] uppercase tracking-[0.35em] text-gray-400">Tracklistify</span>
+            <h1 class="text-lg font-bold text-gray-800 tracking-tight group-hover:text-orange-600 transition-colors">Studio Dashboard</h1>
         </div>
-
-        <div class="flex items-center gap-3 cursor-pointer group" @click="showDashboard()" title="Zum Dashboard">
-            <div class="hidden md:flex flex-col leading-tight">
-                <span class="text-[11px] uppercase tracking-[0.35em] text-slate-400">Tracklistify</span>
-                <h1 class="text-lg font-bold text-white tracking-tight group-hover:text-orange-400 transition-colors">Studio Dashboard</h1>
-            </div>
-            <div class="md:hidden text-sm font-semibold text-white">Dashboard</div>
-        </div>
+        <div class="md:hidden text-sm font-semibold text-gray-800">Dashboard</div>
     </div>
 
-    <div class="flex items-center gap-2">
-        <button @click="ui.showAddModal = true"
-                class="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm font-semibold text-white hover:text-orange-200 hover:border-orange-400/60 hover:bg-white/10 transition shadow-lg shadow-black/20">
-            <svg class="w-4 h-4 text-orange-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-            Upload
-        </button>
-
-        <template x-if="auth.user">
-            <a href="/profile" class="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm font-semibold text-white hover:text-orange-200 hover:border-orange-400/60 hover:bg-white/10 transition">
-                <svg class="w-4 h-4 text-orange-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A10 10 0 1118.88 17.8 7 7 0 005 17.8z" /></svg>
-                Profil
-            </a>
-        </template>
-        <template x-if="!auth.user">
-            <a href="/login" class="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm font-semibold text-white hover:text-orange-200 hover:border-orange-400/60 hover:bg-white/10 transition">
-                <svg class="w-4 h-4 text-orange-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A10 10 0 1118.88 17.8 7 7 0 005 17.8z" /></svg>
-                Login
-            </a>
-        </template>
-
+    <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
         <button @click="showQueueView()" 
-                class="hidden md:flex items-center justify-center px-4 py-2 rounded-xl border transition-all duration-300 cursor-pointer hover:shadow-lg active:scale-95 group min-w-[180px] relative overflow-hidden"
-                :class="queueStatus.active ? 'bg-white/10 border-orange-400/40' : 'bg-white/5 border-white/10'">
+                class="hidden sm:flex items-center justify-center px-4 py-1.5 rounded-full border transition-all duration-300 cursor-pointer hover:shadow-md active:scale-95 group min-w-[180px] relative overflow-hidden"
+                :class="queueStatus.active ? 'bg-white border-gray-200' : 'bg-white border-gray-100'">
             
             <template x-if="queueStatus.active">
                 <div class="absolute inset-0 opacity-20 origin-left transition-transform duration-300 ease-linear"
                      :class="getPhaseColor(queueStatus.active.phase)"
-                     :style="'transform: scaleX(' + (queueStatus.active.progress / 100) + ')'" ></div>
+                     :style="'transform: scaleX(' + (queueStatus.active.progress / 100) + ')'"></div>
             </template>
 
             <div class="relative z-10 flex items-center gap-2">
@@ -78,108 +27,106 @@
                           <span class="relative inline-flex rounded-full h-2.5 w-2.5" :class="getPhaseColor(queueStatus.active.phase)"></span>
                         </span>
                         <div class="flex flex-col items-start leading-none">
-                            <span class="text-xs font-bold text-white" x-text="getPhaseLabel(queueStatus.active.phase)"></span>
-                            <span class="text-[9px] text-slate-300 font-mono" x-text="Math.round(queueStatus.active.progress) + '%'" ></span>
+                            <span class="text-xs font-bold text-gray-700" x-text="getPhaseLabel(queueStatus.active.phase)"></span>
+                            <span class="text-[9px] text-gray-400 font-mono" x-text="Math.round(queueStatus.active.progress) + '%'"></span>
                         </div>
                     </div>
                 </template>
                 <template x-if="!queueStatus.active">
-                    <span class="text-xs font-medium text-slate-300 group-hover:text-white">System bereit</span>
+                    <span class="text-xs font-medium text-gray-400 group-hover:text-gray-600">System bereit</span>
                 </template>
             </div>
         </button>
+    </div>
 
-        <button class="md:hidden inline-flex items-center justify-center px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm font-semibold text-white hover:text-orange-200 hover:border-orange-400/60 hover:bg-white/10 transition" @click="showQueueView()">
-            Queue
-        </button>
- 
+    <div class="flex items-center gap-2">
         <button @click="showRescanView()"
-                class="relative p-2 text-slate-400 hover:text-orange-300 transition-all duration-200 rounded-full hover:bg-white/5 active:scale-95"
+                class="relative p-2 text-gray-400 hover:text-orange-600 transition-all duration-200 rounded-full hover:bg-orange-50 active:scale-95"
                 title="Rescan Queue">
             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 01-2-2M5 11V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>
             <template x-if="rescanCandidates.length > 0">
-                <span class="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-slate-950" 
+                <span class="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white" 
                       x-text="rescanCandidates.length"></span>
             </template>
         </button>
 
         <button @click="ui.showLikes = !ui.showLikes"
-                class="relative p-2 transition-all rounded-xl active:scale-95 border border-transparent"
-                :class="ui.showLikes ? 'text-pink-300 bg-white/10 border-pink-400/40' : 'text-slate-400 hover:text-pink-300 hover:bg-white/5 hover:border-pink-300/30'"
+                class="relative p-2 transition-all rounded-xl active:scale-95"
+                :class="ui.showLikes ? 'text-pink-600 bg-pink-50' : 'text-gray-400 hover:text-pink-500 hover:bg-pink-50'"
                 title="Merkliste">
             <svg class="w-6 h-6" :fill="ui.showLikes ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
             </svg>
             <template x-if="likedTracks.length > 0">
-                <span class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-pink-400 ring-2 ring-slate-950"></span>
+                <span class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-pink-500 ring-2 ring-white"></span>
             </template>
         </button>
 
-        <div class="relative" @click.outside="auth.dropdownOpen = false">
-            <button @click="auth.dropdownOpen = !auth.dropdownOpen"
-                    class="flex items-center gap-2 px-3 py-2 rounded-full border border-white/10 bg-white/5 shadow-sm hover:shadow-lg shadow-black/10 group transition text-white"
-                    :class="auth.dropdownOpen ? 'ring-2 ring-orange-300/60' : ''">
-                <template x-if="auth.user">
-                    <div class="flex items-center gap-2">
-                        <div class="w-9 h-9 rounded-full bg-orange-200/90 text-orange-900 font-bold flex items-center justify-center uppercase group-hover:bg-orange-300" x-text="(auth.user.name || auth.user.dj_name || auth.user.email)[0]"></div>
-                        <div class="hidden sm:flex flex-col leading-none text-left">
-                            <span class="text-xs font-semibold text-white" x-text="auth.user.name || auth.user.dj_name || auth.user.email"></span>
-                            <span class="text-[11px] text-slate-300">Profil</span>
-                        </div>
+    <div class="relative" @click.outside="auth.dropdownOpen = false">
+        <button @click="auth.dropdownOpen = !auth.dropdownOpen"
+                class="flex items-center gap-2 px-3 py-2 rounded-full border border-gray-200 bg-white shadow-sm hover:shadow group transition"
+                :class="auth.dropdownOpen ? 'ring-2 ring-orange-200' : ''">
+            <template x-if="auth.user">
+                <div class="flex items-center gap-2">
+                    <div class="w-9 h-9 rounded-full bg-orange-100 text-orange-700 font-bold flex items-center justify-center uppercase group-hover:bg-orange-200" x-text="(auth.user.name || auth.user.dj_name || auth.user.email)[0]"></div>
+                    <div class="hidden sm:flex flex-col leading-none text-left">
+                        <span class="text-xs font-semibold text-gray-800" x-text="auth.user.name || auth.user.dj_name || auth.user.email"></span>
+                        <span class="text-[11px] text-gray-400">Profil</span>
                     </div>
-                </template>
-                <template x-if="!auth.user">
-                    <div class="flex items-center gap-2">
-                        <div class="w-9 h-9 rounded-full bg-white/10 text-slate-300 flex items-center justify-center group-hover:text-orange-300 group-hover:bg-white/20">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                </div>
+            </template>
+            <template x-if="!auth.user">
+                <div class="flex items-center gap-2">
+                    <div class="w-9 h-9 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center group-hover:text-orange-600 group-hover:bg-orange-50">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A10 10 0 1118.88 17.8 7 7 0 005 17.8z" />
+                        </svg>
+                    </div>
+                    <div class="hidden sm:flex flex-col leading-none text-left">
+                        <span class="text-xs font-semibold text-gray-800">Gast</span>
+                        <span class="text-[11px] text-gray-400">Anmelden</span>
+                    </div>
+                </div>
+            </template>
+            <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+        </button>
+
+        <div x-show="auth.dropdownOpen" x-transition
+             class="absolute right-0 mt-3 w-56 rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden z-30">
+            <template x-if="auth.user">
+                <div>
+                    <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
+                        <p class="text-xs text-gray-500">Angemeldet als</p>
+                        <p class="text-sm font-semibold text-gray-800" x-text="auth.user.name || auth.user.dj_name || auth.user.email"></p>
+                    </div>
+                    <nav class="p-2 flex flex-col gap-1">
+                        <a href="/profile" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-orange-50 text-sm text-gray-700">
+                            <svg class="w-4 h-4 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A10 10 0 1118.88 17.8 7 7 0 005 17.8z" />
                             </svg>
-                        </div>
-                        <div class="hidden sm:flex flex-col leading-none text-left">
-                            <span class="text-xs font-semibold text-white">Gast</span>
-                            <span class="text-[11px] text-slate-300">Anmelden</span>
-                        </div>
-                    </div>
-                </template>
-                <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-            </button>
-
-            <div x-show="auth.dropdownOpen" x-transition
-                 class="absolute right-0 mt-3 w-56 rounded-xl border border-white/10 bg-slate-900/90 shadow-2xl overflow-hidden z-30 backdrop-blur-xl">
-                <template x-if="auth.user">
-                    <div>
-                        <div class="px-4 py-3 bg-white/5 border-b border-white/5">
-                            <p class="text-xs text-slate-400">Angemeldet als</p>
-                            <p class="text-sm font-semibold text-white" x-text="auth.user.name || auth.user.dj_name || auth.user.email"></p>
-                        </div>
-                        <nav class="p-2 flex flex-col gap-1">
-                            <a href="/profile" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 text-sm text-slate-100">
-                                <svg class="w-4 h-4 text-orange-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A10 10 0 1118.88 17.8 7 7 0 005 17.8z" />
-                                </svg>
-                                Profil anzeigen
-                            </a>
-                            <button class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-500/10 text-sm text-red-200 text-left"
-                                    @click="logout()">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 11-4 0v-1m4-10V5a2 2 0 10-4 0v1" />
-                                </svg>
-                                Logout
-                            </button>
-                        </nav>
-                    </div>
-                </template>
-                <template x-if="!auth.user">
-                    <div class="p-3 flex flex-col gap-2">
-                        <a href="/login" class="w-full inline-flex items-center justify-center px-3 py-2 text-sm font-semibold text-white bg-gradient-to-r from-orange-500 via-pink-500 to-indigo-500 rounded-lg hover:shadow-lg">Login</a>
-                        <a href="/register" class="w-full inline-flex items-center justify-center px-3 py-2 text-sm font-semibold text-orange-200 bg-white/5 rounded-lg hover:bg-white/10">Registrieren</a>
-                    </div>
-                </template>
-            </div>
+                            Profil anzeigen
+                        </a>
+                        <button class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50 text-sm text-red-600 text-left"
+                                @click="logout()">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 11-4 0v-1m4-10V5a2 2 0 10-4 0v1" />
+                            </svg>
+                            Logout
+                        </button>
+                    </nav>
+                </div>
+            </template>
+            <template x-if="!auth.user">
+                <div class="p-3 flex flex-col gap-2">
+                    <a href="/login" class="w-full inline-flex items-center justify-center px-3 py-2 text-sm font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600">Login</a>
+                    <a href="/register" class="w-full inline-flex items-center justify-center px-3 py-2 text-sm font-semibold text-orange-600 bg-orange-50 rounded-lg hover:bg-orange-100">Registrieren</a>
+                </div>
+            </template>
         </div>
+    </div>
     </div>
 </header>

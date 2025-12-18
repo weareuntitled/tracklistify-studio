@@ -11,9 +11,7 @@ from job_manager import manager as job_manager
 from services.processor import resolve_audio_stream_url
 import yt_dlp
 
-TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "templates")
-
-app = Flask(__name__, template_folder=TEMPLATE_DIR)
+app = Flask(__name__)
 
 # --- Caching ---
 @lru_cache(maxsize=500)
@@ -49,17 +47,6 @@ def update_set_metadata(sid):
 @app.route("/api/sets/<int:sid>", methods=["DELETE"])
 def delete_set(sid):
     database.delete_set(sid)
-    return jsonify({"ok": True})
-
-
-@app.route("/api/tracks/<int:tid>", methods=["PATCH", "DELETE"])
-def update_or_delete_track(tid):
-    if request.method == "DELETE":
-        deleted = database.delete_track(tid)
-        return jsonify({"ok": True, "deleted": deleted})
-
-    data = request.get_json(force=True) or {}
-    database.update_track_metadata(tid, data)
     return jsonify({"ok": True})
 
 @app.route("/api/tracks/<int:tid>/like", methods=["POST"])
@@ -134,28 +121,16 @@ def get_metadata():
 
 @app.route("/api/queue/add", methods=["POST"])
 def add_job():
-    metadata = {}
-    job_type = None
-    payload = None
-
-    if request.is_json:
-        data = request.get_json(force=True)
-        job_type = data.get("type")
-        payload = data.get("value")
-        metadata = data.get("metadata") or {}
-    else:
-        job_type = request.form.get("type")
-        metadata_raw = request.form.get("metadata")
-        metadata = json.loads(metadata_raw) if metadata_raw else {}
-        payload = request.form.get("value")
+    job_type = request.form.get("type")
+    metadata_raw = request.form.get("metadata")
+    metadata = json.loads(metadata_raw) if metadata_raw else {}
 
     if job_type == "url":
-        if not payload: return jsonify({"ok": False, "error": "Keine URL"}), 400
-        job_manager.add_job("url", payload, metadata)
+        url = request.form.get("value")
+        if not url: return jsonify({"ok": False, "error": "Keine URL"}), 400
+        job_manager.add_job("url", url, metadata)
         
     elif job_type == "file":
-        if request.is_json:
-            return jsonify({"ok": False, "error": "File uploads require multipart"}), 400
         if 'file' not in request.files: return jsonify({"ok": False}), 400
         file = request.files['file']
         if file.filename:

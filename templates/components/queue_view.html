@@ -1,18 +1,18 @@
-<div class="flex-1 flex flex-col min-w-0 studio-surface relative h-full animate-row">
-    <div class="h-16 border-b border-white/10 flex items-center justify-between px-4 sm:px-6 shrink-0 bg-gradient-to-r from-white/5 via-white/0 to-white/5 sticky top-0 z-20">
-        <h2 class="text-lg font-bold text-white">Aktive Prozesse</h2>
-        <button @click="stopQueue()" class="px-3 py-2 rounded-lg text-sm font-bold text-red-100 bg-red-500/20 hover:bg-red-500/30 border border-red-300/40 flex items-center gap-2 disabled:opacity-50 disabled:hover:bg-red-500/20"
+<div class="flex-1 flex flex-col min-w-0 bg-white relative h-full animate-row">
+    <div class="h-16 border-b border-gray-200 flex items-center justify-between px-6 shrink-0 bg-white sticky top-0 z-20">
+        <h2 class="text-lg font-bold text-gray-900">Aktive Prozesse</h2>
+        <button @click="stopQueue()" class="px-3 py-2 rounded-lg text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 flex items-center gap-2 disabled:opacity-50"
                 :disabled="!queueStatus.active">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             <span>Stoppen</span>
         </button>
     </div>
 
-    <div class="flex-1 overflow-auto bg-white/0 p-6 lg:p-8">
+    <div class="flex-1 overflow-auto bg-gray-50 p-8">
         <div class="max-w-4xl mx-auto space-y-8">
             
             <template x-if="queueStatus.active">
-                <div class="rounded-2xl shadow-2xl border border-white/10 overflow-hidden relative studio-surface">
+                <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden relative">
                     <div class="absolute top-0 left-0 h-1.5 transition-all duration-300" 
                          :class="getPhaseColor(queueStatus.active.phase)"
                          :style="'width: ' + queueStatus.active.progress + '%'"></div>
@@ -27,45 +27,45 @@
                                     <svg x-show="queueStatus.active.phase === 'importing'" class="w-6 h-6 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
                                 </div>
                                 <div>
-                                    <h3 class="text-lg font-bold text-white" x-text="getPhaseLabel(queueStatus.active.phase)"></h3>
-                                    <p class="text-sm text-slate-300 font-medium" x-text="queueStatus.active.label"></p>
+                                    <h3 class="text-lg font-bold text-gray-900" x-text="getPhaseLabel(queueStatus.active.phase)"></h3>
+                                    <p class="text-sm text-gray-500 font-medium" x-text="queueStatus.active.label"></p>
                                 </div>
                             </div>
-                            <span class="font-mono font-bold text-2xl text-slate-200" x-text="Math.round(queueStatus.active.progress) + '%'"></span>
+                            <span class="font-mono font-bold text-2xl text-gray-300" x-text="Math.round(queueStatus.active.progress) + '%'"></span>
                         </div>
                         
-                        <div class="bg-black/60 rounded-lg p-4 font-mono text-xs text-slate-200 shadow-inner flex gap-3">
-                             <span class="text-green-400 font-bold shrink-0">>_</span>
-                             <span class="text-slate-200" x-text="queueStatus.active.log"></span>
+                        <div class="bg-gray-900 rounded-lg p-4 font-mono text-xs text-gray-300 shadow-inner flex gap-3">
+                             <span class="text-green-500 font-bold shrink-0">>_</span>
+                             <span x-text="queueStatus.active.log"></span>
                         </div>
                     </div>
                 </div>
             </template>
 
-            <div x-show="!queueStatus.active" class="studio-surface rounded-xl border border-white/10 p-12 text-center">
-                <div class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
+            <div x-show="!queueStatus.active" class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
                     <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
                 </div>
-                <h3 class="text-lg font-medium text-white">Alles erledigt</h3>
-                <p class="text-slate-300 mt-1">Keine aktiven Jobs.</p>
+                <h3 class="text-lg font-medium text-gray-900">Alles erledigt</h3>
+                <p class="text-gray-500 mt-1">Keine aktiven Jobs.</p>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="studio-surface rounded-2xl shadow-xl border border-white/10 p-5">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
                     <div class="flex items-center justify-between mb-4">
                         <div>
-                            <p class="text-xs font-bold text-slate-300 uppercase">Warteschlange</p>
-                            <h3 class="text-lg font-semibold text-white" x-text="queueStatus.queue.length + ' Jobs' "></h3>
+                            <p class="text-xs font-bold text-gray-400 uppercase">Warteschlange</p>
+                            <h3 class="text-lg font-semibold text-gray-900" x-text="queueStatus.queue.length + ' Jobs' "></h3>
                         </div>
                     </div>
 
                     <div class="space-y-3" x-show="queueStatus.queue.length">
                         <template x-for="job in queueStatus.queue" :key="job.id">
-                            <div class="border border-white/10 rounded-xl p-3 bg-white/5">
+                            <div class="border border-gray-100 rounded-xl p-3 bg-gray-50">
                                 <div class="flex items-center justify-between">
                                     <div>
-                                        <p class="text-sm font-bold text-white" x-text="job.label"></p>
-                                        <p class="text-xs text-slate-300">Status: <span class="font-mono" x-text="job.status"></span></p>
+                                        <p class="text-sm font-bold text-gray-800" x-text="job.label"></p>
+                                        <p class="text-xs text-gray-500">Status: <span class="font-mono" x-text="job.status"></span></p>
                                     </div>
                                     <span class="text-[10px] uppercase px-2 py-1 rounded-full font-bold" :class="getPhaseColor(job.phase)">
                                         <span x-text="getPhaseLabel(job.phase)"></span>
@@ -74,31 +74,31 @@
                             </div>
                         </template>
                     </div>
-                    <div x-show="!queueStatus.queue.length" class="text-sm text-slate-300">Keine wartenden Jobs.</div>
+                    <div x-show="!queueStatus.queue.length" class="text-sm text-gray-500">Keine wartenden Jobs.</div>
                 </div>
 
-                <div class="studio-surface rounded-2xl shadow-xl border border-white/10 p-5">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
                     <div class="flex items-center justify-between mb-4">
                         <div>
-                            <p class="text-xs font-bold text-slate-300 uppercase">Verlauf</p>
-                            <h3 class="text-lg font-semibold text-white">Letzte Jobs</h3>
+                            <p class="text-xs font-bold text-gray-400 uppercase">Verlauf</p>
+                            <h3 class="text-lg font-semibold text-gray-900">Letzte Jobs</h3>
                         </div>
                     </div>
                     <div class="space-y-3" x-show="queueStatus.history.length">
                         <template x-for="job in queueStatus.history" :key="job.id">
-                            <div class="border border-white/10 rounded-xl p-3 bg-white/5 shadow-sm">
+                            <div class="border border-gray-100 rounded-xl p-3 bg-white shadow-sm">
                                 <div class="flex items-center justify-between">
                                     <div>
-                                        <p class="text-sm font-bold text-white" x-text="job.label"></p>
-                                        <p class="text-xs text-slate-300" x-text="job.status === 'completed' ? 'Abgeschlossen' : job.status === 'cancelled' ? 'Abgebrochen' : 'Fehler'"></p>
+                                        <p class="text-sm font-bold text-gray-800" x-text="job.label"></p>
+                                        <p class="text-xs text-gray-500" x-text="job.status === 'completed' ? 'Abgeschlossen' : job.status === 'cancelled' ? 'Abgebrochen' : 'Fehler'"></p>
                                     </div>
-                                    <span class="text-[10px] uppercase px-2 py-1 rounded-full font-bold" :class="job.status === 'completed' ? 'bg-green-500/20 text-green-100' : job.status === 'cancelled' ? 'bg-yellow-500/20 text-yellow-100' : 'bg-red-500/20 text-red-100'" x-text="job.status"></span>
+                                    <span class="text-[10px] uppercase px-2 py-1 rounded-full font-bold" :class="job.status === 'completed' ? 'bg-green-100 text-green-700' : job.status === 'cancelled' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'" x-text="job.status"></span>
                                 </div>
-                                <p class="text-xs text-slate-300 mt-1" x-text="job.log"></p>
+                                <p class="text-xs text-gray-400 mt-1" x-text="job.log"></p>
                             </div>
                         </template>
                     </div>
-                    <div x-show="!queueStatus.history.length" class="text-sm text-slate-300">Keine Historie vorhanden.</div>
+                    <div x-show="!queueStatus.history.length" class="text-sm text-gray-500">Keine Historie vorhanden.</div>
                 </div>
             </div>
 

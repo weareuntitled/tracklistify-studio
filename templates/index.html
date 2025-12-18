@@ -1,130 +1,1139 @@
 <!DOCTYPE html>
-<html lang="de" class="h-full">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tracklistify Studio</title>
-    <link rel="stylesheet" href="/static/css/tailwind.css">
-    <link rel="stylesheet" href="/static/css/style.css">
-    <script defer src="/static/js/app.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <script src="/static/js/app.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --studio-bg: #05060f;
-            --studio-surface: rgba(13, 16, 33, 0.72);
-            --studio-border: rgba(255, 255, 255, 0.08);
-            --studio-ink: #e5e7ff;
-            --studio-muted: #9ca7c7;
-            --studio-accent: linear-gradient(120deg, #f97316, #ec4899, #6366f1);
+            --bg: #05070c;
+            --bg-glow: radial-gradient(circle at 20% 20%, rgba(255, 107, 0, 0.16), transparent 30%),
+                        radial-gradient(circle at 80% 0%, rgba(76, 151, 255, 0.1), transparent 28%),
+                        radial-gradient(circle at 50% 90%, rgba(255, 255, 255, 0.04), transparent 30%);
+            --panel: rgba(15, 19, 28, 0.7);
+            --glass: rgba(255, 255, 255, 0.04);
+            --border: rgba(255, 255, 255, 0.08);
+            --muted: #9ca3af;
+            --text: #f3f4f6;
+            --accent: #ff6b00;
+            --accent-strong: #ff7f22;
+            --success: #16a34a;
+            --radius: 16px;
+            --shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
         }
 
-        body { font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; background: radial-gradient(circle at 20% 20%, rgba(236, 72, 153, 0.08), transparent 28%), radial-gradient(circle at 80% 0%, rgba(99, 102, 241, 0.12), transparent 32%), radial-gradient(circle at 40% 80%, rgba(249, 115, 22, 0.08), transparent 30%), var(--studio-bg); color: var(--studio-ink); }
-        [x-cloak] { display: none !important; }
-        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.35); border-radius: 999px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.55); }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-row { animation: fadeInUp 0.25s ease-out forwards; opacity: 0; }
+        * { box-sizing: border-box; }
 
-        .studio-surface { background: var(--studio-surface); border: 1px solid var(--studio-border); box-shadow: 0 10px 60px rgba(0,0,0,0.45); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
-        .studio-glow { box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 40px 120px rgba(99, 102, 241, 0.18); }
-        .chip { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.9rem; border-radius: 999px; background: rgba(255,255,255,0.06); border: 1px solid var(--studio-border); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; }
-        .pill-button { position: relative; overflow: hidden; border-radius: 999px; border: 1px solid var(--studio-border); padding: 0.45rem 1rem; font-weight: 800; letter-spacing: 0.05em; transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease; background: rgba(255,255,255,0.04); color: var(--studio-ink); }
-        .pill-button:hover { transform: translateY(-1px); border-color: rgba(249, 115, 22, 0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.35); }
-        .pill-button.is-active { background-image: var(--studio-accent); color: #0b0b12; border-color: transparent; box-shadow: 0 12px 40px rgba(236, 72, 153, 0.35); }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg);
+            background-image: var(--bg-glow);
+            color: var(--text);
+            letter-spacing: 0.02em;
+        }
+
+        h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+        p { margin: 0; }
+        a { color: inherit; text-decoration: none; }
+        button { font-family: inherit; cursor: pointer; }
+        [x-cloak] { display: none !important; }
+
+        .app-shell {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+            padding: 24px;
+            min-height: 100vh;
+        }
+
+        .glass-panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            backdrop-filter: blur(18px);
+            box-shadow: var(--shadow);
+        }
+
+        .library {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .library-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .brand {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .brand .eyebrow {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            color: var(--muted);
+        }
+
+        .brand .title {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+        }
+
+        .icon-button {
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--glass);
+            color: var(--text);
+            transition: all 0.2s ease;
+        }
+
+        .icon-button:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            transform: translateY(-1px);
+        }
+
+        .library-search {
+            padding: 0 20px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .input {
+            width: 100%;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text);
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+        }
+
+        .input:focus {
+            outline: 1px solid var(--accent);
+            border-color: var(--accent);
+        }
+
+        .hint {
+            font-size: 11px;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .folder-list {
+            display: grid;
+            gap: 10px;
+            padding: 0 20px 10px;
+        }
+
+        .folder {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.02);
+            transition: all 0.2s ease;
+        }
+
+        .folder.is-hovered {
+            border-color: var(--accent);
+            background: rgba(255, 107, 0, 0.08);
+        }
+
+        .folder .meta {
+            display: grid;
+            gap: 4px;
+        }
+
+        .folder .name {
+            font-weight: 700;
+            letter-spacing: 0.06em;
+        }
+
+        .folder .count {
+            font-size: 11px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .trash-zone {
+            margin: 10px 20px 20px;
+            padding: 14px;
+            border: 1px dashed var(--border);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            background: rgba(255, 255, 255, 0.02);
+            transition: all 0.2s ease;
+        }
+
+        .trash-zone.is-hovered {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(255, 107, 0, 0.08);
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .top-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo-mark {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-ring {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(255, 107, 0, 0.18), rgba(76, 151, 255, 0.18));
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+        }
+
+        .logo-text {
+            display: grid;
+            line-height: 1.1;
+        }
+
+        .logo-text span:first-child {
+            font-size: 12px;
+            letter-spacing: 0.14em;
+            color: var(--muted);
+        }
+
+        .logo-text span:last-child {
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: 0.2em;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .pill {
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.04);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .pill-link {
+            border-color: transparent;
+            color: var(--muted);
+            transition: color 0.2s ease;
+        }
+
+        .pill-link:hover { color: var(--accent); }
+
+        .cta {
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            border: none;
+            color: #0c0b0b;
+            font-weight: 800;
+            padding: 12px 18px;
+            border-radius: 12px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            box-shadow: 0 16px 40px rgba(255, 107, 0, 0.32);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .cta:hover { transform: translateY(-1px); box-shadow: 0 22px 48px rgba(255, 107, 0, 0.42); }
+        .cta:active { transform: translateY(0); }
+
+        .user-chip {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255, 107, 0, 0.24), rgba(76, 151, 255, 0.24));
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+        }
+
+        .stat-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            padding: 12px 16px 16px;
+        }
+
+        .stat {
+            padding: 16px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(12px);
+            display: grid;
+            gap: 6px;
+        }
+
+        .stat .label {
+            font-size: 11px;
+            letter-spacing: 0.14em;
+            color: var(--muted);
+        }
+
+        .stat .value {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+        }
+
+        .content {
+            padding: 0 16px 16px;
+            display: grid;
+            gap: 18px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 0 4px;
+        }
+
+        .section-header h2 {
+            font-size: 14px;
+        }
+
+        .set-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 14px;
+        }
+
+        .set-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(15, 19, 28, 0.7));
+            display: grid;
+            grid-template-rows: 140px 1fr;
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .set-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(15, 19, 28, 0.9));
+        }
+
+        .set-thumb {
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        .set-thumb::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, transparent 20%, rgba(0, 0, 0, 0.55));
+        }
+
+        .set-thumb .fallback {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            letter-spacing: 0.18em;
+            color: rgba(255, 255, 255, 0.7);
+            background: linear-gradient(135deg, rgba(255, 107, 0, 0.22), rgba(76, 151, 255, 0.22));
+        }
+
+        .set-meta {
+            padding: 14px 16px 16px;
+            display: grid;
+            gap: 6px;
+        }
+
+        .set-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            font-size: 11px;
+            letter-spacing: 0.12em;
+        }
+
+        .set-title {
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+        }
+
+        .set-artist {
+            font-size: 12px;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+        }
+
+        .set-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px 16px;
+            font-size: 12px;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+        }
+
+        .track-panel {
+            padding: 16px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .track-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .track-panel-header .title {
+            display: grid;
+            gap: 4px;
+        }
+
+        .track-panel-header .title span:first-child {
+            font-size: 12px;
+            letter-spacing: 0.14em;
+            color: var(--muted);
+        }
+
+        .track-panel-header .title span:last-child {
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+        }
+
+        .action-link {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            font-size: 11px;
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .tracklist {
+            display: grid;
+            gap: 10px;
+        }
+
+        .track {
+            display: grid;
+            grid-template-columns: 60px 1fr 140px 90px 100px;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+        }
+
+        .track:hover { border-color: var(--accent); }
+
+        .track .pos {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.08em;
+        }
+
+        .track .names {
+            display: grid;
+            gap: 4px;
+        }
+
+        .track .names .song {
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        .track .names .artist {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .track .controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .ghost-button {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-size: 11px;
+            transition: border-color 0.2s ease, color 0.2s ease;
+        }
+
+        .ghost-button:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .context-menu {
+            position: fixed;
+            z-index: 70;
+            background: rgba(12, 14, 20, 0.95);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 8px;
+            min-width: 200px;
+            box-shadow: var(--shadow);
+        }
+
+        .context-menu button {
+            width: 100%;
+            background: none;
+            border: none;
+            color: var(--text);
+            padding: 10px 12px;
+            border-radius: 10px;
+            text-align: left;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-size: 11px;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+
+        .context-menu button:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--accent);
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 80;
+            padding: 16px;
+        }
+
+        .modal {
+            width: 100%;
+            max-width: 640px;
+            background: rgba(12, 14, 20, 0.92);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .modal h3 {
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .modal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .label {
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        .modal-actions {
+            margin-top: 16px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .toast-stack {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 90;
+            display: grid;
+            gap: 10px;
+        }
+
+        .toast {
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.08);
+            letter-spacing: 0.06em;
+        }
+
+        .toast .title {
+            font-weight: 700;
+        }
+
+        .toast .subtitle {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        audio { display: none; }
+        @media (max-width: 1100px) {
+            .app-shell { grid-template-columns: 1fr; }
+            .library { order: 2; }
+            .main { order: 1; }
+        }
+
+        @media (max-width: 720px) {
+            .track { grid-template-columns: 1fr; }
+            .app-shell { padding: 14px; }
+            .top-nav { flex-direction: column; align-items: flex-start; gap: 10px; }
+        }
     </style>
 </head>
-<body class="min-h-screen text-slate-100 relative overflow-hidden" x-data="tracklistify()" x-init="init()"
-      @keydown.window.escape="closeContextMenu()" @mousedown.window="handleContextMenuOutside($event)">
-<div class="pointer-events-none absolute inset-0">
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(236,72,153,0.15),transparent_28%),radial-gradient(circle_at_80%_0%,rgba(99,102,241,0.2),transparent_32%),radial-gradient(circle_at_40%_80%,rgba(249,115,22,0.12),transparent_30%)] blur-3xl"></div>
-</div>
+<body class="h-full flex flex-col" x-data="tracklistify()"
+      @keydown.window.escape="closeContextMenu()"
+      @mousedown.window="handleContextMenuOutside($event)"
+      @resize.window="positionContextMenu()">
+<div class="swiss-shell">
+    <aside class="swiss-sidebar">
+        <div class="swiss-section flex items-center justify-between">
+            <div class="swiss-brand leading-none">
+                <span>TRACKLISTIFY</span>
+                <span>STUDIO</span>
+            </div>
+            <button class="icon-button" @click="createFolder()" title="New Folder">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h6l2 3h8v13H4z"/><path d="M12 11v6"/><path d="M9 14h6"/></svg>
+            </button>
+        </div>
+        <div class="library-search">
+            <input class="input" x-model="search" type="text" placeholder="Filter sets">
+            <span class="hint">Drag sets into folders to organize them.</span>
+        </div>
 
-<div class="relative flex flex-col h-screen min-h-0 px-3 sm:px-5 lg:px-10 py-4 gap-4">
-    <div class="flex flex-col flex-1 min-h-0 gap-4 studio-glow studio-surface rounded-3xl">
-        {% include 'components/header.html' %}
-        <div class="flex flex-1 min-h-0 min-w-0 px-2 sm:px-4 pb-4">
-            <div class="flex w-full max-w-[1600px] mx-auto gap-3 lg:gap-5 items-stretch">
-                {% include 'components/sidebar_sets.html' %}
-
-                <div class="flex-1 min-w-0 lg:min-w-[640px]">
-                    <div class="flex flex-col min-h-0 h-full studio-surface rounded-[26px] overflow-hidden border border-white/10 shadow-2xl">
-                        <div class="border-b border-white/10 bg-gradient-to-r from-white/5 via-white/0 to-white/5 px-4 sm:px-6 pt-4 pb-3 flex flex-col gap-3">
-                            <div class="flex items-start justify-between gap-4">
-                                <div class="space-y-1">
-                                    <p class="text-[11px] uppercase tracking-[0.3em] text-slate-400 leading-none">Tracklistify Studio</p>
-                                    <h1 class="text-xl font-extrabold text-white leading-tight">Control Center</h1>
-                                </div>
-                                <span class="chip hidden sm:inline-flex">Live Session</span>
-                            </div>
-                            <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
-                                <button @click="showDashboard()" :class="currentView === 'dashboard' ? 'pill-button is-active' : 'pill-button'" class="pill-button">Dashboard</button>
-                                <button @click="currentView = 'sets'" :class="currentView === 'sets' ? 'pill-button is-active' : 'pill-button'" class="pill-button">Sets</button>
-                                <button @click="showQueueView()" :class="currentView === 'queue' ? 'pill-button is-active' : 'pill-button'" class="pill-button">Queue</button>
-                                <button @click="showRescanView()" :class="currentView === 'rescan' ? 'pill-button is-active' : 'pill-button'" class="pill-button">Rescan</button>
-                                <button @click="showLikesView()" :class="currentView === 'likes' ? 'pill-button is-active' : 'pill-button'" class="pill-button">Likes</button>
-                            </div>
+        <div class="swiss-section space-y-2">
+            <div class="flex items-center justify-between text-[11px] font-bold">
+                <span>FOLDERS</span>
+                <button @click="createFolder" class="swiss-button text-[10px] px-2 py-1">NEW</button>
+            </div>
+            <div class="flex flex-col gap-2">
+                <template x-for="folder in folders" :key="folder.id">
+                    <div
+                        class="flex items-center justify-between gap-2 px-3 py-2 border text-[12px] font-bold transition-all duration-150"
+                        :class="folderHoverId === folder.id ? 'contrast-active ring-2 ring-black' : 'accent-hover'"
+                        @dragenter="onFolderDragEnter(folder, $event)"
+                        @dragleave="onFolderDragLeave(folder)"
+                        @dragover.prevent="onFolderDragOver($event)"
+                        @drop="onDropToFolder(folder, $event)"
+                    >
+                        <div class="flex items-center gap-2 truncate">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18v10H3V7zm3-3h12v3H6V4z"/></svg>
+                            <span class="truncate" x-text="folder.name"></span>
                         </div>
-
-                        <div class="flex-1 min-h-0 overflow-hidden">
-                            <div class="flex-1 overflow-auto custom-scrollbar bg-gradient-to-b from-white/5 via-transparent to-white/5">
-                                <section x-show="currentView === 'dashboard'" x-cloak class="h-full flex flex-col">
-                                    {% include 'components/dashboard.html' %}
-                                </section>
-
-            <div class="flex-1 min-h-0 overflow-hidden">
-                <div class="flex-1 overflow-auto custom-scrollbar">
-                    <section x-show="currentView === 'dashboard'" x-cloak class="h-full flex flex-col">
-                        {% include 'components/dashboard.html' %}
-                    </section>
-
-                    <section x-show="currentView === 'sets'" x-cloak class="h-full flex flex-col">
-                        {% include 'components/main_view.html' %}
-                    </section>
-
-                    <section x-show="currentView === 'queue'" x-cloak class="h-full flex flex-col">
-                        {% include 'components/queue_view.html' %}
-                    </section>
-
-                    <section x-show="currentView === 'rescan'" x-cloak class="h-full flex flex-col">
-                        {% include 'components/rescan_view.html' %}
-                    </section>
-
-                    <section x-show="currentView === 'likes'" x-cloak class="h-full flex flex-col">
-                        {% include 'components/main_likes.html' %}
-                    </section>
+                        <span class="text-[10px] font-bold pill" x-text="(folder.sets?.length || 0) + 'x'"></span>
+                    </div>
+                </template>
+                <div x-show="folders.length === 0" class="text-[11px] muted">NO FOLDERS</div>
+                <div
+                    class="border-2 border-dashed text-center text-[11px] py-2 px-2 transition-all duration-150"
+                    :class="trashHover ? 'contrast-active ring-2 ring-black' : 'border-gray-300'"
+                    @dragenter="onTrashDragEnter($event)"
+                    @dragover.prevent="onTrashDragEnter($event)"
+                    @dragleave="onTrashDragLeave"
+                    @drop="onDropToTrash"
+                >
+                    DROP HERE TO DELETE
                 </div>
             </div>
         </div>
 
-        {% include 'components/sidebar_likes.html' %}
-    </div>
+        <div class="flex-1 overflow-y-auto divide-y divide-swiss">
+            <div class="px-4 py-4 space-y-3">
+                <div class="flex items-center justify-between text-[10px] font-bold">
+                    <span>FOLDERS</span>
+                    <button @click="createFolder()" class="swiss-button text-[10px] px-2 py-1">NEW</button>
+                </div>
 
-    {% include 'components/footer_player.html' %}
+                <div class="space-y-2">
+                    <template x-for="folder in folders" :key="folder.id">
+                        <div class="px-3 py-2 border flex items-center justify-between text-[11px] gap-3 transition-colors"
+                             :class="folderHoverId === folder.id ? 'contrast-active' : 'accent-hover'"
+                             @contextmenu.prevent="openFolderContextMenu($event, folder)"
+                             @dragenter.prevent="onFolderDragEnter(folder, $event)" @dragover.prevent="onFolderDragOver($event)" @dragleave="onFolderDragLeave(folder)"
+                             @drop.prevent="onDropToFolder(folder, $event)">
+                            <div class="flex items-center gap-2 truncate">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 7a2 2 0 012-2h2m14 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7m18 0l-3.34-4H8.34L5 7" /></svg>
+                                <span class="truncate" x-text="folder.name"></span>
+                            </div>
+                            <span class="pill text-[10px]" x-text="(folder.sets?.length || 0) + ' SETS'"></span>
+                        </div>
+                    </template>
+                    <div x-show="!folders.length" class="text-[11px] muted">NO FOLDERS</div>
+                </div>
+
+                <div class="border border-dashed px-3 py-4 text-center text-[11px] muted transition-colors"
+                     style="border-color: var(--swiss-muted);"
+                     :class="draggingSet ? 'contrast-active' : ''"
+                     @dragover.prevent @dragenter.prevent @drop.prevent="onDropToTrash($event)">
+                    DROP SET HERE TO DELETE
+                </div>
+            </div>
+
+            <div class="py-2">
+                <template x-for="set in filteredSets" :key="set.id">
+                    <button @click="loadSet(set)"
+                            @contextmenu.prevent="openContextMenu($event, 'set', set)"
+                            draggable="true"
+                            @dragstart="onDragSet(set, $event)" @dragend="onDragEnd"
+                            class="w-full text-left px-4 py-3 border-b last:border-b-0 transition-all duration-150"
+                            :class="activeSet && activeSet.id === set.id ? 'contrast-active' : ''">
+                        <div class="flex items-center justify-between text-[12px] font-bold gap-2">
+                            <div class="flex items-center gap-2 truncate">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-2v13" /></svg>
+                                <span class="truncate" x-text="set.name"></span>
+                            </div>
+                            <span class="font-mono px-2 py-0.5 pill" x-text="set.track_count"></span>
+                        </div>
+                        <div class="text-[10px] muted" x-text="formatDate(set.created_at)"></div>
+                    </button>
+                </template>
+                <div x-show="sets.length === 0" class="px-4 py-6 text-[12px] muted">NO SETS YET</div>
+            </div>
+        </div>
+        <div class="trash-zone"
+             :class="folderHoverId === 'trash' ? 'is-hovered' : ''"
+             @dragenter.prevent="folderHoverId = 'trash'"
+             @dragleave="folderHoverId = null"
+             @dragover.prevent
+             @drop="onDropToTrash($event)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            <span>Trash Zone</span>
+        </div>
+    </aside>
+
+    <section class="main glass-panel">
+        <div class="top-nav">
+            <div class="logo-mark">
+                <div class="logo-ring">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h6l2 3h8v9H4z"/><circle cx="9" cy="13" r="2"/><circle cx="15" cy="13" r="2"/></svg>
+                </div>
+                <div class="logo-text">
+                    <span>Tracklistify</span>
+                    <span>Studio</span>
+                </div>
+            </div>
+            <div class="nav-actions">
+                <button class="pill pill-link" @click="openAdmin">Admin</button>
+                <template x-if="auth.user">
+                    <div class="user-chip">
+                        <div class="avatar" x-text="(auth.user.name || auth.user.dj_name || auth.user.email || 'DJ')[0]"></div>
+                        <div class="names">
+                            <div style="font-weight:700; letter-spacing:0.06em;" x-text="auth.user.name || auth.user.dj_name || auth.user.email"></div>
+                            <div style="font-size:11px; color:var(--muted); letter-spacing:0.1em;">Signed in</div>
+                        </div>
+                    </div>
+                </template>
+                <template x-if="!auth.user">
+                    <a href="/login" class="pill pill-link">Guest</a>
+                </template>
+                <button class="cta" @click="ui.showAddModal = true">Add Set</button>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-auto">
+            <section x-show="currentView === 'dashboard'" class="p-6 space-y-4" x-cloak>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="tile">
+                        <strong>SETS</strong>
+                        <span class="value" x-text="dashboardStats.total_sets"></span>
+                    </div>
+                    <div class="tile">
+                        <strong>TRACKS</strong>
+                        <span class="value" x-text="dashboardStats.total_tracks"></span>
+                    </div>
+                    <div class="tile">
+                        <strong>LIKES</strong>
+                        <span class="value" x-text="dashboardStats.total_likes"></span>
+                    </div>
+                    <div class="tile">
+                        <strong>DISCOVERY</strong>
+                        <span class="value" x-text="dashboardStats.discovery_rate + '%' "></span>
+                    </div>
+                </div>
+                <div class="tile">
+                    <div class="text-[10px] font-bold mb-2">RECENT SETS</div>
+                    <div class="divide-y divide-swiss">
+                        <template x-for="item in dashboardStats.recent_sets" :key="item.id">
+                            <button class="w-full flex items-center justify-between py-3 text-left accent-hover cursor-move"
+                                    draggable="true"
+                                    @dragstart="onDragSet(item, $event)"
+                                    @dragend="onDragEnd"
+                                    @click="loadSet(item.id)">
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-bold" x-text="item.name"></span>
+                                    <span class="text-[10px] muted" x-text="formatDate(item.created_at)"></span>
+                                </div>
+                                <span class="text-[10px] font-bold" x-text="item.track_count + ' TRACKS'"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </section>
+
+        <div class="stat-row">
+            <div class="stat">
+                <span class="label">Sets</span>
+                <span class="value" x-text="dashboardStats.total_sets"></span>
+            </div>
+            <div class="stat">
+                <span class="label">Tracks</span>
+                <span class="value" x-text="dashboardStats.total_tracks"></span>
+            </div>
+            <div class="stat">
+                <span class="label">Likes</span>
+                <span class="value" x-text="dashboardStats.total_likes"></span>
+            </div>
+            <div class="stat">
+                <span class="label">Discovery</span>
+                <span class="value" x-text="dashboardStats.discovery_rate + '%'"></span>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="section-header">
+                <h2>Sets</h2>
+                <span class="hint">Right-click for quick actions</span>
+            </div>
+            <div class="set-grid">
+                <template x-for="set in filteredSets" :key="set.id">
+                    <div class="set-card"
+                         draggable="true"
+                         @dragstart="onDragSet(set, $event)"
+                         @dragend="onDragEnd"
+                         @click="loadSet(set)"
+                         @contextmenu.prevent="openSetContextMenu($event, set)">
+                        <div class="set-thumb" :style="set.thumbnail ? `background-image:url(${set.thumbnail})` : ''">
+                            <div class="fallback" x-show="!set.thumbnail" x-text="(set.artists || set.dj_names || set.name || 'SET').slice(0, 6).toUpperCase()"></div>
+                        </div>
+                        <div class="set-meta">
+                            <div class="set-pill">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h6l2 3h8v9H4z"/></svg>
+                                <span x-text="set.track_count + ' tracks'"></span>
+                            </div>
+                            <div class="set-title" x-text="set.name"></div>
+                            <div class="set-artist" x-text="set.artists || set.dj_names || 'Unknown Artist'"></div>
+                        </div>
+                        <div class="set-footer">
+                            <span x-text="formatDate(set.created_at)"></span>
+                            <span x-text="set.event || 'Ready'"></span>
+                        </div>
+                    </div>
+                </template>
+                <div x-show="filteredSets.length === 0" class="set-card" style="display:flex; align-items:center; justify-content:center; text-transform:uppercase; letter-spacing:0.1em;">
+                    No sets yet
+                </div>
+            </div>
+
+            <div class="track-panel">
+                <div class="track-panel-header">
+                    <div class="title">
+                        <span>Active Set</span>
+                        <span x-text="activeSet ? activeSet.name : 'Select a set to view tracks'"></span>
+                    </div>
+                    <div class="controls" style="display:flex; gap:8px;">
+                        <button class="ghost-button" @click="copyTracklist" x-show="activeSet">Copy List</button>
+                    </div>
+                </div>
+                <div class="tracklist" x-show="activeSet">
+                    <template x-for="(track, index) in tracks" :key="track.id">
+                        <div class="track">
+                            <div class="pos">
+                                <button class="icon-button" style="width:32px; height:32px; border-radius:10px;" @click.stop="togglePlay(track)">
+                                    <svg x-show="ui.playingId !== track.id" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                                    <svg x-show="ui.playingId === track.id" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                                </button>
+                                <span x-text="track.flag === 3 ? '???' : (track.position || index + 1)"></span>
+                            </div>
+                            <div class="names">
+                                <div class="song" x-text="track.title || 'Unknown Track'"></div>
+                                <div class="artist" x-text="track.artist || 'Unknown Artist'"></div>
+                            </div>
+                            <div class="names">
+                                <div class="artist">Start</div>
+                                <div class="song" style="font-size:13px;" x-text="formatTime(track.start_time)"></div>
+                            </div>
+                            <div class="names">
+                                <div class="artist">Confidence</div>
+                                <div class="song" style="font-size:13px;" x-text="formatConf(track.confidence)"></div>
+                            </div>
+                            <div class="controls">
+                                <button class="ghost-button" @click.stop="togglePurchase(track)" x-text="track.purchased ? 'Bought' : 'Buy'"></button>
+                                <button class="ghost-button" @click.stop="toggleLike(track)">
+                                    <span x-text="track.liked ? 'Liked' : 'Like'"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <div x-show="!activeSet" class="hint" style="padding:12px 0;">Choose a set to see its tracks.</div>
+            </div>
+        </div>
+    </section>
 </div>
 
-{% include 'components/modals.html' %}
+<div x-show="ui.contextMenu.show" x-ref="contextMenu" x-cloak
+     class="fixed z-[90] bg-white border shadow-xl w-60 divide-y divide-swiss"
+     @contextmenu.prevent
+     @click.outside="closeContextMenu()"
+     :style="'top: ' + ui.contextMenu.y + 'px; left: ' + ui.contextMenu.x + 'px'">
+    <div class="px-3 py-2 text-[10px] font-bold tracking-wide">
+        <span x-text="ui.contextMenu.type === 'folder' ? 'FOLDER ACTIONS' : 'SET ACTIONS'"></span>
+    </div>
 
-<div class="fixed bottom-6 right-6 space-y-2 z-50">
-    <template x-for="toast in toasts" :key="toast.id">
-        <div class="studio-surface rounded-xl shadow-xl px-4 py-3 w-72 border border-white/10"
-             :class="toast.type === 'error' ? 'border-red-400/40 text-red-100' : toast.type === 'success' ? 'border-emerald-400/40 text-emerald-100' : toast.type === 'info' ? 'border-orange-400/40 text-orange-100' : ''">
-            <div class="font-semibold text-white" x-text="toast.title"></div>
-            <div class="text-sm text-slate-300" x-text="toast.subtitle"></div>
+    <template x-if="ui.contextMenu.type === 'set'">
+        <div class="py-1 space-y-1">
+            <button @click="openEditSetModal()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>Info & Tags</span>
+            </button>
+            <button @click="renameSetContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                <span>Umbenennen</span>
+            </button>
+            <button @click="promptMoveSetContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h7" /></svg>
+                <span>In Ordner verschieben</span>
+            </button>
+            <div x-show="folders.length" class="pt-1">
+                <div class="px-4 py-1 text-[10px] muted">Oder hierhin bewegen</div>
+                <template x-for="folder in folders" :key="folder.id">
+                    <button @click="moveSetToFolderFromMenu(folder)" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 7a2 2 0 012-2h2m14 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7m18 0l-3.34-4H8.34L5 7" /></svg>
+                        <span class="truncate" x-text="folder.name"></span>
+                    </button>
+                </template>
+            </div>
+            <button @click="rescanSetContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                <span>Neu analysieren</span>
+            </button>
+            <button @click="deleteSetContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2 text-red-600">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                <span>Set löschen</span>
+            </button>
+        </div>
+    </template>
+
+    <template x-if="ui.contextMenu.type === 'folder'">
+        <div class="py-1 space-y-1">
+            <button @click="renameFolderContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2" /></svg>
+                <span>Ordner umbenennen</span>
+            </button>
+            <button @click="deleteFolderContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2 text-red-600">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" /></svg>
+                <span>Ordner löschen</span>
+            </button>
         </div>
     </template>
 </div>
 
-<audio x-ref="player"
-       @timeupdate="updateProgress"
-       @ended="onAudioEnded"
-       @pause="onAudioPaused"
-       @play="onAudioPlaying"
-       @error="onAudioError"
-       class="hidden"></audio>
+<!-- Add Set Modal -->
+<div x-show="ui.showAddModal" x-cloak class="fixed inset-0 z-[80] flex items-center justify-center">
+    <div class="fixed inset-0 bg-black/70" @click="ui.showAddModal = false"></div>
+    <div class="bg-white border w-full max-w-lg p-6 space-y-4 z-10">
+        <div class="text-sm font-bold">IMPORT SET</div>
+        <div class="space-y-2">
+            <label class="text-[10px] font-bold">URL</label>
+            <div class="flex gap-2">
+                <input type="text" x-model="inputs.url" class="flex-1 swiss-input text-[11px]">
+                <button @click="fetchUrlMetadata(inputs.url)" class="swiss-button text-[11px]">FETCH</button>
+            </div>
+        </div>
+        <div class="modal-grid">
+            <div style="display:grid; gap:6px;">
+                <label class="label">Artist / DJ</label>
+                <input type="text" class="input" x-model="inputs.metaArtist">
+            </div>
+            <div style="display:grid; gap:6px;">
+                <label class="label">Title</label>
+                <input type="text" class="input" x-model="inputs.metaName">
+            </div>
+            <div style="display:grid; gap:6px;">
+                <label class="label">Event / Info</label>
+                <input type="text" class="input" x-model="inputs.metaEvent">
+            </div>
+            <div style="display:grid; gap:6px;">
+                <label class="label">Tags</label>
+                <input type="text" class="input" x-model="inputs.metaTags">
+            </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+            <label style="display:flex; align-items:center; gap:8px; letter-spacing:0.08em; font-size:12px;">
+                <input type="checkbox" x-model="inputs.is_b2b">
+                B2B
+            </label>
+            <span class="hint" x-text="queueStatus.queue.length + ' waiting'"></span>
+        </div>
+        <div class="modal-actions">
+            <button class="ghost-button" @click="ui.showAddModal = false">Close</button>
+            <button class="cta" @click="inputs.url ? addToQueue('url') : addToQueue('file')">Start</button>
+        </div>
+    </div>
+</div>
+
+<div x-show="ui.showProfileModal" x-cloak class="modal-backdrop">
+    <div class="modal" style="max-width:480px;">
+        <h3>Edit Profile</h3>
+        <div class="modal-grid">
+            <div style="display:grid; gap:6px;">
+                <label class="label">Name</label>
+                <input type="text" class="input" x-model="profile.display_name">
+            </div>
+            <div style="display:grid; gap:6px;">
+                <label class="label">DJ Name</label>
+                <input type="text" class="input" x-model="profile.dj_name">
+            </div>
+            <div style="display:grid; gap:6px;">
+                <label class="label">SoundCloud</label>
+                <input type="text" class="input" x-model="profile.soundcloud_url">
+            </div>
+            <div style="display:grid; gap:6px;">
+                <label class="label">Avatar</label>
+                <input type="file" class="input" x-ref="avatarInput" style="padding:10px;">
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="ghost-button" @click="ui.showProfileModal = false">Cancel</button>
+            <button class="cta" @click="saveProfile">Save</button>
+        </div>
+    </div>
+</div>
+
+<div x-show="admin.show" x-cloak class="modal-backdrop">
+    <div class="modal" style="max-width:720px;">
+        <div class="top-nav" style="padding:0 0 12px; border:none;">
+            <h3>Admin Console</h3>
+            <button class="ghost-button" @click="admin.show = false">Close</button>
+        </div>
+        <div class="modal-grid">
+            <div style="display:grid; gap:6px;">
+                <label class="label">Username</label>
+                <input type="text" class="input" x-model="admin.invite.username">
+            </div>
+            <div style="display:grid; gap:6px;">
+                <label class="label">Password</label>
+                <input type="text" class="input" x-model="admin.invite.password">
+            </div>
+            <div style="align-self:end;">
+                <button class="cta" style="width:100%;" @click="inviteUser">Invite</button>
+            </div>
+        </div>
+        <div class="hint" style="margin-top:8px;" x-show="admin.invite.generated">Temp password: <span x-text="admin.invite.generated"></span></div>
+        <div class="tracklist" style="margin-top:14px;">
+            <template x-for="user in admin.users" :key="user.id">
+                <div class="track" style="grid-template-columns: 1fr 120px;">
+                    <div class="names">
+                        <div class="song" x-text="user.username"></div>
+                        <div class="artist" x-text="formatDate(user.created_at)"></div>
+                    </div>
+                    <div style="display:flex; justify-content:flex-end;">
+                        <button class="ghost-button" @click="deleteUser(user.id)">Delete</button>
+                    </div>
+                </div>
+            </template>
+            <div class="hint" x-show="admin.users.length === 0">No users yet.</div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-stack">
+    <template x-for="toast in toasts" :key="toast.id">
+        <div class="toast">
+            <div class="title" x-text="toast.title"></div>
+            <div class="subtitle" x-text="toast.subtitle"></div>
+        </div>
+    </template>
+</div>
+
+<audio x-ref="player" @timeupdate="updateProgress" @ended="onAudioEnded" @pause="onAudioPaused" @play="onAudioPlaying" @error="onAudioError"></audio>
 </body>
 </html>

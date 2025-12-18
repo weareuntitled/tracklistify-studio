@@ -1,40 +1,40 @@
-<div class="flex-1 flex flex-col min-w-0 studio-surface relative h-full animate-row">
+<div class="flex-1 flex flex-col min-w-0 bg-white relative h-full animate-row">
     
-    <div class="h-16 border-b border-white/10 flex items-center justify-between px-4 sm:px-6 shrink-0 bg-gradient-to-r from-white/5 via-white/0 to-white/5 sticky top-0 z-20">
+    <div class="h-16 border-b border-gray-200 flex items-center justify-between px-6 shrink-0 bg-white sticky top-0 z-20">
         <div class="flex items-center gap-3">
-            <h2 class="text-lg font-bold text-white">Rescan Queue</h2>
-            <span class="bg-red-500/20 text-red-100 text-xs font-bold px-2 py-0.5 rounded-full border border-red-300/40" x-text="rescanCandidates.length + ' Tracks'"></span>
+            <h2 class="text-lg font-bold text-gray-900">Rescan Queue</h2>
+            <span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full" x-text="rescanCandidates.length + ' Tracks'"></span>
         </div>
         
-        <button @click="runRescan()" class="bg-gradient-to-r from-orange-500 via-pink-500 to-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:shadow-lg shadow-orange-500/30 transition-colors flex items-center gap-2">
+        <button @click="runRescan()" class="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-orange-700 shadow-sm transition-colors flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             Alle scannen
         </button>
     </div>
 
-    <div class="flex-1 overflow-auto bg-white/0 p-6">
+    <div class="flex-1 overflow-auto bg-gray-50 p-6">
         <div class="max-w-5xl mx-auto">
-            <div class="studio-surface rounded-xl shadow-xl border border-white/10 overflow-hidden">
-                <table class="min-w-full divide-y divide-white/10">
-                    <thead class="bg-slate-900/80">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-100">
+                    <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Set</th>
-                            <th class="px-6 py-3 text-right text-xs font-bold text-slate-300 uppercase tracking-wider w-24">Time</th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Markierter Titel</th>
-                            <th class="px-6 py-3 text-right text-xs font-bold text-slate-300 uppercase tracking-wider w-32">Aktion</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Set</th>
+                            <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-24">Time</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Markierter Titel</th>
+                            <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-32">Aktion</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white/0 divide-y divide-white/10">
+                    <tbody class="bg-white divide-y divide-gray-100">
                         <template x-for="c in rescanCandidates" :key="c.id">
-                            <tr class="hover:bg-white/5 transition-colors group">
-                                <td class="px-6 py-4 text-sm text-white font-medium truncate max-w-xs" x-text="c.set_name"></td>
-                                <td class="px-6 py-4 text-sm text-slate-300 font-mono text-right" x-text="formatTime(c.start_time)"></td>
-                                <td class="px-6 py-4 text-sm text-white">
+                            <tr class="hover:bg-orange-50 transition-colors group">
+                                <td class="px-6 py-4 text-sm text-gray-600 font-medium truncate max-w-xs" x-text="c.set_name"></td>
+                                <td class="px-6 py-4 text-sm text-gray-500 font-mono text-right" x-text="formatTime(c.start_time)"></td>
+                                <td class="px-6 py-4 text-sm text-gray-900">
                                     <div class="font-bold" x-text="c.title"></div>
-                                    <div class="text-xs text-slate-300" x-text="c.artist"></div>
+                                    <div class="text-xs text-gray-400" x-text="c.artist"></div>
                                 </td>
                                 <td class="px-6 py-4 text-right">
-                                    <button @click="toggleFlag(c)" class="text-red-100 hover:text-white bg-red-500/20 hover:bg-red-500/30 border border-red-300/40 text-xs font-bold uppercase px-3 py-1.5 rounded transition-colors">
+                                    <button @click="toggleFlag(c)" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 text-xs font-bold uppercase px-3 py-1.5 rounded transition-colors">
                                         Entfernen
                                     </button>
                                 </td>
@@ -42,9 +42,9 @@
                         </template>
                         <template x-if="rescanCandidates.length === 0">
                             <tr>
-                                <td colspan="4" class="px-6 py-20 text-center text-slate-300">
+                                <td colspan="4" class="px-6 py-20 text-center text-gray-400">
                                     <div class="flex flex-col items-center gap-3">
-                                        <svg class="w-12 h-12 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        <svg class="w-12 h-12 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                         <span>Queue leer. Alles sauber.</span>
                                     </div>
                                 </td>

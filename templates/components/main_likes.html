@@ -1,54 +1,54 @@
-<div class="flex-1 flex flex-col min-w-0 studio-surface relative h-full">
+<div class="flex-1 flex flex-col min-w-0 bg-white relative h-full">
 
-    <div class="h-16 border-b border-white/10 flex items-center justify-between px-4 sm:px-6 shrink-0 bg-gradient-to-r from-pink-500/20 via-slate-900/40 to-indigo-500/10">
+    <div class="h-16 border-b border-gray-200 flex items-center justify-between px-6 shrink-0 bg-gradient-to-r from-pink-50 to-white">
         <div class="flex items-center gap-3">
             <div>
-                <h2 class="text-lg font-bold text-white">Meine Sammlung</h2>
-                <p class="text-xs text-slate-200">Favoriten, Käufe und Lieblings-Producer</p>
+                <h2 class="text-lg font-bold text-gray-900">Meine Sammlung</h2>
+                <p class="text-xs text-gray-500">Favoriten, Käufe und Lieblings-Producer</p>
             </div>
         </div>
         <div class="flex items-center gap-2 text-xs text-gray-500 font-semibold">
-            <span class="px-2 py-1 bg-pink-500/25 text-pink-100 border border-pink-300/40 rounded-full" x-text="likedTracks.length + ' Likes'"></span>
-            <span class="px-2 py-1 bg-emerald-500/20 text-emerald-100 border border-emerald-300/40 rounded-full" x-text="purchasedTracks.length + ' Käufe'"></span>
-            <span class="px-2 py-1 bg-blue-500/20 text-blue-100 border border-blue-300/40 rounded-full" x-text="favoriteProducers.length + ' Producer'"></span>
+            <span class="px-2 py-1 bg-pink-100 text-pink-700 rounded-full" x-text="likedTracks.length + ' Likes'"></span>
+            <span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full" x-text="purchasedTracks.length + ' Käufe'"></span>
+            <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full" x-text="favoriteProducers.length + ' Producer'"></span>
         </div>
     </div>
 
-    <div class="flex-1 overflow-auto bg-white/0 p-6">
+    <div class="flex-1 overflow-auto bg-gray-50/40 p-6">
         <div class="max-w-6xl mx-auto space-y-6">
             <div class="grid lg:grid-cols-2 gap-6">
-                <section class="studio-surface border border-white/10 rounded-xl shadow-xl p-5 flex flex-col">
+                <section class="bg-white border border-gray-200 rounded-xl shadow-sm p-5 flex flex-col">
                     <div class="flex items-center justify-between mb-4">
                         <div>
-                            <h3 class="text-base font-bold text-white">Gemerkte Tracks</h3>
-                            <p class="text-xs text-slate-300">Alle Herzchen aus deinen Sets</p>
+                            <h3 class="text-base font-bold text-gray-900">Gemerkte Tracks</h3>
+                            <p class="text-xs text-gray-500">Alle Herzchen aus deinen Sets</p>
                         </div>
-                        <span class="bg-pink-500/20 text-pink-100 border border-pink-300/40 text-xs font-bold px-2 py-0.5 rounded-full" x-text="likedTracks.length + ' Tracks'"></span>
+                        <span class="bg-pink-100 text-pink-700 text-xs font-bold px-2 py-0.5 rounded-full" x-text="likedTracks.length + ' Tracks'"></span>
                     </div>
 
                     <div class="flex-1 overflow-y-auto space-y-4">
                         <template x-for="track in likedTracks" :key="'liked-' + track.id">
-                            <div class="studio-surface border border-white/10 rounded-xl p-4 shadow-lg hover:shadow-pink-500/20 transition-all flex flex-col gap-3">
+                            <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
                                 <div class="flex items-start gap-3">
                                     <button @click="togglePlay(track)"
-                                            class="w-12 h-12 rounded-full bg-white/10 hover:bg-orange-500/20 text-slate-200 hover:text-white flex items-center justify-center transition-colors shrink-0 shadow-inner border border-white/10">
-                                        <div x-show="ui.loadingId === track.id" class="animate-spin h-5 w-5 border-2 border-orange-300 border-t-transparent rounded-full"></div>
+                                            class="w-12 h-12 rounded-full bg-gray-100 hover:bg-orange-100 text-gray-400 hover:text-orange-600 flex items-center justify-center transition-colors shrink-0 shadow-inner">
+                                        <div x-show="ui.loadingId === track.id" class="animate-spin h-5 w-5 border-2 border-orange-600 border-t-transparent rounded-full"></div>
                                         <svg x-show="ui.playingId !== track.id && ui.loadingId !== track.id" class="w-6 h-6 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                                         <svg x-show="ui.playingId === track.id" class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                                     </button>
                                     <div class="flex-1 min-w-0">
-                                        <div class="text-base font-bold text-white leading-tight" x-text="track.title"></div>
-                                        <div class="text-sm text-slate-200 font-medium" x-text="track.artist"></div>
-                                        <div class="flex flex-wrap items-center gap-2 mt-2 text-[11px] text-slate-300">
-                                            <span class="bg-white/10 px-2 py-0.5 rounded border border-white/10" x-text="track.set_name || 'Unbekanntes Set'"></span>
-                                            <span x-show="track.producer_name" class="flex items-center gap-1 bg-emerald-400/15 text-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300/40">
+                                        <div class="text-base font-bold text-gray-900 leading-tight" x-text="track.title"></div>
+                                        <div class="text-sm text-gray-600 font-medium" x-text="track.artist"></div>
+                                        <div class="flex flex-wrap items-center gap-2 mt-2 text-[11px] text-gray-400">
+                                            <span class="bg-gray-100 px-2 py-0.5 rounded" x-text="track.set_name || 'Unbekanntes Set'"></span>
+                                            <span x-show="track.producer_name" class="flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
                                                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 016.5 4h11A2.5 2.5 0 0120 6.5v11a2.5 2.5 0 01-2.5 2.5h-11A2.5 2.5 0 014 17.5v-11zm3 1a1 1 0 100 2h3a1 1 0 100-2H7zm6 0a1 1 0 100 2h1.5a1 1 0 100-2H13zm-6 6a1 1 0 100 2h6a1 1 0 100-2H7zm8 0a1 1 0 100 2h2a1 1 0 100-2h-2z"/></svg>
                                                 <span x-text="track.producer_name"></span>
                                             </span>
-                                            <span x-show="track.confidence" x-text="'Conf: ' + Math.round(track.confidence * 100) + '%'" class="bg-white/5 px-2 py-0.5 rounded border border-white/10"></span>
+                                            <span x-show="track.confidence" x-text="'Conf: ' + Math.round(track.confidence * 100) + '%'" class="bg-gray-50 px-2 py-0.5 rounded"></span>
                                         </div>
                                     </div>
-                                    <button @click="toggleLike(track)" title="Entfernen" class="text-slate-300 hover:text-red-300 p-2 hover:bg-red-500/10 rounded-full transition-colors self-start">
+                                    <button @click="toggleLike(track)" title="Entfernen" class="text-gray-300 hover:text-red-500 p-2 hover:bg-red-50 rounded-full transition-colors self-start">
                                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                                     </button>
                                 </div>
@@ -56,66 +56,62 @@
                                 <div class="flex flex-wrap gap-2 justify-end">
                                     <button @click="togglePurchase(track)"
                                             class="px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded-lg border transition-colors"
-                                            :class="track.purchased ? 'bg-emerald-400/15 text-emerald-100 border-emerald-300/40' : 'bg-white/5 text-slate-300 border-white/10 hover:border-emerald-300/40 hover:text-emerald-100'">
+                                            :class="track.purchased ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-white text-gray-500 border-gray-200 hover:border-emerald-200 hover:text-emerald-700'">
                                         <span x-text="track.purchased ? 'Gekauft' : 'Als gekauft markieren'"></span>
                                     </button>
                                     <button x-show="track.producer_id"
                                             @click="toggleProducerFavorite(track)"
                                             class="px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded-lg border transition-colors flex items-center gap-1"
-                                            :class="isProducerFavorite(track.producer_id) ? 'bg-blue-400/15 text-blue-100 border-blue-300/40' : 'bg-white/5 text-slate-300 border-white/10 hover:border-blue-300/40 hover:text-blue-100'">
+                                            :class="isProducerFavorite(track.producer_id) ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-gray-500 border-gray-200 hover:border-blue-200 hover:text-blue-700'">
                                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a5 5 0 015 5v1a5 5 0 11-10 0V7a5 5 0 015-5zm-6 18a6 6 0 0112 0v1H6v-1z"/></svg>
                                         <span x-text="isProducerFavorite(track.producer_id) ? 'Producer gespeichert' : 'Producer merken'"></span>
                                     </button>
-                                    <a :href="getSearchLink(track, 'bandcamp')" target="_blank"
-                                       class="px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded-lg border border-cyan-300/40 bg-cyan-400/15 text-cyan-100 hover:bg-cyan-400/25">
-                                        Bandcamp
-                                    </a>
                                     <a :href="getSearchLink(track, 'beatport')" target="_blank"
-                                       class="px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded-lg border border-emerald-300/40 bg-emerald-400/15 text-emerald-100 hover:bg-emerald-400/25">
+                                       class="px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded-lg border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100">
                                         Beatport
                                     </a>
                                 </div>
                             </div>
                         </template>
 
-                        <div x-show="likedTracks.length === 0" class="h-full flex flex-col items-center justify-center text-slate-400 gap-2 opacity-80 py-12">
-                            <svg class="w-10 h-10 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                        <div x-show="likedTracks.length === 0" class="h-full flex flex-col items-center justify-center text-gray-400 gap-2 opacity-70 py-12">
+                            <svg class="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
                             <span class="text-xs">Noch keine Likes gespeichert</span>
                         </div>
                     </div>
                 </section>
 
-                <section class="studio-surface border border-white/10 rounded-xl shadow-xl p-5 flex flex-col">
+                <section class="bg-white border border-gray-200 rounded-xl shadow-sm p-5 flex flex-col">
                     <div class="flex items-center justify-between mb-4">
                         <div>
-                            <h3 class="text-base font-bold text-white">Gekaufte Tracks</h3>
-                            <p class="text-xs text-slate-300">Alles, was du bereits gekauft hast</p>
+                            <h3 class="text-base font-bold text-gray-900">Gekaufte Tracks</h3>
+                            <p class="text-xs text-gray-500">Alles, was du bereits gekauft hast</p>
                         </div>
-                        <span class="bg-emerald-500/20 text-emerald-100 border border-emerald-300/40 text-xs font-bold px-2 py-0.5 rounded-full" x-text="purchasedTracks.length + ' Tracks'"></span>
+                        <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-0.5 rounded-full" x-text="purchasedTracks.length + ' Tracks'"></span>
                     </div>
 
                     <div class="flex-1 overflow-y-auto space-y-4">
                         <template x-for="track in purchasedTracks" :key="'purchased-' + track.id">
-                            <div class="studio-surface border border-white/10 rounded-xl p-4 shadow-lg hover:shadow-emerald-500/20 transition-all flex flex-col gap-3">
+                            <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
                                 <div class="flex items-start gap-3">
                                     <div class="flex-1 min-w-0">
-                                        <div class="text-base font-bold text-white leading-tight" x-text="track.title"></div>
-                                        <div class="text-sm text-slate-200 font-medium" x-text="track.artist"></div>
-                                        <div class="flex flex-wrap items-center gap-2 mt-2 text-[11px] text-slate-300">
-                                            <span class="bg-white/10 px-2 py-0.5 rounded border border-white/10" x-text="track.set_name || 'Unbekanntes Set'"></span>
-                                            <span x-show="track.producer_name" class="flex items-center gap-1 bg-blue-400/15 text-blue-100 px-2 py-0.5 rounded-full border border-blue-300/40">
+                                        <div class="text-base font-bold text-gray-900 leading-tight" x-text="track.title"></div>
+                                        <div class="text-sm text-gray-600 font-medium" x-text="track.artist"></div>
+                                        <div class="flex flex-wrap items-center gap-2 mt-2 text-[11px] text-gray-400">
+                                            <span class="bg-gray-100 px-2 py-0.5 rounded" x-text="track.set_name || 'Unbekanntes Set'"></span>
+                                            <span x-show="track.producer_name" class="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
                                                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 016.5 4h11A2.5 2.5 0 0120 6.5v11a2.5 2.5 0 01-2.5 2.5h-11A2.5 2.5 0 014 17.5v-11zm3 1a1 1 0 100 2h3a1 1 0 100-2H7zm6 0a1 1 0 100 2h1.5a1 1 0 100-2H13zm-6 6a1 1 0 100 2h6a1 1 0 100-2H7zm8 0a1 1 0 100 2h2a1 1 0 100-2h-2z"/></svg>
                                                 <span x-text="track.producer_name"></span>
                                             </span>
-                                            <span x-show="track.purchased_at" class="bg-emerald-400/15 text-emerald-100 px-2 py-0.5 rounded border border-emerald-300/40" x-text="'Gekauft am ' + new Date(track.purchased_at).toLocaleDateString('de-DE')"></span>
+                                            <span x-show="track.purchased_at" class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded" x-text="'Gekauft am ' + new Date(track.purchased_at).toLocaleDateString('de-DE')"></span>
                                         </div>
                                     </div>
                                     <div class="flex flex-col gap-2 items-end">
-                                        <button @click="togglePurchase(track)" class="px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded-lg border border-emerald-300/40 text-emerald-100 bg-emerald-400/15 hover:bg-emerald-400/25">
+                                        <button @click="togglePurchase(track)" class="px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100">
                                             Entfernen
                                         </button>
                                         <button x-show="track.producer_id" @click="toggleProducerFavorite(track)" class="px-3 py-1 text-[11px] font-semibold rounded-lg border transition-colors"
-                                                :class="isProducerFavorite(track.producer_id) ? 'bg-blue-400/15 text-blue-100 border-blue-300/40' : 'bg-white/5 text-slate-300 border-white/10 hover:border-blue-300/40 hover:text-blue-100'">
+                                                :class="isProducerFavorite(track.producer_id) ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-gray-500 border-gray-200 hover:border-blue-200 hover:text-blue-700'">
                                             <span x-text="isProducerFavorite(track.producer_id) ? 'Producer gespeichert' : 'Producer merken'"></span>
                                         </button>
                                     </div>
@@ -123,45 +119,45 @@
                             </div>
                         </template>
 
-                        <div x-show="purchasedTracks.length === 0" class="h-full flex flex-col items-center justify-center text-slate-400 gap-2 opacity-80 py-12">
-                            <svg class="w-10 h-10 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21a4 4 0 01-4-4V8a4 4 0 014-4h10a4 4 0 014 4v9a4 4 0 01-4 4H7z" /></svg>
+                        <div x-show="purchasedTracks.length === 0" class="h-full flex flex-col items-center justify-center text-gray-400 gap-2 opacity-70 py-12">
+                            <svg class="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21a4 4 0 01-4-4V8a4 4 0 014-4h10a4 4 0 014 4v9a4 4 0 01-4 4H7z" /></svg>
                             <span class="text-xs">Noch keine Käufe notiert</span>
                         </div>
                     </div>
                 </section>
             </div>
 
-            <section class="studio-surface border border-white/10 rounded-xl shadow-xl p-5">
+            <section class="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <h3 class="text-base font-bold text-white">Lieblings-Producer</h3>
-                        <p class="text-xs text-slate-300">Schneller Zugriff auf deine Favoriten</p>
+                        <h3 class="text-base font-bold text-gray-900">Lieblings-Producer</h3>
+                        <p class="text-xs text-gray-500">Schneller Zugriff auf deine Favoriten</p>
                     </div>
-                    <span class="bg-blue-500/20 text-blue-100 border border-blue-300/40 text-xs font-bold px-2 py-0.5 rounded-full" x-text="favoriteProducers.length + ' Favoriten'"></span>
+                    <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full" x-text="favoriteProducers.length + ' Favoriten'"></span>
                 </div>
 
                 <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <template x-for="producer in favoriteProducers" :key="'prod-' + producer.id">
-                        <div class="border border-white/10 rounded-xl p-4 bg-gradient-to-br from-blue-500/15 via-slate-900/60 to-white/5 shadow-lg flex flex-col gap-3">
+                        <div class="border border-gray-200 rounded-xl p-4 bg-gradient-to-br from-blue-50/50 to-white shadow-sm flex flex-col gap-3">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full bg-blue-400/20 text-blue-100 flex items-center justify-center font-bold border border-blue-300/40" x-text="producer.name ? producer.name.charAt(0) : '?' "></div>
+                                <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold" x-text="producer.name ? producer.name.charAt(0) : '?' "></div>
                                 <div class="flex-1 min-w-0">
-                                    <div class="text-sm font-bold text-white truncate" x-text="producer.name"></div>
-                                    <div class="text-[11px] text-slate-300 truncate" x-text="producer.beatport_url || 'Kein Link hinterlegt'"></div>
+                                    <div class="text-sm font-bold text-gray-900 truncate" x-text="producer.name"></div>
+                                    <div class="text-[11px] text-gray-500 truncate" x-text="producer.beatport_url || 'Kein Link hinterlegt'"></div>
                                 </div>
-                                <button @click="toggleProducerFavorite(producer)" class="text-slate-300 hover:text-red-300 p-2 rounded-full hover:bg-red-500/10 transition-colors">
+                                <button @click="toggleProducerFavorite(producer)" class="text-gray-300 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                                 </button>
                             </div>
                             <div class="flex gap-2">
-                                <a x-show="producer.beatport_url" :href="producer.beatport_url" target="_blank" class="flex-1 text-xs font-semibold text-center px-3 py-2 rounded-lg bg-emerald-400/15 text-emerald-100 border border-emerald-300/40 hover:bg-emerald-400/25">Beatport</a>
-                                <button @click="toggleProducerFavorite(producer)" class="flex-1 text-xs font-semibold text-center px-3 py-2 rounded-lg border border-blue-300/40 text-blue-100 bg-blue-400/15 hover:bg-blue-400/25">Merken / Entfernen</button>
+                                <a x-show="producer.beatport_url" :href="producer.beatport_url" target="_blank" class="flex-1 text-xs font-semibold text-center px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100">Beatport</a>
+                                <button @click="toggleProducerFavorite(producer)" class="flex-1 text-xs font-semibold text-center px-3 py-2 rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100">Merken / Entfernen</button>
                             </div>
                         </div>
                     </template>
 
-                    <div x-show="favoriteProducers.length === 0" class="md:col-span-2 lg:col-span-3 flex flex-col items-center justify-center text-slate-400 gap-2 py-10">
-                        <svg class="w-10 h-10 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.5l3 6 6.5.5-4.8 4.4 1.4 6.5-6.1-3.3-6.1 3.3 1.4-6.5-4.8-4.4 6.5-.5z"/></svg>
+                    <div x-show="favoriteProducers.length === 0" class="md:col-span-2 lg:col-span-3 flex flex-col items-center justify-center text-gray-400 gap-2 py-10">
+                        <svg class="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.5l3 6 6.5.5-4.8 4.4 1.4 6.5-6.1-3.3-6.1 3.3 1.4-6.5-4.8-4.4 6.5-.5z"/></svg>
                         <span class="text-xs">Noch keine Lieblings-Producer gespeichert</span>
                     </div>
                 </div>

@@ -1,6 +1,5 @@
-const registerTracklistify = (AlpineInstance) => {
-    if (!AlpineInstance) return;
-    AlpineInstance.data('tracklistify', () => ({
+document.addEventListener('alpine:init', () => {
+    Alpine.data('tracklistify', () => ({
         // =====================================================================
         // DATA STORAGE
         // =====================================================================
@@ -19,8 +18,6 @@ const registerTracklistify = (AlpineInstance) => {
         draggingSet: null,
         folderHoverId: null,
         trashHover: false,
-        cardHoverId: null,
-        folderForm: { open: false, name: '' },
 
         auth: {
             user: null,
@@ -55,9 +52,7 @@ const registerTracklistify = (AlpineInstance) => {
         // UI STATE
         // =====================================================================
         currentView: 'dashboard',
-        sidebarExpanded: true,
         queueStatus: { active: null, queue: [], history: [] },
-        uploadToastState: { lastProgress: null, lastPhase: null },
         
         // Inputs für Upload Modal
         inputs: {
@@ -79,13 +74,10 @@ const registerTracklistify = (AlpineInstance) => {
             showRescanModal: false, 
             showEditSetModal: false, 
             showLikes: false,
-            showNavMenu: false,
             playingId: null, 
             loadingId: null,
             hoverTrackId: null,
-            contextMenu: { show: false, x: 0, y: 0, target: null, type: null },
-            trackViewOnly: false,
-            draggingProgress: false
+            contextMenu: { show: false, x: 0, y: 0, target: null, type: null }
         },
         
         toasts: [],
@@ -124,9 +116,6 @@ const registerTracklistify = (AlpineInstance) => {
             // Volume wiederherstellen
             const vol = localStorage.getItem('tracklistify_volume');
             if (vol !== null) this.audio.volume = parseFloat(vol);
-
-            const sidebarState = localStorage.getItem('tracklistify_sidebar_expanded');
-            if (sidebarState !== null) this.sidebarExpanded = sidebarState === '1';
 
             // Globaler Poll Loop (Status Updates)
             setInterval(() => {
@@ -257,28 +246,7 @@ const registerTracklistify = (AlpineInstance) => {
                     this.fetchDashboard();
                     this.showToast("Verarbeitung fertig", "Set wurde importiert.", "success");
                 }
-
-                // Fortschritt Toasties für Upload
-                if (status.active) {
-                    const progress = Math.round(status.active.progress || 0);
-                    const phase = status.active.phase || 'processing';
-                    const label = status.active.label || 'Upload';
-
-                    if (
-                        this.uploadToastState.lastProgress === null ||
-                        progress - this.uploadToastState.lastProgress >= 5 ||
-                        phase !== this.uploadToastState.lastPhase
-                    ) {
-                        const subtitle = `${label} · ${this.getPhaseLabel(phase)} ${progress}%`;
-                        this.showToast('Upload läuft', subtitle, 'info');
-                        this.uploadToastState.lastProgress = progress;
-                        this.uploadToastState.lastPhase = phase;
-                    }
-                } else {
-                    this.uploadToastState.lastProgress = null;
-                    this.uploadToastState.lastPhase = null;
-                }
-
+                
                 // Live Log Toasties
                 this.handleLiveLog(status);
 
@@ -303,14 +271,12 @@ const registerTracklistify = (AlpineInstance) => {
             this.currentView = 'dashboard'; 
             this.activeSet = null; 
             this.fetchDashboard(); 
-            this.ui.trackViewOnly = false;
         },
         
         showQueueView() { 
             this.currentView = 'queue'; 
             this.activeSet = null; 
             this.ui.showLikes = false; 
-            this.ui.trackViewOnly = false;
         },
         
         showRescanView() {
@@ -318,7 +284,6 @@ const registerTracklistify = (AlpineInstance) => {
             this.activeSet = null;
             this.fetchRescan();
             this.ui.showLikes = false;
-            this.ui.trackViewOnly = false;
         },
 
         showLikesView() {
@@ -327,29 +292,15 @@ const registerTracklistify = (AlpineInstance) => {
             this.fetchLikes();
             this.fetchPurchases();
             this.fetchProducerLikes();
-            this.ui.trackViewOnly = false;
         },
 
         showCollections() {
             this.currentView = 'collections';
             this.fetchLikes();
-            this.ui.trackViewOnly = false;
         },
 
         showSetView(set) {
             this.loadSet(set);
-        },
-        focusOnSet(setOrId) {
-            this.ui.trackViewOnly = true;
-            this.loadSet(setOrId);
-        },
-        resetTrackView() {
-            this.ui.trackViewOnly = false;
-            this.currentView = 'sets';
-        },
-        toggleSidebar() {
-            this.sidebarExpanded = !this.sidebarExpanded;
-            localStorage.setItem('tracklistify_sidebar_expanded', this.sidebarExpanded ? '1' : '0');
         },
 
         // =====================================================================
@@ -384,13 +335,9 @@ const registerTracklistify = (AlpineInstance) => {
             }
 
             this.currentView = 'sets';
-            this.ui.trackViewOnly = true;
 
             const res = await fetch(`/api/sets/${id}/tracks`);
-            this.tracks = (await res.json()).map(track => {
-                track.streamUrl = track.streamUrl || track.stream_url;
-                return track;
-            });
+            this.tracks = await res.json();
             
             // Turbo anwerfen
             this.startPreloading();
@@ -451,28 +398,9 @@ const registerTracklistify = (AlpineInstance) => {
             this.ui.contextMenu.type = null;
         },
 
-        handleContextAction(action) {
-            const { type, target } = this.ui.contextMenu;
-            if (!target || !type) return;
-            this.closeContextMenu();
-
-            if (type === 'set') {
-                if (action === 'edit') return this.openEditSetModal(target);
-                if (action === 'rename') return this.promptRenameSet(target);
-                if (action === 'move') return this.promptMoveSet(target);
-                if (action === 'rescan') return this.rescanSetContext(target);
-                if (action === 'delete') return this.confirmAndDeleteSet(target);
-            }
-
-            if (type === 'folder') {
-                if (action === 'rename') return this.renameFolderContext(target);
-                if (action === 'delete') return this.deleteFolderContext(target);
-            }
-        },
-
         // Edit Modal
-        openEditSetModal(target = null) {
-            const set = target || this.ui.contextMenu.target;
+        openEditSetModal() {
+            const set = this.ui.contextMenu.target;
             this.closeContextMenu();
             if (!set) return;
             this.editSetData = { 
@@ -501,16 +429,19 @@ const registerTracklistify = (AlpineInstance) => {
             this.showToast("Änderungen gespeichert.", "", "success");
         },
 
-        async promptRenameSet(set = this.ui.contextMenu.target) {
+        async renameSetContext() {
+            const set = this.ui.contextMenu.target; 
+            this.closeContextMenu();
             if (!set) return;
             const n = prompt("Neuer Name für das Set:", set.name);
-            if(!n || n === set.name) return;
-
-            await fetch(`/api/sets/${set.id}/rename`, { 
-                method: 'POST', body: JSON.stringify({name: n}) 
-            }); 
-            this.fetchSets(); 
-            if(this.activeSet && this.activeSet.id === set.id) this.activeSet.name = n;
+            
+            if(n && n !== set.name) { 
+                await fetch(`/api/sets/${set.id}/rename`, { 
+                    method: 'POST', body: JSON.stringify({name: n}) 
+                }); 
+                this.fetchSets(); 
+                if(this.activeSet && this.activeSet.id === set.id) this.activeSet.name = n;
+            }
         },
 
         async deleteSet(set, options = {}) {
@@ -532,7 +463,6 @@ const registerTracklistify = (AlpineInstance) => {
             if (this.activeSet && this.activeSet.id === target.id) {
                 this.activeSet = null;
                 this.tracks = [];
-                this.ui.trackViewOnly = false;
             }
 
             this.syncFolderAssignments();
@@ -540,12 +470,15 @@ const registerTracklistify = (AlpineInstance) => {
             return true;
         },
 
-        async deleteSetContext(set = this.ui.contextMenu.target) {
+        async deleteSetContext() {
+            const set = this.ui.contextMenu.target;
             this.closeContextMenu();
             await this.confirmAndDeleteSet(set);
         },
 
-        async rescanSetContext(set = this.ui.contextMenu.target) {
+        async rescanSetContext() {
+            const set = this.ui.contextMenu.target; 
+            this.closeContextMenu(); 
             if (!set) return;
             const val = set.audio_file || set.source_url; 
             
@@ -576,7 +509,9 @@ const registerTracklistify = (AlpineInstance) => {
             await this.assignSetToFolder(set, folder);
         },
 
-        promptMoveSet(set = this.ui.contextMenu.target) {
+        promptMoveSetContext() {
+            const set = this.ui.contextMenu.target;
+            this.closeContextMenu();
             if (!set) return;
             if (!this.folders.length) {
                 this.showToast('Keine Ordner', 'Lege zuerst einen Ordner an.', 'info');
@@ -678,11 +613,7 @@ const registerTracklistify = (AlpineInstance) => {
             const rect = e.currentTarget.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const pct = Math.max(0, Math.min(1, x / rect.width));
-            const nextTime = pct * player.duration;
-            player.currentTime = nextTime;
-            this.audio.currentTime = nextTime;
-            this.audio.duration = player.duration;
-            this.audio.progressPercent = pct * 100;
+            player.currentTime = pct * player.duration;
         },
         
         seek(e, track) {
@@ -693,61 +624,12 @@ const registerTracklistify = (AlpineInstance) => {
             const pct = Math.max(0, Math.min(1, x / rect.width));
             
             if (this.ui.playingId === track.id) {
-                if (player.duration) {
-                    const nextTime = pct * player.duration;
-                    player.currentTime = nextTime;
-                    this.audio.currentTime = nextTime;
-                    this.audio.duration = player.duration;
-                    this.audio.progressPercent = pct * 100;
-                }
+                if (player.duration) player.currentTime = pct * player.duration;
             } else {
                 this.togglePlay(track).then(() => {
-                    if (player.duration) {
-                        const nextTime = pct * player.duration;
-                        player.currentTime = nextTime;
-                        this.audio.currentTime = nextTime;
-                        this.audio.duration = player.duration;
-                        this.audio.progressPercent = pct * 100;
-                    }
+                    if (player.duration) player.currentTime = pct * player.duration;
                 });
             }
-        },
-
-        startProgressDrag(e) {
-            this.ui.draggingProgress = true;
-            this.seekGlobal(e);
-        },
-
-        dragProgress(e) {
-            if (!this.ui.draggingProgress) return;
-            this.seekGlobal(e);
-        },
-
-        endProgressDrag(e) {
-            if (!this.ui.draggingProgress) return;
-            this.seekGlobal(e);
-            this.ui.draggingProgress = false;
-        },
-
-        playNextInQueue() {
-            const queue = Array.isArray(this.tracks) ? this.tracks : [];
-            if (!queue.length) return;
-            const currentId = this.ui.playingId || this.activeTrack?.id;
-            const currentIndex = queue.findIndex(t => t.id === currentId);
-            const nextIndex = currentIndex >= 0 && currentIndex < queue.length - 1 ? currentIndex + 1 : 0;
-            const nextTrack = queue[nextIndex];
-            if (nextTrack) this.togglePlay(nextTrack);
-        },
-
-        playPreviousInQueue() {
-            const queue = Array.isArray(this.tracks) ? this.tracks : [];
-            if (!queue.length) return;
-            const currentId = this.ui.playingId || this.activeTrack?.id;
-            const currentIndex = queue.findIndex(t => t.id === currentId);
-            let prevIndex = currentIndex > 0 ? currentIndex - 1 : queue.length - 1;
-            if (currentIndex === -1) prevIndex = queue.length - 1;
-            const prevTrack = queue[prevIndex];
-            if (prevTrack) this.togglePlay(prevTrack);
         },
 
         // --- Preloading Engine ---
@@ -997,7 +879,6 @@ const registerTracklistify = (AlpineInstance) => {
         },
 
         resetFolderForm() {
-            if (!this.folderForm) this.folderForm = { open: false, name: '' };
             this.folderForm.name = this.defaultFolderName();
         },
 
@@ -1041,11 +922,6 @@ const registerTracklistify = (AlpineInstance) => {
                     this.updateFoldersFromServer(payload);
                     return;
                 }
-
-                this.ensureFolderStructure();
-                this.syncFolderAssignments();
-                this.resetFolderForm();
-                return;
             } catch (e) {}
 
             const cached = localStorage.getItem('tracklistify_folders');
@@ -1137,7 +1013,6 @@ const registerTracklistify = (AlpineInstance) => {
             this.persistFoldersLocally();
             this.activeFolderId = optimisticId;
             this.updateFilteredSets();
-            let created = null;
 
             try {
                 const res = await fetch('/api/folders', { 
@@ -1147,7 +1022,7 @@ const registerTracklistify = (AlpineInstance) => {
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    created = data.folder || data;
+                    const created = data.folder || data;
                     created.sets = created.sets || [];
                     this.folders = this.folders.map(folder => folder.id === optimisticId ? created : folder);
                     this.activeFolderId = created.id;
@@ -1156,7 +1031,7 @@ const registerTracklistify = (AlpineInstance) => {
                 }
             } catch (e) {}
 
-            if (created) this.ensureFolderStructure([created, ...this.folders]);
+            this.ensureFolderStructure([created, ...this.folders]);
             this.syncFolderAssignments();
             this.persistFoldersLocally();
         },
@@ -1195,34 +1070,6 @@ const registerTracklistify = (AlpineInstance) => {
             this.draggingSet = null;
             this.folderHoverId = null;
             this.trashHover = false;
-            this.cardHoverId = null;
-        },
-
-        setCardClasses(set) {
-            return {
-                'is-dragging': this.draggingSet && this.draggingSet.id === set.id,
-                'is-drop-target': this.cardHoverId === set.id
-            };
-        },
-
-        onCardDragEnter(set) {
-            this.cardHoverId = set?.id || null;
-        },
-
-        onCardDragLeave(set) {
-            if (this.cardHoverId === (set?.id || null)) this.cardHoverId = null;
-        },
-
-        onCardDragOver(event) {
-            if (event && event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-        },
-
-        onCardDrop(set, event) {
-            event.preventDefault();
-            this.cardHoverId = null;
-            const target = set || this.resolveDraggedSet(event);
-            if (target) this.focusOnSet(target);
-            this.onDragEnd();
         },
 
         resolveDraggedSet(event) {
@@ -1265,16 +1112,25 @@ const registerTracklistify = (AlpineInstance) => {
 
         async onDropToFolder(folder, event) {
             event.preventDefault();
-            const dragged = this.resolveDraggedSet(event);
-            const resolvedSet = dragged ? (this.sets.find(s => s.id === dragged.id) || dragged) : null;
+            const set = this.resolveDraggedSet(event);
+            const resolvedSet = set ? (this.sets.find(s => s.id === set.id) || set) : null;
             this.draggingSet = null;
             this.folderHoverId = null;
-            this.cardHoverId = null;
-            if (!resolvedSet) return;
-            await this.assignSetToFolder(resolvedSet, folder);
+            if (!set) return;
+            await this.assignSetToFolder(set, folder);
         },
 
-        async renameFolderContext(folder = this.ui.contextMenu.target) {
+        async onDropToTrash(event) {
+            event.preventDefault();
+            const set = this.draggingSet;
+            this.draggingSet = null;
+            this.folderHoverId = null;
+            if (!set) return;
+            await this.confirmAndDeleteSet(set, `Set "${set.name}" wirklich löschen?`);
+        },
+
+        renameFolderContext() {
+            const folder = this.ui.contextMenu.target;
             this.closeContextMenu();
             if (!folder) return;
             const next = prompt('Ordner umbenennen', folder.name) || folder.name;
@@ -1282,17 +1138,16 @@ const registerTracklistify = (AlpineInstance) => {
             folder.name = next;
 
             try {
-                const res = await fetch(`/api/folders/${folder.id}`, {
+                fetch(`/api/folders/${folder.id}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name: next })
                 });
-                if (res && res.ok) {
+                if (res.ok) {
                     const data = await res.json();
                     if (data.folders) this.updateFoldersFromServer(data.folders);
                 }
             } catch (e) {}
-            this.persistFoldersLocally();
         },
 
         onTrashDragEnter(event) {
@@ -1311,12 +1166,12 @@ const registerTracklistify = (AlpineInstance) => {
             this.draggingSet = null;
             this.folderHoverId = null;
             this.trashHover = false;
-            this.cardHoverId = null;
             if (!set) return;
             await this.deleteSet(set, { prompt: true });
         },
 
-        async deleteFolderContext(folder = this.ui.contextMenu.target) {
+        async deleteFolderContext() {
+            const folder = this.ui.contextMenu.target;
             this.closeContextMenu();
             if (!folder) return;
 
@@ -1437,21 +1292,6 @@ const registerTracklistify = (AlpineInstance) => {
             const match = (this.folders || []).find(f => f.id === set.folder_id);
             return match ? match.name : 'NO FOLDER';
         },
-
-        setProgress(set) {
-            const candidates = [set?.progress, set?.analysis_progress, set?.completion, set?.percent_complete];
-            const explicit = candidates.find(v => v !== undefined && v !== null);
-            if (explicit !== undefined) {
-                const numeric = Number(explicit);
-                if (!Number.isNaN(numeric)) return Math.max(4, Math.min(100, numeric));
-            }
-
-            const count = Number(set?.track_count || 0);
-            if (count > 0) {
-                return Math.min(100, 30 + Math.min(count, 24) * 3);
-            }
-            return 12;
-        },
         
         cleanLogMessage(msg) {
             const parts = msg.split(' - ');
@@ -1523,7 +1363,7 @@ const registerTracklistify = (AlpineInstance) => {
              const map = {
                  youtube: `https://www.youtube.com/results?search_query=${q}`,
                  beatport: track.beatport_url || `https://www.beatport.com/search?q=${q}`,
-                 bandcamp: track.bandcamp_url || `https://bandcamp.com/search?q=${q}`,
+                 bandcamp: `https://bandcamp.com/search?q=${q}`,
                  soundcloud: `https://soundcloud.com/search?q=${q}`,
                  google: `https://www.google.com/search?q=${q}`
              };
@@ -1537,10 +1377,4 @@ const registerTracklistify = (AlpineInstance) => {
             this.showToast("Kopiert!", "", "success"); 
         }
     }));
-};
-
-if (window.Alpine) {
-    registerTracklistify(window.Alpine);
-} else {
-    document.addEventListener('alpine:init', () => registerTracklistify(window.Alpine));
-}
+});

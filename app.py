@@ -301,24 +301,7 @@ def list_sets():
 
 @app.route("/api/sets/<int:sid>/tracks")
 def list_tracks(sid):
-    tracks = database.get_tracks_by_set_with_relations(sid)
-
-    for track in tracks:
-        if track.get("stream_url"):
-            continue
-
-        artist = track.get("artist") or track.get("orig_artist")
-        title = track.get("title") or track.get("orig_title")
-        if not (artist or title):
-            continue
-
-        query = " - ".join([part for part in (artist, title) if part])
-        url = cached_resolve_audio(query)
-        if url:
-            track["stream_url"] = url
-            database.update_track_stream_url(track.get("id"), url)
-
-    return jsonify(tracks)
+    return jsonify(database.get_tracks_by_set_with_relations(sid))
 
 @app.route("/api/sets/<int:sid>/rename", methods=["POST"])
 def rename_set(sid):
@@ -453,25 +436,17 @@ def get_metadata():
 
 @app.route("/api/queue/add", methods=["POST"])
 def add_job():
+    metadata_raw = request.form.get("metadata")
     metadata: Dict[str, Any] = {}
-    submission_type = None
-    submission_value = None
 
-    if request.is_json:
-        data = request.get_json(force=True)
-        submission_type = data.get("type")
-        submission_value = data.get("value")
-        metadata = data.get("metadata") or {}
-    else:
-        metadata_raw = request.form.get("metadata")
-        if metadata_raw:
-            try:
-                metadata = load_json_value(metadata_raw) or {}
-            except Exception as exc:
-                raise BadRequest(f"Invalid metadata payload: {exc}")
+    if metadata_raw:
+        try:
+            metadata = load_json_value(metadata_raw) or {}
+        except Exception as exc:
+            raise BadRequest(f"Invalid metadata payload: {exc}")
 
-        submission_type = request.form.get("type")
-        submission_value = request.form.get("value")
+    submission_type = request.form.get("type")
+    submission_value = request.form.get("value")
 
     if submission_type == "url":
         if not submission_value:
@@ -479,8 +454,6 @@ def add_job():
         job_manager.add_job("url", submission_value, metadata)
 
     elif submission_type == "file":
-        if request.is_json:
-            raise BadRequest("File upload requires multipart form data")
         if 'file' not in request.files:
             raise BadRequest("File upload required")
         file = request.files['file']

@@ -1,61 +1,61 @@
-<main class="flex-1 flex flex-col min-w-0 studio-surface relative h-full">
-    <div class="h-16 border-b border-white/10 flex items-center justify-between px-4 sm:px-6 shrink-0 bg-gradient-to-r from-white/5 via-white/0 to-white/5 backdrop-blur-md sticky top-0 z-20">
+<main class="flex-1 flex flex-col min-w-0 bg-white relative h-full">
+    <div class="h-16 border-b border-gray-200 flex items-center justify-between px-6 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-20">
         <div class="flex-1 min-w-0 pr-4">
-            <h2 class="text-lg font-bold text-white truncate" x-text="activeSet ? activeSet.name : 'Wähle ein Set'"></h2>
-            <div class="flex gap-2 text-xs text-slate-400 mt-0.5" x-show="activeSet">
+            <h2 class="text-lg font-bold text-gray-900 truncate" x-text="activeSet ? activeSet.name : 'Wähle ein Set'"></h2>
+            <div class="flex gap-2 text-xs text-gray-400 mt-0.5" x-show="activeSet">
                 <span x-text="tracks.length + ' Tracks'"></span>
             </div>
         </div>
         <div class="flex items-center gap-4" x-show="activeSet" x-transition>
-            <button @click="copyTracklist()" class="px-4 py-2 bg-white/10 border border-white/10 text-sm font-medium rounded-lg shadow-sm text-white hover:border-orange-400/60 hover:bg-white/20">Copy List</button>
+            <button @click="copyTracklist()" class="px-4 py-2 bg-white border border-gray-200 text-sm font-medium rounded-lg shadow-sm">Copy List</button>
         </div>
     </div>
 
-    <div class="flex-1 overflow-auto bg-white/0">
+    <div class="flex-1 overflow-auto bg-gray-50/30">
         <div x-show="activeSet">
-            <table class="min-w-full divide-y divide-white/5 table-fixed">
-                <thead class="bg-slate-900/80 sticky top-0 z-10 shadow-lg shadow-black/30">
+            <table class="min-w-full divide-y divide-gray-200 table-fixed">
+                <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
                     <tr>
-                        <th class="w-12 px-2 py-3 text-center text-xs font-bold text-slate-300 uppercase">#</th>
-                        <th class="w-12 px-2 py-3 text-center text-xs font-bold text-slate-300 uppercase">Play</th>
-                        <th class="w-16 px-2 py-3 text-right text-xs font-bold text-slate-300 uppercase">Time</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-slate-300 uppercase">Track</th>
-                        <th class="w-20 px-2 py-3 text-right text-xs font-bold text-slate-300 uppercase">Conf</th>
-                        <th class="w-40 px-2 py-3 text-center text-xs font-bold text-slate-300 uppercase">Shops</th>
-                        <th class="w-20 px-2 py-3 text-center text-xs font-bold text-slate-300 uppercase">Gekauft</th>
-                        <th class="w-12 px-2 py-3 text-center text-xs font-bold text-slate-300 uppercase">Fav</th>
+                        <th class="w-12 px-2 py-3 text-center text-xs font-bold text-gray-400 uppercase">#</th>
+                        <th class="w-12 px-2 py-3 text-center text-xs font-bold text-gray-400 uppercase">Play</th>
+                        <th class="w-16 px-2 py-3 text-right text-xs font-bold text-gray-400 uppercase">Time</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Track</th>
+                        <th class="w-20 px-2 py-3 text-right text-xs font-bold text-gray-400 uppercase">Conf</th>
+                        <th class="w-40 px-2 py-3 text-center text-xs font-bold text-gray-400 uppercase">Shops</th>
+                        <th class="w-20 px-2 py-3 text-center text-xs font-bold text-gray-400 uppercase">Gekauft</th>
+                        <th class="w-12 px-2 py-3 text-center text-xs font-bold text-gray-400 uppercase">Fav</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white/0 divide-y divide-white/5">
+                <tbody class="bg-white divide-y divide-gray-100">
                     <template x-for="(track, index) in tracks" :key="track.id">
-                        <tr class="group hover:bg-white/5 transition-colors animate-row"
-                            :class="ui.playingId === track.id ? 'bg-orange-400/10' : ''"
+                        <tr class="group hover:bg-orange-50/40 transition-colors animate-row"
+                            :class="ui.playingId === track.id ? 'bg-orange-50/60' : ''"
                             :style="{ animationDelay: (index * 10) + 'ms' }"
                             @mouseenter="ui.hoverTrackId = track.id" @mouseleave="ui.hoverTrackId = null">
                             
                             <td class="px-2 py-3 text-center">
-                                <button @click.stop="toggleFlag(track)" class="text-xs font-bold text-slate-400 hover:text-white w-full" :class="track.flag === 3 ? 'text-red-400' : ''">
+                                <button @click.stop="toggleFlag(track)" class="text-xs font-bold text-gray-400 hover:text-gray-600 w-full" :class="track.flag === 3 ? 'text-red-500' : ''">
                                     <span x-text="track.flag === 3 ? '???' : track.position"></span>
                                 </button>
                             </td>
                             
                             <td class="px-2 py-3 text-center relative">
-                                <button @click.stop="togglePlay(track)" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-orange-500/20 hover:text-orange-300 transition-all text-slate-300">
-                                    <div x-show="ui.loadingId === track.id" class="animate-spin h-4 w-4 border-2 border-orange-400 border-t-transparent rounded-full"></div>
+                                <button @click.stop="togglePlay(track)" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-orange-100 hover:text-orange-600 transition-all text-gray-400">
+                                    <div x-show="ui.loadingId === track.id" class="animate-spin h-4 w-4 border-2 border-orange-500 border-t-transparent rounded-full"></div>
                                     <svg x-show="ui.playingId !== track.id && ui.loadingId !== track.id" class="w-5 h-5 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                                     <svg x-show="ui.playingId === track.id" class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                                 </button>
                             </td>
 
-                            <td class="px-2 py-3 text-right text-xs text-slate-300 font-mono">
+                            <td class="px-2 py-3 text-right text-xs text-gray-400 font-mono">
                                 <span x-text="formatTime(track.start_time)"></span>
                             </td>
 
                             <td class="px-4 py-3 overflow-hidden align-middle relative">
                                 <div class="flex flex-col justify-center h-full gap-1 relative z-10 pointer-events-none">
                                     <div class="flex items-baseline gap-2">
-                                        <span class="text-sm font-semibold text-white truncate group-hover:text-orange-200 transition-colors" x-text="track.title || 'Unknown'"></span>
-                                        <span class="text-xs text-slate-300 truncate" x-text="track.artist || 'Unknown'"></span>
+                                        <span class="text-sm font-semibold text-gray-900 truncate group-hover:text-orange-700 transition-colors" x-text="track.title || 'Unknown'"></span>
+                                        <span class="text-xs text-gray-500 truncate" x-text="track.artist || 'Unknown'"></span>
                                     </div>
                                     
                                     <div class="relative h-6 w-full">
@@ -66,23 +66,23 @@
                                 <div class="absolute inset-0 z-20 cursor-pointer" @click.stop="seek($event, track)"></div>
                             </td>
 
-                            <td class="px-2 py-3 text-right"><span class="text-[10px] font-bold text-slate-300" :class="getConfColor(track.confidence)" x-text="formatConf(track.confidence)"></span></td>
-                            <td class="px-2 py-3 text-center"><div class="flex justify-center gap-2 opacity-50 group-hover:opacity-100 transition-opacity"><a :href="getSearchLink(track, 'youtube')" target="_blank" class="hover:text-red-400 text-slate-300"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg></a><a :href="getSearchLink(track, 'beatport')" target="_blank" class="hover:text-green-300 text-slate-300"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm6.3 14.4h-3.6v-4.8h-5.4v4.8h-3.6v-9.6h12.6v9.6z"/></svg></a><a :href="getSearchLink(track, 'bandcamp')" target="_blank" class="hover:text-teal-300 text-slate-300"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M3 16l7.5-8H21l-7.5 8H3z"/></svg></a></div></td>
+                            <td class="px-2 py-3 text-right"><span class="text-[10px] font-bold text-gray-400" :class="getConfColor(track.confidence)" x-text="formatConf(track.confidence)"></span></td>
+                            <td class="px-2 py-3 text-center"><div class="flex justify-center gap-2 opacity-40 group-hover:opacity-100 transition-opacity"><a :href="getSearchLink(track, 'youtube')" target="_blank" class="hover:text-red-600 text-gray-400"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg></a><a :href="getSearchLink(track, 'beatport')" target="_blank" class="hover:text-green-500 text-gray-400"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm6.3 14.4h-3.6v-4.8h-5.4v4.8h-3.6v-9.6h12.6v9.6z"/></svg></a></div></td>
                             <td class="px-2 py-3 text-center">
                                 <button @click.stop="togglePurchase(track)"
                                         class="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-colors border"
-                                        :class="track.purchased ? 'bg-emerald-400/15 text-emerald-100 border-emerald-300/40' : 'bg-white/5 text-slate-400 border-white/10 hover:border-emerald-300/40 hover:text-emerald-100'">
+                                        :class="track.purchased ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-white text-gray-400 border-gray-200 hover:border-emerald-200 hover:text-emerald-600'">
                                     <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M7 4a3 3 0 0 1 6 0h4a1 1 0 0 1 .98 1.198l-1.5 7A1 1 0 0 1 15.5 13H8.7l-.2 1h8a1 1 0 1 1 0 2H7a1 1 0 0 1-.98-1.198l1-5A1 1 0 0 1 8 8h6.28l.24-1H7a1 1 0 0 1 0-2h.06A3.001 3.001 0 0 1 7 4Z"/></svg>
                                     <span x-text="track.purchased ? 'Gekauft' : 'Merken'"></span>
                                 </button>
                             </td>
-                            <td class="px-2 py-3 text-center"><button @click.stop="toggleLike(track)" class="transform active:scale-110 transition-transform text-slate-300 hover:text-pink-300" :class="track.liked ? 'text-pink-400' : ''"><svg class="w-5 h-5" :fill="track.liked ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg></button></td>
+                            <td class="px-2 py-3 text-center"><button @click.stop="toggleLike(track)" class="transform active:scale-110 transition-transform text-gray-300 hover:text-pink-500" :class="track.liked ? 'text-pink-500' : ''"><svg class="w-5 h-5" :fill="track.liked ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg></button></td>
 
                         </tr>
                     </template>
                 </tbody>
             </table>
         </div>
-        <template x-if="!activeSet"><div class="h-full flex flex-col items-center justify-center text-slate-400 gap-4"><p class="font-medium">Wähle ein Set links aus</p></div></template>
+        <template x-if="!activeSet"><div class="h-full flex flex-col items-center justify-center text-gray-400 gap-4"><p class="font-medium">Wähle ein Set links aus</p></div></template>
     </div>
 </main>

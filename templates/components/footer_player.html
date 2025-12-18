@@ -3,60 +3,54 @@
      x-transition:enter-start="translate-y-full"
      x-transition:enter-end="translate-y-0"
      x-cloak
-     class="fixed bottom-0 left-0 right-0 bg-slate-900/90 border-t border-white/10 shadow-[0_-12px_60px_-10px_rgba(0,0,0,0.6)] z-50 h-20 flex flex-col backdrop-blur-xl">
+     class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 h-20 flex flex-col">
     
-    <div class="w-full h-6 cursor-pointer group relative -mt-3"
-         x-ref="footerProgress"
-         @click="seekGlobal($event)"
-         @pointerdown="startProgressDrag($event)"
-         @pointermove.prevent="dragProgress($event)"
-         @pointerup="endProgressDrag($event)"
-         @pointerleave="endProgressDrag($event)">
+    <div class="w-full h-6 cursor-pointer group relative -mt-3" @click="seekGlobal($event)">
         
-        <div class="absolute top-3 left-0 right-0 h-1 bg-white/10 group-hover:h-1.5 transition-all rounded-full"></div>
+        <div class="absolute top-3 left-0 right-0 h-1 bg-gray-200 group-hover:h-1.5 transition-all rounded-full"></div>
         
-        <div class="absolute top-3 left-0 h-1 bg-gradient-to-r from-orange-500 via-pink-500 to-indigo-500 group-hover:h-1.5 transition-all ease-linear rounded-full" 
+        <div class="absolute top-3 left-0 h-1 bg-orange-500 group-hover:h-1.5 transition-all ease-linear rounded-full" 
              :style="'width: ' + audio.progressPercent + '%'">
              
-             <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-slate-900 border-2 border-white/70 rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity transform scale-125"></div>
+             <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white border-2 border-orange-600 rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity transform scale-125"></div>
         </div>
     </div>
 
     <div class="flex-1 flex items-center justify-between px-6 pb-2">
         <div class="flex items-center gap-4 w-1/3 overflow-hidden">
-            <div class="w-10 h-10 bg-orange-400/20 rounded-lg flex items-center justify-center text-orange-200 shadow-sm shrink-0 border border-orange-300/40">
+            <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center text-orange-500 shadow-sm shrink-0">
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zm0 5a4 4 0 110 8 4 4 0 010-8zm0 2a2 2 0 100 4 2 2 0 000-4z"/></svg>
             </div>
             <div class="min-w-0 flex-1">
-                <div class="font-bold text-white text-sm truncate" x-text="activeTrack ? activeTrack.title : '-'"></div>
-                <div class="text-xs text-slate-300 truncate" x-text="activeTrack ? activeTrack.artist : '-'"></div>
+                <div class="font-bold text-gray-900 text-sm truncate" x-text="activeTrack ? activeTrack.title : '-'"></div>
+                <div class="text-xs text-gray-500 truncate" x-text="activeTrack ? activeTrack.artist : '-'"></div>
             </div>
-            <button x-show="activeTrack" @click="toggleLike(activeTrack)" class="text-slate-300 hover:text-pink-300 transition-colors px-2">
-                <svg class="w-5 h-5" :class="activeTrack && activeTrack.liked ? 'text-pink-300 fill-current' : ''" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+            <button x-show="activeTrack" @click="toggleLike(activeTrack)" class="text-gray-300 hover:text-pink-500 transition-colors px-2">
+                <svg class="w-5 h-5" :class="activeTrack && activeTrack.liked ? 'text-pink-500 fill-current' : ''" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
             </button>
         </div>
 
         <div class="flex flex-col items-center w-1/3">
             <div class="flex items-center gap-6">
-                <button class="text-slate-300 hover:text-white transition-colors" @click="playPreviousInQueue()"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M11 17l-5-5 5-5v10zm7 0l-5-5 5-5v10z"/></svg></button>
-                <button @click="togglePlayPauseGlobal()" class="w-12 h-12 bg-gradient-to-r from-orange-500 via-pink-500 to-indigo-500 hover:brightness-110 text-white rounded-full flex items-center justify-center shadow-xl transition-all transform hover:scale-105 active:scale-95">
+                <button class="text-gray-300 hover:text-gray-600 transition-colors"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M11 17l-5-5 5-5v10zm7 0l-5-5 5-5v10z"/></svg></button>
+                <button @click="togglePlayPauseGlobal()" class="w-12 h-12 bg-gray-900 hover:bg-orange-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all transform hover:scale-105 active:scale-95">
                     <svg x-show="audio.paused" class="w-6 h-6 fill-current ml-1" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                     <svg x-show="!audio.paused" class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                 </button>
-                <button class="text-slate-300 hover:text-white transition-colors" @click="playNextInQueue()"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M13 7l5 5-5 5V7zM6 7l5 5-5 5V7z"/></svg></button>
+                <button class="text-gray-300 hover:text-gray-600 transition-colors"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M13 7l5 5-5 5V7zM6 7l5 5-5 5V7z"/></svg></button>
             </div>
         </div>
 
         <div class="flex items-center justify-end gap-4 w-1/3">
-            <div class="text-[10px] font-mono text-slate-200 bg-white/5 px-2 py-1 rounded border border-white/10">
+            <div class="text-[10px] font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded">
                 <span x-text="formatTime(audio.currentTime)">00:00</span> / <span x-text="formatTime(audio.duration || 0)">00:00</span>
             </div>
             <div class="flex items-center gap-2 group w-28">
-                <div class="text-slate-300" :class="audio.volume === 0 ? 'text-slate-500' : 'text-slate-300'">
+                <div class="text-gray-500" :class="audio.volume === 0 ? 'text-gray-300' : 'text-gray-500'">
                     <svg x-show="audio.volume === 0" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464l4.95-4.95m-4.95 4.95l4.95 4.95m-4.95-4.95a5 5 0 010 7.072M6.586 15H5a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C11.923 3.663 13 4.109 13 5v14c0 .891-1.077 1.337-1.707.707L6.586 15z" /></svg>
                     <svg x-show="audio.volume > 0" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M6.586 15H5a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C11.923 3.663 13 4.109 13 5v14c0 .891-1.077 1.337-1.707.707L6.586 15z" /></svg>
                 </div>
-                <input type="range" min="0" max="1" step="0.05" x-model="audio.volume" @input="updateVolume" class="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-orange-500">
+                <input type="range" min="0" max="1" step="0.05" x-model="audio.volume" @input="updateVolume" class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500">
             </div>
         </div>
     </div>
