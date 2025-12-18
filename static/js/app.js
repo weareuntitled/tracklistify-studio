@@ -840,6 +840,7 @@ document.addEventListener('alpine:init', () => {
         async toggleLike(track) {
             if (!this.ensureAuthenticated()) return;
 
+            this.ui.showLikes = true;
             track.liked = !track.liked;
             // Update Local List
             if (!track.liked) {
