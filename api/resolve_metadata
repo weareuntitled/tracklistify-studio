@@ -121,16 +121,28 @@ def get_metadata():
 
 @app.route("/api/queue/add", methods=["POST"])
 def add_job():
-    job_type = request.form.get("type")
-    metadata_raw = request.form.get("metadata")
-    metadata = json.loads(metadata_raw) if metadata_raw else {}
+    metadata = {}
+    job_type = None
+    payload = None
+
+    if request.is_json:
+        data = request.get_json(force=True)
+        job_type = data.get("type")
+        payload = data.get("value")
+        metadata = data.get("metadata") or {}
+    else:
+        job_type = request.form.get("type")
+        metadata_raw = request.form.get("metadata")
+        metadata = json.loads(metadata_raw) if metadata_raw else {}
+        payload = request.form.get("value")
 
     if job_type == "url":
-        url = request.form.get("value")
-        if not url: return jsonify({"ok": False, "error": "Keine URL"}), 400
-        job_manager.add_job("url", url, metadata)
+        if not payload: return jsonify({"ok": False, "error": "Keine URL"}), 400
+        job_manager.add_job("url", payload, metadata)
         
     elif job_type == "file":
+        if request.is_json:
+            return jsonify({"ok": False, "error": "File uploads require multipart"}), 400
         if 'file' not in request.files: return jsonify({"ok": False}), 400
         file = request.files['file']
         if file.filename:

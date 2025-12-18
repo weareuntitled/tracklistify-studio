@@ -148,6 +148,24 @@
                     <h2>Recent Sets</h2>
                     <span class="hint">Drag to folders or open</span>
                 </div>
+                <div class="tile">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-[10px] font-bold">RECENT SETS</div>
+                        <div class="flex items-center gap-2" x-show="uploadState.isProcessing">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-orange-50 text-orange-600 border border-orange-200">Processing</span>
+                            <span class="text-[10px] text-gray-500" x-text="processingLabel()"></span>
+                        </div>
+                    </div>
+                    <div class="divide-y divide-swiss">
+                        <template x-for="item in dashboardStats.recent_sets" :key="item.id">
+                            <button class="w-full flex items-center justify-between py-3 text-left accent-hover cursor-move"
+                                    draggable="true"
+                                    @dragstart="onDragSet(item, $event)"
+                                    @dragend="onDragEnd"
+                                    @click="loadSet(item.id)">
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-bold" x-text="item.name"></span>
+                                    <span class="text-[10px] muted" x-text="formatDate(item.created_at)"></span>
                 <div class="set-grid">
                     <template x-for="item in dashboardStats.recent_sets" :key="item.id">
                         <div class="set-card"
@@ -178,6 +196,16 @@
             </div>
         </section>
 
+        <div class="content">
+            <div class="section-header">
+                <h2>Sets</h2>
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2" x-show="uploadState.isProcessing">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-orange-50 text-orange-600 border border-orange-200">Processing</span>
+                        <span class="text-[11px] text-gray-500" x-text="processingLabel()"></span>
+                    </div>
+                    <span class="hint">Right-click for quick actions</span>
+                </div>
         <section class="panel" x-show="currentView === 'sets'" x-cloak>
             <div class="panel-header">
                 <div>
@@ -390,6 +418,15 @@
     </template>
 </div>
 
+<!-- Add Set Modal -->
+<div x-show="ui.showAddModal" x-cloak class="fixed inset-0 z-[80] flex items-center justify-center">
+    <div class="fixed inset-0 bg-black/70" @click="ui.showAddModal = false"></div>
+    <div class="bg-white border w-full max-w-2xl p-6 space-y-4 z-10 rounded-2xl shadow-xl">
+        <div class="flex items-center justify-between gap-3">
+            <div class="text-sm font-bold uppercase tracking-wide text-gray-800">Import Set</div>
+            <div class="flex items-center gap-2" x-show="uploadState.isProcessing">
+                <span class="px-2 py-1 rounded-full text-[10px] font-bold uppercase bg-orange-50 text-orange-600 border border-orange-200">Processing</span>
+                <span class="text-[11px] text-gray-500" x-text="queueStatus.active ? queueStatus.active.label : 'Waiting jobs'"></span>
 <div x-show="ui.showAddModal" x-cloak class="modal-backdrop">
     <div class="modal glass-panel">
         <div class="modal-header">
@@ -460,6 +497,46 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
             </button>
         </div>
+
+        <div class="flex gap-2 bg-gray-50 border border-gray-200 rounded-xl p-1 text-[12px] font-bold uppercase tracking-wide">
+            <button class="flex-1 py-2 rounded-lg transition-colors"
+                    :class="uploadState.tab === 'url' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500'"
+                    @click="uploadManager.setTab('url')">URL</button>
+            <button class="flex-1 py-2 rounded-lg transition-colors"
+                    :class="uploadState.tab === 'file' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500'"
+                    @click="uploadManager.setTab('file')">File</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-3" x-show="uploadState.tab === 'url'">
+                <label class="text-[10px] font-bold text-gray-500">Paste URL</label>
+                <div class="flex gap-2">
+                    <input type="text"
+                           :value="inputs.url"
+                           @input="uploadManager.handleUrlInput($event.target.value)"
+                           @paste.prevent="uploadManager.handlePaste($event)"
+                           placeholder="YouTube / Mixcloud / SoundCloud ..."
+                           class="flex-1 swiss-input text-[11px]">
+                    <button @click="fetchUrlMetadata(inputs.url)"
+                            class="swiss-button text-[11px] flex items-center gap-2"
+                            :class="inputs.isLoadingMeta ? 'opacity-60 pointer-events-none' : ''">
+                        <svg x-show="inputs.isLoadingMeta" class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12a8 8 0 018-8"/></svg>
+                        <span>Fetch</span>
+                    </button>
+                </div>
+                <p class="text-[11px] text-gray-500 leading-tight">Smart metadata lookup will prefill details after you paste or type.</p>
+            </div>
+
+            <div class="space-y-3" x-show="uploadState.tab === 'file'">
+                <label class="text-[10px] font-bold text-gray-500">Upload file</label>
+                <input type="file"
+                       x-ref="fileInput"
+                       @change="uploadManager.handleFileChange($event.target.files[0])"
+                       class="flex-1 swiss-input text-[11px]">
+                <p class="text-[11px] text-gray-500 leading-tight">Drop a local recording to analyse. We will extract hints from the filename automatically.</p>
+            </div>
+        </div>
+
         <div class="modal-grid">
             <div class="modal-field">
                 <label class="label">Name</label>
@@ -483,6 +560,16 @@
                 <input type="checkbox" x-model="editSetData.is_b2b">
                 <span>B2B</span>
             </label>
+            <span class="hint" x-text="queueStatus.queue_count ? queueStatus.queue_count + ' waiting' : 'Queue idle'"></span>
+        </div>
+        <div class="modal-actions">
+            <button class="ghost-button" @click="ui.showAddModal = false">Close</button>
+            <button class="cta"
+                    :disabled="uploadState.isSubmitting || (uploadState.tab === 'url' ? !inputs.url : !inputs.file)"
+                    :class="uploadState.isSubmitting ? 'opacity-60 pointer-events-none' : ''"
+                    @click="uploadManager.submit()">
+                <span x-text="uploadState.tab === 'url' ? 'Submit URL' : 'Upload File'"></span>
+            </button>
         </div>
         <div class="modal-actions">
             <button class="ghost-button" @click="ui.showEditSetModal = false">Cancel</button>

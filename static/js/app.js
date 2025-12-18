@@ -1,3 +1,104 @@
+class UploadManager {
+    constructor(component) {
+        this.component = component;
+        this.debounceTimer = null;
+    }
+
+    setTab(tab) {
+        this.component.uploadState.tab = tab;
+        this.component.inputs.url = tab === 'url' ? this.component.inputs.url : '';
+        if (tab === 'url') {
+            this.resetFile();
+        } else {
+            this.component.inputs.metaName = '';
+            this.component.inputs.metaArtist = '';
+            this.component.inputs.metaEvent = '';
+            this.component.inputs.metaTags = '';
+        }
+    }
+
+    resetFile() {
+        this.component.inputs.file = null;
+        if (this.component.$refs.fileInput) {
+            this.component.$refs.fileInput.value = '';
+        }
+    }
+
+    handleUrlInput(value) {
+        const url = (value || '').trim();
+        this.component.inputs.url = url;
+        this.component.uploadState.tab = 'url';
+        this.triggerMetadataResolve(url);
+    }
+
+    handlePaste(event) {
+        const pasted = event.clipboardData?.getData('text') || '';
+        if (pasted) {
+            this.handleUrlInput(pasted);
+        }
+    }
+
+    triggerMetadataResolve(url) {
+        clearTimeout(this.debounceTimer);
+        if (!url) return;
+        this.debounceTimer = setTimeout(() => {
+            this.component.fetchUrlMetadata(url);
+        }, 350);
+    }
+
+    handleFileChange(file) {
+        this.component.uploadState.tab = 'file';
+        this.component.inputs.file = file || null;
+        this.component.parseFileMetadata(file);
+    }
+
+    async submit(typeOverride = null) {
+        if (!this.component.ensureAuthenticated()) return;
+
+        const type = typeOverride || this.component.uploadState.tab;
+        const metadata = {
+            name: this.component.inputs.metaName,
+            artist: this.component.inputs.metaArtist,
+            event: this.component.inputs.metaEvent,
+            tags: this.component.inputs.metaTags,
+            is_b2b: this.component.inputs.is_b2b
+        };
+
+        this.component.uploadState.isSubmitting = true;
+        try {
+            if (type === 'url') {
+                if (!this.component.inputs.url) return;
+                const res = await fetch('/api/queue/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'url',
+                        value: this.component.inputs.url,
+                        metadata
+                    })
+                });
+                if (res.status === 401) return this.component.ensureAuthenticated();
+            } else {
+                const file = this.component.inputs.file || (this.component.$refs.fileInput?.files || [])[0];
+                if (!file) return;
+                const fd = new FormData();
+                fd.append('type', 'file');
+                fd.append('file', file);
+                fd.append('metadata', JSON.stringify(metadata));
+                const res = await fetch('/api/queue/add', { method: 'POST', body: fd });
+                if (res.status === 401) return this.component.ensureAuthenticated();
+            }
+
+            this.component.ui.showAddModal = false;
+            this.component.showQueueView();
+            this.component.resetUploadInputs();
+            await this.component.pollQueue();
+        } finally {
+            this.component.uploadState.isSubmitting = false;
+        }
+    }
+}
+
 document.addEventListener('alpine:init', () => {
     Alpine.data('tracklistify', () => ({
         // =====================================================================
@@ -52,7 +153,9 @@ document.addEventListener('alpine:init', () => {
         // UI STATE
         // =====================================================================
         currentView: 'dashboard',
-        queueStatus: { active: null, queue: [], history: [] },
+        queueStatus: { active: null, queue: [], history: [], queue_count: 0 },
+        uploadManager: null,
+        uploadState: { tab: 'url', lastResolvedUrl: '', isSubmitting: false, isProcessing: false },
         
         // Inputs für Upload Modal
         inputs: {
@@ -104,6 +207,7 @@ document.addEventListener('alpine:init', () => {
         // INITIALIZATION
         // =====================================================================
         init() {
+            this.uploadManager = new UploadManager(this);
             this.fetchSets();
             this.fetchLikes();
             this.fetchPurchases();
@@ -149,6 +253,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 const res = await fetch('/api/resolve_metadata', {
                     method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url })
                 });
                 const data = await res.json();
@@ -158,6 +263,7 @@ document.addEventListener('alpine:init', () => {
                     if (!this.inputs.metaName) this.inputs.metaName = data.name || '';
                     if (!this.inputs.metaArtist) this.inputs.metaArtist = data.artist || '';
                     if (!this.inputs.metaEvent) this.inputs.metaEvent = data.event || '';
+                    this.uploadState.lastResolvedUrl = url;
 
                     this.showToast("Infos gefunden", data.name || "Metadaten geladen", "info");
                 } else {
@@ -172,9 +278,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         // 2. Client: Regex Parser für lokale Dateinamen
-        parseFileMetadata() {
-            if (this.$refs.fileInput && this.$refs.fileInput.files[0]) {
-                const raw = this.$refs.fileInput.files[0].name.replace(/\.[^/.]+$/, "");
+        parseFileMetadata(file = null) {
+            const targetFile = file || (this.$refs.fileInput && this.$refs.fileInput.files[0]);
+            if (targetFile) {
+                const raw = targetFile.name.replace(/\.[^/.]+$/, "");
                 let clean = raw.replace(/_/g, ' ').replace(/\(.*?\)/g, '').replace(/\[.*?\]/g, '').trim();
                 
                 // Muster: Artist - Title @ Event
@@ -194,47 +301,19 @@ document.addEventListener('alpine:init', () => {
         // QUEUE & JOBS
         // =====================================================================
         async addToQueue(type) {
-            if (!this.ensureAuthenticated()) return;
+            return this.uploadManager.submit(type);
+        },
 
-            const fd = new FormData();
-            fd.append('type', type);
-            
-            const meta = { 
-                name: this.inputs.metaName, 
-                artist: this.inputs.metaArtist, 
-                event: this.inputs.metaEvent, 
-                tags: this.inputs.metaTags, 
-                is_b2b: this.inputs.is_b2b 
-            };
-            fd.append('metadata', JSON.stringify(meta));
-
-            if (type === 'url') {
-                if (!this.inputs.url) return;
-                fd.append('value', this.inputs.url);
-            } else {
-                const f = this.$refs.fileInput;
-                if (!f.files.length) return;
-                fd.append('file', f.files[0]);
-                f.value = '';
-                this.inputs.file = null;
-            }
-
-            // Direkt Modal schließen und zur Queue springen
-            this.ui.showAddModal = false;
-            this.showQueueView();
-
-            const res = await fetch('/api/queue/add', { method: 'POST', body: fd });
-            if (res.status === 401) return this.ensureAuthenticated();
-
-            // UI Reset
+        resetUploadInputs() {
             this.inputs.url = '';
             this.inputs.metaName = '';
             this.inputs.metaArtist = '';
             this.inputs.metaEvent = '';
             this.inputs.metaTags = '';
-
-            // Zur Queue wechseln
-            this.pollQueue();
+            this.inputs.is_b2b = false;
+            this.uploadState.tab = 'url';
+            this.uploadState.lastResolvedUrl = '';
+            this.uploadManager.resetFile();
         },
 
         async pollQueue() {
@@ -252,8 +331,22 @@ document.addEventListener('alpine:init', () => {
                 // Live Log Toasties
                 this.handleLiveLog(status);
 
-                this.queueStatus = status;
+                this.queueStatus = {
+                    active: status.active || null,
+                    queue: status.queue || [],
+                    history: status.history || [],
+                    queue_count: typeof status.queue_count === 'number' ? status.queue_count : (status.queue || []).length
+                };
+                this.uploadState.isProcessing = !!(status?.active || (status?.queue || []).length);
             } catch(e) {}
+        },
+
+        processingLabel() {
+            if (this.queueStatus?.active) return this.queueStatus.active.label || 'Processing';
+            if (this.queueStatus?.queue && this.queueStatus.queue.length) {
+                return this.queueStatus.queue[0].label || 'Queued';
+            }
+            return '';
         },
 
         async stopQueue() {
