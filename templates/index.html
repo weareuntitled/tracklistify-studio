@@ -669,13 +669,16 @@
         }
     </style>
 </head>
-<body x-data="tracklistify()">
-<div class="app-shell">
-    <aside class="library glass-panel">
-        <div class="library-header">
-            <div class="brand">
-                <span class="eyebrow">Library</span>
-                <div class="title">Tracklistify</div>
+<body class="h-full flex flex-col" x-data="tracklistify()"
+      @keydown.window.escape="closeContextMenu()"
+      @mousedown.window="handleContextMenuOutside($event)"
+      @resize.window="positionContextMenu()">
+<div class="swiss-shell">
+    <aside class="swiss-sidebar">
+        <div class="swiss-section flex items-center justify-between">
+            <div class="swiss-brand leading-none">
+                <span>TRACKLISTIFY</span>
+                <span>STUDIO</span>
             </div>
             <button class="icon-button" @click="createFolder()" title="New Folder">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h6l2 3h8v13H4z"/><path d="M12 11v6"/><path d="M9 14h6"/></svg>
@@ -722,28 +725,58 @@
             </div>
         </div>
 
-        <div class="flex-1 overflow-y-auto">
-            <template x-for="set in filteredSets" :key="set.id">
-                <button @click="loadSet(set)" class="w-full text-left px-4 py-3 border-b last:border-b-0 transition-all duration-150 cursor-move"
-                        draggable="true"
-                        @dragstart="onDragSet(set, $event)"
-                        @dragend="onDragEnd"
-                        :class="[activeSet && activeSet.id === set.id ? 'contrast-active' : '', draggingSet && draggingSet.id === set.id ? 'opacity-70' : '']">
-                    <div class="flex items-center justify-between text-[12px] font-bold gap-2">
-                        <div class="flex items-center gap-2 truncate">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-2v13" /></svg>
-                            <span class="truncate" x-text="set.name"></span>
+        <div class="flex-1 overflow-y-auto divide-y divide-swiss">
+            <div class="px-4 py-4 space-y-3">
+                <div class="flex items-center justify-between text-[10px] font-bold">
+                    <span>FOLDERS</span>
+                    <button @click="createFolder()" class="swiss-button text-[10px] px-2 py-1">NEW</button>
+                </div>
+
+                <div class="space-y-2">
+                    <template x-for="folder in folders" :key="folder.id">
+                        <div class="px-3 py-2 border flex items-center justify-between text-[11px] gap-3 transition-colors"
+                             :class="folderHoverId === folder.id ? 'contrast-active' : 'accent-hover'"
+                             @contextmenu.prevent="openFolderContextMenu($event, folder)"
+                             @dragenter.prevent="onFolderDragEnter(folder, $event)" @dragover.prevent="onFolderDragOver($event)" @dragleave="onFolderDragLeave(folder)"
+                             @drop.prevent="onDropToFolder(folder, $event)">
+                            <div class="flex items-center gap-2 truncate">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 7a2 2 0 012-2h2m14 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7m18 0l-3.34-4H8.34L5 7" /></svg>
+                                <span class="truncate" x-text="folder.name"></span>
+                            </div>
+                            <span class="pill text-[10px]" x-text="(folder.sets?.length || 0) + ' SETS'"></span>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <template x-if="set.folder_id">
-                                <span class="text-[10px] pill" x-text="(folders.find(f => f.id === set.folder_id) || {}).name || 'FOLDER'"></span>
-                            </template>
+                    </template>
+                    <div x-show="!folders.length" class="text-[11px] muted">NO FOLDERS</div>
+                </div>
+
+                <div class="border border-dashed px-3 py-4 text-center text-[11px] muted transition-colors"
+                     style="border-color: var(--swiss-muted);"
+                     :class="draggingSet ? 'contrast-active' : ''"
+                     @dragover.prevent @dragenter.prevent @drop.prevent="onDropToTrash($event)">
+                    DROP SET HERE TO DELETE
+                </div>
+            </div>
+
+            <div class="py-2">
+                <template x-for="set in filteredSets" :key="set.id">
+                    <button @click="loadSet(set)"
+                            @contextmenu.prevent="openContextMenu($event, 'set', set)"
+                            draggable="true"
+                            @dragstart="onDragSet(set, $event)" @dragend="onDragEnd"
+                            class="w-full text-left px-4 py-3 border-b last:border-b-0 transition-all duration-150"
+                            :class="activeSet && activeSet.id === set.id ? 'contrast-active' : ''">
+                        <div class="flex items-center justify-between text-[12px] font-bold gap-2">
+                            <div class="flex items-center gap-2 truncate">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-2v13" /></svg>
+                                <span class="truncate" x-text="set.name"></span>
+                            </div>
                             <span class="font-mono px-2 py-0.5 pill" x-text="set.track_count"></span>
                         </div>
-                    </div>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h6l2 3h8v13H4z"/></svg>
-                </div>
-            </template>
+                        <div class="text-[10px] muted" x-text="formatDate(set.created_at)"></div>
+                    </button>
+                </template>
+                <div x-show="sets.length === 0" class="px-4 py-6 text-[12px] muted">NO SETS YET</div>
+            </div>
         </div>
         <div class="trash-zone"
              :class="folderHoverId === 'trash' ? 'is-hovered' : ''"
@@ -926,28 +959,73 @@
     </section>
 </div>
 
-<div x-show="ui.contextMenu.show" x-cloak class="context-menu" :style="`left:${ui.contextMenu.x}px; top:${ui.contextMenu.y}px;`" @click.outside="ui.contextMenu.show = false">
-    <button @click="loadSet(ui.contextMenu.targetSet)">Open</button>
-    <button @click="openEditSetModal()">Edit Metadata</button>
-    <button @click="rescanSetContext()">Rescan</button>
-    <button @click="renameSetContext()">Rename</button>
-    <button @click="deleteSetContext()">Delete</button>
+<div x-show="ui.contextMenu.show" x-ref="contextMenu" x-cloak
+     class="fixed z-[90] bg-white border shadow-xl w-60 divide-y divide-swiss"
+     @contextmenu.prevent
+     @click.outside="closeContextMenu()"
+     :style="'top: ' + ui.contextMenu.y + 'px; left: ' + ui.contextMenu.x + 'px'">
+    <div class="px-3 py-2 text-[10px] font-bold tracking-wide">
+        <span x-text="ui.contextMenu.type === 'folder' ? 'FOLDER ACTIONS' : 'SET ACTIONS'"></span>
+    </div>
+
+    <template x-if="ui.contextMenu.type === 'set'">
+        <div class="py-1 space-y-1">
+            <button @click="openEditSetModal()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>Info & Tags</span>
+            </button>
+            <button @click="renameSetContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                <span>Umbenennen</span>
+            </button>
+            <button @click="promptMoveSetContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h7" /></svg>
+                <span>In Ordner verschieben</span>
+            </button>
+            <div x-show="folders.length" class="pt-1">
+                <div class="px-4 py-1 text-[10px] muted">Oder hierhin bewegen</div>
+                <template x-for="folder in folders" :key="folder.id">
+                    <button @click="moveSetToFolderFromMenu(folder)" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 7a2 2 0 012-2h2m14 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7m18 0l-3.34-4H8.34L5 7" /></svg>
+                        <span class="truncate" x-text="folder.name"></span>
+                    </button>
+                </template>
+            </div>
+            <button @click="rescanSetContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                <span>Neu analysieren</span>
+            </button>
+            <button @click="deleteSetContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2 text-red-600">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                <span>Set löschen</span>
+            </button>
+        </div>
+    </template>
+
+    <template x-if="ui.contextMenu.type === 'folder'">
+        <div class="py-1 space-y-1">
+            <button @click="renameFolderContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2" /></svg>
+                <span>Ordner umbenennen</span>
+            </button>
+            <button @click="deleteFolderContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2 text-red-600">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" /></svg>
+                <span>Ordner löschen</span>
+            </button>
+        </div>
+    </template>
 </div>
 
-<div x-show="ui.showAddModal" x-cloak class="modal-backdrop">
-    <div class="modal">
-        <h3>Import Set</h3>
-        <div class="modal-grid">
-            <div style="display:grid; gap:8px;">
-                <label class="label">URL</label>
-                <div style="display:flex; gap:8px;">
-                    <input type="text" class="input" x-model="inputs.url" placeholder="Link to mix">
-                    <button class="ghost-button" @click="fetchUrlMetadata(inputs.url)">Fetch</button>
-                </div>
-            </div>
-            <div style="display:grid; gap:8px;">
-                <label class="label">File</label>
-                <input type="file" x-ref="fileInput" @change="parseFileMetadata()" class="input" style="padding:10px;">
+<!-- Add Set Modal -->
+<div x-show="ui.showAddModal" x-cloak class="fixed inset-0 z-[80] flex items-center justify-center">
+    <div class="fixed inset-0 bg-black/70" @click="ui.showAddModal = false"></div>
+    <div class="bg-white border w-full max-w-lg p-6 space-y-4 z-10">
+        <div class="text-sm font-bold">IMPORT SET</div>
+        <div class="space-y-2">
+            <label class="text-[10px] font-bold">URL</label>
+            <div class="flex gap-2">
+                <input type="text" x-model="inputs.url" class="flex-1 swiss-input text-[11px]">
+                <button @click="fetchUrlMetadata(inputs.url)" class="swiss-button text-[11px]">FETCH</button>
             </div>
         </div>
         <div class="modal-grid">

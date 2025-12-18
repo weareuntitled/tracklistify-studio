@@ -77,7 +77,7 @@ document.addEventListener('alpine:init', () => {
             playingId: null, 
             loadingId: null,
             hoverTrackId: null,
-            contextMenu: { show: false, x: 0, y: 0, targetSet: null }
+            contextMenu: { show: false, x: 0, y: 0, target: null, type: null }
         },
         
         toasts: [],
@@ -345,23 +345,64 @@ document.addEventListener('alpine:init', () => {
 
         // Context Menu
         openSetContextMenu(e, set) {
-            e.preventDefault(); 
-            e.stopPropagation();
-            this.ui.contextMenu.targetSet = set;
-            
-            let x = e.clientX;
-            let y = e.clientY;
-            if (y > window.innerHeight - 200) y -= 150; // Overflow prevent
-            
-            this.ui.contextMenu.x = x;
-            this.ui.contextMenu.y = y;
+            this.openContextMenu(e, 'set', set);
+        },
+
+        openFolderContextMenu(e, folder) {
+            this.openContextMenu(e, 'folder', folder);
+        },
+
+        openContextMenu(event, type, target) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.ui.contextMenu.target = target;
+            this.ui.contextMenu.type = type;
+            this.ui.contextMenu.x = event.clientX;
+            this.ui.contextMenu.y = event.clientY;
             this.ui.contextMenu.show = true;
+
+            this.$nextTick(() => this.positionContextMenu());
+        },
+
+        positionContextMenu() {
+            if (!this.ui.contextMenu.show) return;
+            const menu = this.$refs.contextMenu;
+            if (!menu) return;
+
+            const rect = menu.getBoundingClientRect();
+            const margin = 8;
+            let nextX = this.ui.contextMenu.x;
+            let nextY = this.ui.contextMenu.y;
+
+            if (nextX + rect.width + margin > window.innerWidth) {
+                nextX = Math.max(margin, window.innerWidth - rect.width - margin);
+            }
+            if (nextY + rect.height + margin > window.innerHeight) {
+                nextY = Math.max(margin, window.innerHeight - rect.height - margin);
+            }
+
+            this.ui.contextMenu.x = nextX;
+            this.ui.contextMenu.y = nextY;
+        },
+
+        handleContextMenuOutside(event) {
+            if (!this.ui.contextMenu.show) return;
+            const menu = this.$refs.contextMenu;
+            if (menu && menu.contains(event.target)) return;
+            this.closeContextMenu();
+        },
+
+        closeContextMenu() {
+            this.ui.contextMenu.show = false;
+            this.ui.contextMenu.target = null;
+            this.ui.contextMenu.type = null;
         },
 
         // Edit Modal
         openEditSetModal() {
-            const set = this.ui.contextMenu.targetSet;
-            this.ui.contextMenu.show = false;
+            const set = this.ui.contextMenu.target;
+            this.closeContextMenu();
+            if (!set) return;
             this.editSetData = { 
                 id: set.id, 
                 name: set.name, 
@@ -389,8 +430,9 @@ document.addEventListener('alpine:init', () => {
         },
 
         async renameSetContext() {
-            const set = this.ui.contextMenu.targetSet; 
-            this.ui.contextMenu.show = false;
+            const set = this.ui.contextMenu.target; 
+            this.closeContextMenu();
+            if (!set) return;
             const n = prompt("Neuer Name für das Set:", set.name);
             
             if(n && n !== set.name) { 
@@ -429,14 +471,15 @@ document.addEventListener('alpine:init', () => {
         },
 
         async deleteSetContext() {
-            const set = this.ui.contextMenu.targetSet;
-            this.ui.contextMenu.show = false;
-            await this.deleteSet(set, { prompt: true });
+            const set = this.ui.contextMenu.target;
+            this.closeContextMenu();
+            await this.confirmAndDeleteSet(set);
         },
 
         async rescanSetContext() {
-            const set = this.ui.contextMenu.targetSet; 
-            this.ui.contextMenu.show = false; 
+            const set = this.ui.contextMenu.target; 
+            this.closeContextMenu(); 
+            if (!set) return;
             const val = set.audio_file || set.source_url; 
             
             if(!val) return alert("Keine Audio-Datei oder URL hinterlegt.");
@@ -457,6 +500,45 @@ document.addEventListener('alpine:init', () => {
             await fetch('/api/queue/add', { method: 'POST', body: fd }); 
             this.pollQueue(); 
             this.showToast("Set zur Warteschlange hinzugefügt.", "", "info");
+        },
+
+        async moveSetToFolderFromMenu(folder) {
+            const set = this.ui.contextMenu.target;
+            this.closeContextMenu();
+            if (!set || !folder) return;
+            await this.assignSetToFolder(set, folder);
+        },
+
+        promptMoveSetContext() {
+            const set = this.ui.contextMenu.target;
+            this.closeContextMenu();
+            if (!set) return;
+            if (!this.folders.length) {
+                this.showToast('Keine Ordner', 'Lege zuerst einen Ordner an.', 'info');
+                return;
+            }
+
+            const name = prompt('Set in welchen Ordner verschieben?', this.folders[0].name);
+            const folder = this.folders.find(f => f.name.toLowerCase() === (name || '').toLowerCase());
+            if (folder) this.assignSetToFolder(set, folder);
+        },
+
+        async confirmAndDeleteSet(set, message) {
+            if (!set) return false;
+            const confirmMessage = message || `Set "${set.name}" wirklich löschen?`;
+            const confirmed = confirm(confirmMessage);
+            if (!confirmed) return false;
+
+            await fetch(`/api/sets/${set.id}`, { method: 'DELETE' });
+            this.sets = this.sets.filter(s => s.id !== set.id);
+            this.filteredSets = this.filteredSets.filter(s => s.id !== set.id);
+            this.removeSetFromFolders(set.id);
+            if (this.activeSet && this.activeSet.id === set.id) {
+                this.activeSet = null;
+                this.tracks = [];
+            }
+            this.showDashboard();
+            return true;
         },
 
         // =====================================================================
@@ -873,6 +955,36 @@ document.addEventListener('alpine:init', () => {
             } catch (e) {}
         },
 
+        removeSetFromFolders(setId) {
+            if (!this.folders || !setId) return;
+            this.folders.forEach(folder => {
+                folder.sets = (folder.sets || []).filter(id => id !== setId);
+            });
+            this.persistFoldersLocally();
+        },
+
+        async assignSetToFolder(set, folder) {
+            if (!set || !folder) return;
+
+            (this.folders || []).forEach(f => {
+                f.sets = (f.sets || []).filter(id => id !== set.id);
+            });
+
+            folder.sets = folder.sets || [];
+            if (!folder.sets.includes(set.id)) folder.sets.push(set.id);
+            set.folder_id = folder.id;
+
+            try {
+                await fetch(`/api/folders/${folder.id}/sets`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ set_id: set.id }) 
+                });
+            } catch (e) {}
+
+            this.persistFoldersLocally();
+        },
+
         syncFolderAssignments() {
             if (!this.sets || !this.sets.length) return;
 
@@ -1004,18 +1116,32 @@ document.addEventListener('alpine:init', () => {
             const resolvedSet = set ? (this.sets.find(s => s.id === set.id) || set) : null;
             this.draggingSet = null;
             this.folderHoverId = null;
-            this.trashHover = false;
-            if (!resolvedSet || !resolvedSet.id) return;
+            if (!set) return;
+            await this.assignSetToFolder(set, folder);
+        },
 
-            this.applyFolderAssignment(folder.id, resolvedSet.id);
-            this.syncFolderAssignments();
-            this.persistFoldersLocally();
+        async onDropToTrash(event) {
+            event.preventDefault();
+            const set = this.draggingSet;
+            this.draggingSet = null;
+            this.folderHoverId = null;
+            if (!set) return;
+            await this.confirmAndDeleteSet(set, `Set "${set.name}" wirklich löschen?`);
+        },
+
+        renameFolderContext() {
+            const folder = this.ui.contextMenu.target;
+            this.closeContextMenu();
+            if (!folder) return;
+            const next = prompt('Ordner umbenennen', folder.name) || folder.name;
+            if (next === folder.name) return;
+            folder.name = next;
 
             try {
-                const res = await fetch(`/api/folders/${folder.id}/sets`, { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ set_id: resolvedSet.id }) 
+                fetch(`/api/folders/${folder.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: next })
                 });
                 if (res.ok) {
                     const data = await res.json();
@@ -1042,6 +1168,25 @@ document.addEventListener('alpine:init', () => {
             this.trashHover = false;
             if (!set) return;
             await this.deleteSet(set, { prompt: true });
+        },
+
+        async deleteFolderContext() {
+            const folder = this.ui.contextMenu.target;
+            this.closeContextMenu();
+            if (!folder) return;
+
+            if (!confirm(`Ordner "${folder.name}" löschen?`)) return;
+
+            this.folders = (this.folders || []).filter(f => f.id !== folder.id);
+            this.sets.forEach(set => {
+                if (set.folder_id === folder.id) set.folder_id = null;
+            });
+
+            try {
+                await fetch(`/api/folders/${folder.id}`, { method: 'DELETE' });
+            } catch (e) {}
+
+            this.persistFoldersLocally();
         },
 
         isProducerFavorite(producerId) {
