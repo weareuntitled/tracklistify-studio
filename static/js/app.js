@@ -53,6 +53,7 @@ document.addEventListener('alpine:init', () => {
         // =====================================================================
         currentView: 'dashboard',
         queueStatus: { active: null, queue: [], history: [] },
+        queueToastMeta: { lastJobId: null, lastPhase: null, lastProgress: 0, lastToastAt: 0 },
         
         // Inputs für Upload Modal
         inputs: {
@@ -249,6 +250,7 @@ document.addEventListener('alpine:init', () => {
                 
                 // Live Log Toasties
                 this.handleLiveLog(status);
+                this.handleQueueProgress(status);
 
                 this.queueStatus = status;
             } catch(e) {}
@@ -1364,6 +1366,38 @@ document.addEventListener('alpine:init', () => {
             ) {
                 this.showToast('Track erkannt', cleanMsg, 'track');
             }
+        },
+
+        handleQueueProgress(status) {
+            const active = status.active;
+            const now = Date.now();
+            const throttleMs = 2500;
+
+            if (!active) {
+                this.queueToastMeta = { lastJobId: null, lastPhase: null, lastProgress: 0, lastToastAt: 0 };
+                return;
+            }
+
+            if (this.queueToastMeta.lastJobId !== active.id) {
+                this.queueToastMeta = { lastJobId: active.id, lastPhase: active.phase, lastProgress: active.progress || 0, lastToastAt: 0 };
+                return;
+            }
+
+            if (active.phase && active.phase !== this.queueToastMeta.lastPhase && now - this.queueToastMeta.lastToastAt >= throttleMs) {
+                this.showToast('Phase gewechselt', this.getPhaseLabel(active.phase), 'info');
+                this.queueToastMeta.lastPhase = active.phase;
+                this.queueToastMeta.lastToastAt = now;
+            }
+
+            const progress = typeof active.progress === 'number' ? active.progress : null;
+            if (progress !== null && progress - this.queueToastMeta.lastProgress >= 5 && now - this.queueToastMeta.lastToastAt >= throttleMs) {
+                const subtitle = active.label ? `${Math.round(progress)}% • ${active.label}` : `${Math.round(progress)}%`;
+                this.showToast('Fortschritt', subtitle, 'info');
+                this.queueToastMeta.lastProgress = progress;
+                this.queueToastMeta.lastToastAt = now;
+            }
+
+            this.queueToastMeta.lastPhase = active.phase || this.queueToastMeta.lastPhase;
         },
         
         getSearchLink(track, provider) {
