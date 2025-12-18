@@ -365,6 +365,8 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
             gap: 14px;
+            max-height: 70vh;
+            overflow-y: auto;
         }
 
         .set-card {
@@ -916,28 +918,6 @@
         </div>
 
         <section class="content">
-            <div class="section-card">
-                <div class="section-heading">
-                    <span>Recent Sets</span>
-                    <span class="hint">Drag to folder or open for details</span>
-                </div>
-                <div class="divide-y divide-swiss">
-                    <template x-for="item in dashboardStats.recent_sets" :key="item.id">
-                        <button class="w-full flex items-center justify-between py-3 text-left accent-hover cursor-move"
-                                draggable="true"
-                                @dragstart="onDragSet(item, $event)"
-                                @dragend="onDragEnd"
-                                @click="loadSet(item.id)">
-                            <div class="flex flex-col">
-                                <span class="text-sm font-bold" x-text="item.name"></span>
-                                <span class="text-[10px] muted" x-text="formatDate(item.created_at)"></span>
-                            </div>
-                            <span class="text-[10px] font-bold" x-text="item.track_count + ' TRACKS'"></span>
-                        </button>
-                    </template>
-                </div>
-            </div>
-
             <div class="section-header" style="padding-top:8px;">
                 <h2>Sets</h2>
                 <span class="hint">Right-click for quick actions</span>
@@ -959,12 +939,16 @@
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h6l2 3h8v9H4z"/></svg>
                                     <span x-text="set.track_count + ' tracks'"></span>
                                 </div>
+                                <div class="set-pill">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 12a5 5 0 100-10 5 5 0 000 10z"/><path d="M2 22c0-5.523 4.477-10 10-10s10 4.477 10 10"/></svg>
+                                    <span x-text="set.artists || set.dj_names || 'Unknown Artist'"></span>
+                                </div>
                                 <div class="set-title" x-text="set.name"></div>
                                 <div class="set-artist" x-text="set.artists || set.dj_names || 'Unknown Artist'"></div>
                             </div>
                             <div class="set-footer">
                                 <span x-text="formatDate(set.created_at)"></span>
-                                <span x-text="set.event || 'Ready'"></span>
+                                <span x-text="set.event || set.tags || 'Ready'"></span>
                             </div>
                         </div>
                     </template>
