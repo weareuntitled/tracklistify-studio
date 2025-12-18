@@ -8,11 +8,11 @@
         <div class="md:hidden text-sm font-semibold text-gray-800">Dashboard</div>
     </div>
 
-    <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-        <button @click="showQueueView()" 
+    <div class="flex-1 flex justify-center">
+        <button @click="showQueueView()"
                 class="hidden sm:flex items-center justify-center px-4 py-1.5 rounded-full border transition-all duration-300 cursor-pointer hover:shadow-md active:scale-95 group min-w-[180px] relative overflow-hidden"
                 :class="queueStatus.active ? 'bg-white border-gray-200' : 'bg-white border-gray-100'">
-            
+
             <template x-if="queueStatus.active">
                 <div class="absolute inset-0 opacity-20 origin-left transition-transform duration-300 ease-linear"
                      :class="getPhaseColor(queueStatus.active.phase)"
