@@ -355,7 +355,10 @@ const registerTracklistify = (AlpineInstance) => {
             this.ui.trackViewOnly = true;
 
             const res = await fetch(`/api/sets/${id}/tracks`);
-            this.tracks = await res.json();
+            this.tracks = (await res.json()).map(track => {
+                track.streamUrl = track.streamUrl || track.stream_url;
+                return track;
+            });
             
             // Turbo anwerfen
             this.startPreloading();

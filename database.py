@@ -240,7 +240,8 @@ def init_db():
         "flag": "INTEGER DEFAULT 0", "orig_artist": "TEXT", "orig_title": "TEXT",
         "needs_rescan": "INTEGER DEFAULT 0", "last_rescan_at": "TEXT",
         "liked": "INTEGER DEFAULT 0", "purchased": "INTEGER DEFAULT 0",
-        "producer_id": "INTEGER", "label_id": "INTEGER", "beatport_url": "TEXT"
+        "producer_id": "INTEGER", "label_id": "INTEGER", "beatport_url": "TEXT",
+        "stream_url": "TEXT"
     }
     for col, dtype in track_cols.items():
         if col not in existing_track_cols:
@@ -359,6 +360,15 @@ def assign_track_entities(track_id, producer_id=None, label_id=None, beatport_ur
         "UPDATE tracks SET producer_id = COALESCE(?, producer_id), label_id = COALESCE(?, label_id), beatport_url = COALESCE(?, beatport_url) WHERE id = ?",
         (producer_id, label_id, beatport_url, track_id),
     )
+    conn.commit()
+    conn.close()
+
+
+def update_track_stream_url(track_id, stream_url):
+    if not track_id or not stream_url:
+        return
+    conn = get_conn()
+    conn.execute("UPDATE tracks SET stream_url = ? WHERE id = ?", (stream_url, track_id))
     conn.commit()
     conn.close()
 

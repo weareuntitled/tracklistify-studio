@@ -301,7 +301,24 @@ def list_sets():
 
 @app.route("/api/sets/<int:sid>/tracks")
 def list_tracks(sid):
-    return jsonify(database.get_tracks_by_set_with_relations(sid))
+    tracks = database.get_tracks_by_set_with_relations(sid)
+
+    for track in tracks:
+        if track.get("stream_url"):
+            continue
+
+        artist = track.get("artist") or track.get("orig_artist")
+        title = track.get("title") or track.get("orig_title")
+        if not (artist or title):
+            continue
+
+        query = " - ".join([part for part in (artist, title) if part])
+        url = cached_resolve_audio(query)
+        if url:
+            track["stream_url"] = url
+            database.update_track_stream_url(track.get("id"), url)
+
+    return jsonify(tracks)
 
 @app.route("/api/sets/<int:sid>/rename", methods=["POST"])
 def rename_set(sid):
