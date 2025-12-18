@@ -14,8 +14,10 @@ document.addEventListener('alpine:init', () => {
         rescanCandidates: [],
         youtubeFeed: [],
         folders: [],
+        activeFolderId: null,
         draggingSet: null,
         folderHoverId: null,
+        trashHover: false,
 
         auth: {
             user: null,
@@ -126,8 +128,7 @@ document.addEventListener('alpine:init', () => {
 
             // Suche Watcher
             this.$watch('search', val => {
-                if(!val) this.filteredSets = this.sets;
-                else this.filteredSets = this.sets.filter(s => s.name.toLowerCase().includes(val.toLowerCase()));
+                this.updateFilteredSets();
             });
             
             // Player Init
@@ -443,6 +444,32 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        async deleteSet(set, options = {}) {
+            const target = set && set.id ? set : this.sets.find(s => s.id === set);
+            if (!target) return false;
+
+            const { prompt = false } = options;
+            if (prompt && !confirm(`Set "${target.name || target.id}" wirklich löschen?`)) return false;
+
+            await fetch(`/api/sets/${target.id}`, { method: 'DELETE' });
+            this.sets = this.sets.filter(s => s.id !== target.id);
+            this.filteredSets = this.filteredSets.filter(s => s.id !== target.id);
+            this.folders = (this.folders || []).map(folder => ({
+                ...folder,
+                sets: (folder.sets || []).filter(id => id !== target.id)
+            }));
+            this.persistFoldersLocally();
+
+            if (this.activeSet && this.activeSet.id === target.id) {
+                this.activeSet = null;
+                this.tracks = [];
+            }
+
+            this.syncFolderAssignments();
+            this.showDashboard();
+            return true;
+        },
+
         async deleteSetContext() {
             const set = this.ui.contextMenu.target;
             this.closeContextMenu();
@@ -661,8 +688,8 @@ document.addEventListener('alpine:init', () => {
         async fetchSets() { 
             const res = await fetch('/api/sets'); 
             this.sets = await res.json(); 
-            this.filteredSets = this.sets; 
             this.syncFolderAssignments(); 
+            this.updateFilteredSets();
         },
         async fetchLikes() { const res = await fetch('/api/tracks/likes'); this.likedTracks = await res.json(); },
         async fetchPurchases() { const res = await fetch('/api/tracks/purchases'); this.purchasedTracks = await res.json(); },
@@ -847,31 +874,79 @@ document.addEventListener('alpine:init', () => {
         // =====================================================================
         // FOLDER MANAGEMENT
         // =====================================================================
+        defaultFolderName() {
+            return `Ordner ${ (this.folders?.length || 0) + 1 }`;
+        },
+
+        resetFolderForm() {
+            this.folderForm.name = this.defaultFolderName();
+        },
+
+        updateFilteredSets() {
+            const searchTerm = (this.search || '').toLowerCase();
+            let scopedSets = Array.isArray(this.sets) ? [...this.sets] : [];
+
+            if (this.activeFolderId) {
+                const activeFolder = (this.folders || []).find(folder => folder.id === this.activeFolderId);
+                if (!activeFolder) {
+                    this.activeFolderId = null;
+                } else {
+                    const allowedIds = new Set((activeFolder.sets || []).map(item => typeof item === 'object' ? item.id : item));
+                    scopedSets = scopedSets.filter(set => allowedIds.has(set.id));
+                }
+            }
+
+            if (searchTerm) {
+                scopedSets = scopedSets.filter(set => set.name.toLowerCase().includes(searchTerm));
+            }
+
+            this.filteredSets = scopedSets;
+        },
+
+        toggleFolderForm() {
+            this.folderForm.open = !this.folderForm.open;
+            if (this.folderForm.open) this.resetFolderForm();
+        },
+
+        selectFolder(folder) {
+            this.activeFolderId = this.activeFolderId === folder.id ? null : folder.id;
+            this.updateFilteredSets();
+        },
+
         async loadFolders() {
             try {
                 const res = await fetch('/api/folders');
                 if (res.ok) {
                     const data = await res.json();
-                    this.folders = Array.isArray(data) ? data : (data.folders || []);
-                    this.ensureFolderStructure();
-                    this.syncFolderAssignments();
-                    this.persistFoldersLocally();
+                    const payload = Array.isArray(data) ? data : (data.folders || []);
+                    this.updateFoldersFromServer(payload);
                     return;
                 }
             } catch (e) {}
 
             const cached = localStorage.getItem('tracklistify_folders');
-            this.folders = cached ? JSON.parse(cached) : [];
-            this.ensureFolderStructure();
+            this.ensureFolderStructure(cached ? JSON.parse(cached) : []);
             this.syncFolderAssignments();
+            this.resetFolderForm();
         },
 
-        ensureFolderStructure() {
-            this.folders = (this.folders || []).map(folder => ({
-                id: folder.id ?? `local-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-                name: folder.name || 'Ordner',
-                sets: (folder.sets || []).map(item => typeof item === 'object' ? item.id : item)
-            }));
+        ensureFolderStructure(folders = this.folders) {
+            const normalized = (folders || []).map(folder => {
+                const fallbackId = `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+                const rawId = folder.id ?? fallbackId;
+                const normalizedId = (typeof rawId === 'string' && rawId.startsWith('local-')) 
+                    ? rawId 
+                    : (!Number.isNaN(Number(rawId)) ? Number(rawId) : rawId);
+                const sets = Array.from(new Set((folder.sets || []).map(item => typeof item === 'object' ? item.id : item))).filter(Boolean);
+                return {
+                    ...folder,
+                    id: normalizedId,
+                    name: folder.name || 'Ordner',
+                    sets
+                };
+            });
+            this.folders = normalized;
+            return normalized;
         },
 
         persistFoldersLocally() {
@@ -913,11 +988,12 @@ document.addEventListener('alpine:init', () => {
         syncFolderAssignments() {
             if (!this.sets || !this.sets.length) return;
 
+            this.ensureFolderStructure();
             const setMap = new Map(this.sets.map(s => [s.id, s]));
             this.sets.forEach(set => set.folder_id = null);
 
             (this.folders || []).forEach(folder => {
-                folder.sets = (folder.sets || []).map(item => typeof item === 'object' ? item.id : item).filter(id => setMap.has(id));
+                folder.sets = Array.from(new Set((folder.sets || []).map(item => typeof item === 'object' ? item.id : item).filter(id => setMap.has(id))));
                 folder.sets.forEach(setId => {
                     const target = setMap.get(setId);
                     if (target) target.folder_id = folder.id;
@@ -925,13 +1001,18 @@ document.addEventListener('alpine:init', () => {
             });
 
             this.persistFoldersLocally();
+            this.updateFilteredSets();
         },
 
         async createFolder() {
-            const defaultName = `Ordner ${this.folders.length + 1}`;
-            const name = prompt('Ordnername', defaultName) || defaultName;
-            const optimisticFolder = { id: `local-${Date.now()}`, name, sets: [] };
-            let created = optimisticFolder;
+            const name = (this.folderForm.name || '').trim() || this.defaultFolderName();
+            const optimisticId = `local-${Date.now()}`;
+            const optimisticFolder = { id: optimisticId, name, sets: [] };
+            this.folders = [optimisticFolder, ...this.folders];
+            this.ensureFolderStructure();
+            this.persistFoldersLocally();
+            this.activeFolderId = optimisticId;
+            this.updateFilteredSets();
 
             try {
                 const res = await fetch('/api/folders', { 
@@ -941,14 +1022,38 @@ document.addEventListener('alpine:init', () => {
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    created = data.folder || data;
+                    const created = data.folder || data;
                     created.sets = created.sets || [];
+                    this.folders = this.folders.map(folder => folder.id === optimisticId ? created : folder);
+                    this.activeFolderId = created.id;
+                    this.ensureFolderStructure();
+                    this.syncFolderAssignments();
                 }
             } catch (e) {}
 
-            this.folders = [created, ...this.folders];
-            this.ensureFolderStructure();
+            this.ensureFolderStructure([created, ...this.folders]);
+            this.syncFolderAssignments();
             this.persistFoldersLocally();
+        },
+
+        updateFoldersFromServer(folders) {
+            this.ensureFolderStructure(folders);
+            this.syncFolderAssignments();
+            this.persistFoldersLocally();
+        },
+
+        applyFolderAssignment(folderId, setId) {
+            const targetId = !Number.isNaN(Number(folderId)) ? Number(folderId) : folderId;
+            this.folders = (this.folders || []).map(folder => {
+                const normalizedSets = new Set((folder.sets || []).map(item => typeof item === 'object' ? item.id : item));
+                normalizedSets.delete(setId);
+                if (folder.id === targetId) normalizedSets.add(setId);
+                return { ...folder, sets: Array.from(normalizedSets) };
+            });
+
+            const targetSet = this.sets.find(s => s.id === setId);
+            if (targetSet) targetSet.folder_id = targetId;
+            if (this.activeSet && this.activeSet.id === setId) this.activeSet.folder_id = targetId;
         },
 
         onDragSet(set, event) {
@@ -957,16 +1062,42 @@ document.addEventListener('alpine:init', () => {
             if (event && event.dataTransfer) {
                 event.dataTransfer.effectAllowed = 'move';
                 event.dataTransfer.setData('text/plain', set.id);
+                event.dataTransfer.setData('application/json', JSON.stringify({ setId: set.id }));
             }
         },
 
         onDragEnd() {
             this.draggingSet = null;
             this.folderHoverId = null;
+            this.trashHover = false;
+        },
+
+        resolveDraggedSet(event) {
+            if (this.draggingSet) return this.draggingSet;
+            const dataTransfer = event?.dataTransfer;
+            if (!dataTransfer) return null;
+
+            const json = dataTransfer.getData('application/json');
+            if (json) {
+                try {
+                    const payload = JSON.parse(json);
+                    const payloadId = payload.setId ?? payload.set_id ?? payload.id;
+                    const numericId = !Number.isNaN(Number(payloadId)) ? Number(payloadId) : payloadId;
+                    if (payloadId) {
+                        return this.sets.find(s => s.id === numericId) || { id: numericId };
+                    }
+                } catch (e) {}
+            }
+
+            const text = dataTransfer.getData('text/plain');
+            const idFromText = parseInt(text, 10);
+            if (idFromText) return this.sets.find(s => s.id === idFromText) || { id: idFromText };
+            return null;
         },
 
         onFolderDragEnter(folder, event) {
             event.preventDefault();
+            this.draggingSet = this.draggingSet || this.resolveDraggedSet(event);
             this.folderHoverId = folder.id;
         },
 
@@ -976,11 +1107,13 @@ document.addEventListener('alpine:init', () => {
 
         onFolderDragOver(event) {
             event.preventDefault();
+            if (event && event.dataTransfer) event.dataTransfer.dropEffect = 'move';
         },
 
         async onDropToFolder(folder, event) {
             event.preventDefault();
-            const set = this.draggingSet;
+            const set = this.resolveDraggedSet(event);
+            const resolvedSet = set ? (this.sets.find(s => s.id === set.id) || set) : null;
             this.draggingSet = null;
             this.folderHoverId = null;
             if (!set) return;
@@ -1010,9 +1143,31 @@ document.addEventListener('alpine:init', () => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name: next })
                 });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.folders) this.updateFoldersFromServer(data.folders);
+                }
             } catch (e) {}
+        },
 
-            this.persistFoldersLocally();
+        onTrashDragEnter(event) {
+            event.preventDefault();
+            this.draggingSet = this.draggingSet || this.resolveDraggedSet(event);
+            this.trashHover = true;
+        },
+
+        onTrashDragLeave() {
+            this.trashHover = false;
+        },
+
+        async onDropToTrash(event) {
+            event.preventDefault();
+            const set = this.resolveDraggedSet(event);
+            this.draggingSet = null;
+            this.folderHoverId = null;
+            this.trashHover = false;
+            if (!set) return;
+            await this.deleteSet(set, { prompt: true });
         },
 
         async deleteFolderContext() {
@@ -1113,6 +1268,31 @@ document.addEventListener('alpine:init', () => {
             return 'Verarbeite...';
         },
 
+        statHighlights() {
+            return [
+                { key: 'sets', label: 'SETS', value: this.dashboardStats.total_sets || 0 },
+                { key: 'tracks', label: 'TRACKS', value: this.dashboardStats.total_tracks || 0 },
+                { key: 'likes', label: 'LIKES', value: this.dashboardStats.total_likes || 0 },
+                { key: 'discovery', label: 'DISCOVERY', value: (this.dashboardStats.discovery_rate || 0) + '%' }
+            ];
+        },
+
+        hasSetThumbnail(set) {
+            return Boolean(set?.thumbnail || set?.thumbnail_url);
+        },
+
+        setCardBackground(set) {
+            const thumb = set?.thumbnail || set?.thumbnail_url;
+            if (!thumb) return '';
+            return `background-image: linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.55)), url('${thumb}')`;
+        },
+
+        setFolderLabel(set) {
+            if (!set?.folder_id) return 'NO FOLDER';
+            const match = (this.folders || []).find(f => f.id === set.folder_id);
+            return match ? match.name : 'NO FOLDER';
+        },
+        
         cleanLogMessage(msg) {
             const parts = msg.split(' - ');
             const level = parts[0]?.toLowerCase();

@@ -71,3 +71,15 @@ class PurchaseToggleRequest(BaseModel):
     purchased: bool
 
     model_config = {"extra": "forbid"}
+
+
+class FolderCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1)
+
+    model_config = {"extra": "forbid", "str_strip_whitespace": True}
+
+
+class FolderAssignRequest(BaseModel):
+    set_id: int
+
+    model_config = {"extra": "forbid"}
