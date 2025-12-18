@@ -812,9 +812,6 @@
                 <span class="title">Studio Library</span>
             </div>
             <div style="display:flex; gap:10px;">
-                <button class="icon-button" @click="createFolder()" title="New Folder">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h6l2 3h8v13H4z"/><path d="M12 11v6"/><path d="M9 14h6"/></svg>
-                </button>
                 <button class="cta" style="padding:10px 14px;" @click="ui.showAddModal = true">Add Set</button>
             </div>
         </div>
@@ -822,12 +819,14 @@
             <input class="input" x-model="search" type="text" placeholder="Filter sets or artists">
             <span class="hint">Drag sets into folders to organize them.</span>
         </div>
+        <div style="padding:0 20px;">
+            <button @click="createFolder" class="ghost-button" style="width:100%; padding:10px 12px;">New Folder</button>
+        </div>
 
         <div class="library-stack">
             <div class="section-card">
                 <div class="section-heading">
                     <span>Folders</span>
-                    <button @click="createFolder" class="ghost-button" style="padding:8px 10px;">New</button>
                 </div>
                 <div class="folder-list">
                     <template x-for="folder in folders" :key="folder.id">
