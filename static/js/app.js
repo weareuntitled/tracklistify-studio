@@ -54,6 +54,7 @@ const registerTracklistify = (AlpineInstance) => {
         // UI STATE
         // =====================================================================
         currentView: 'dashboard',
+        sidebarExpanded: true,
         queueStatus: { active: null, queue: [], history: [] },
         
         // Inputs für Upload Modal
@@ -120,6 +121,9 @@ const registerTracklistify = (AlpineInstance) => {
             // Volume wiederherstellen
             const vol = localStorage.getItem('tracklistify_volume');
             if (vol !== null) this.audio.volume = parseFloat(vol);
+
+            const sidebarState = localStorage.getItem('tracklistify_sidebar_expanded');
+            if (sidebarState !== null) this.sidebarExpanded = sidebarState === '1';
 
             // Globaler Poll Loop (Status Updates)
             setInterval(() => {
@@ -318,6 +322,10 @@ const registerTracklistify = (AlpineInstance) => {
         resetTrackView() {
             this.ui.trackViewOnly = false;
             this.currentView = 'sets';
+        },
+        toggleSidebar() {
+            this.sidebarExpanded = !this.sidebarExpanded;
+            localStorage.setItem('tracklistify_sidebar_expanded', this.sidebarExpanded ? '1' : '0');
         },
 
         // =====================================================================

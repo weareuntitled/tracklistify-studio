@@ -1,13 +1,27 @@
-<aside class="w-72 bg-gray-50/80 border-r border-gray-200 flex flex-col backdrop-blur-sm z-10 shrink-0">
+<aside class="bg-gray-50/80 border-r border-gray-200 flex flex-col backdrop-blur-sm z-30 shrink-0 transition-all duration-300"
+       :class="sidebarExpanded ? 'w-72' : 'w-16'">
     
-    <div class="p-4 border-b border-gray-200 bg-white/60">
-        <button @click="ui.showAddModal = true" class="w-full group flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 hover:bg-orange-600 text-white text-sm font-bold rounded-xl shadow-sm hover:shadow-lg hover:shadow-orange-200/50 transition-all duration-200 transform hover:-translate-y-0.5">
+    <div class="p-4 border-b border-gray-200 bg-white/60 flex items-center gap-2">
+        <button @click="toggleSidebar()" class="p-2 rounded-lg border border-gray-200 text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors duration-200">
+            <template x-if="sidebarExpanded">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+            </template>
+            <template x-if="!sidebarExpanded">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </template>
+        </button>
+        <button @click="ui.showAddModal = true" class="w-full group items-center justify-center gap-2 px-4 py-3 bg-gray-900 hover:bg-orange-600 text-white text-sm font-bold rounded-xl shadow-sm hover:shadow-lg hover:shadow-orange-200/50 transition-all duration-200 transform hover:-translate-y-0.5"
+                :class="sidebarExpanded ? 'flex' : 'hidden'">
             <svg class="w-5 h-5 text-white/70 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
             Set hinzufügen
         </button>
+        <button @click="ui.showAddModal = true" class="p-2 bg-gray-900 hover:bg-orange-600 text-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-200"
+                :class="sidebarExpanded ? 'hidden' : 'flex'">
+            <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+        </button>
     </div>
     
-    <div class="p-3">
+    <div class="p-3" x-show="sidebarExpanded" x-cloak>
         <div class="relative">
             <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -17,22 +31,32 @@
         </div>
     </div>
 
-    <div class="flex-1 overflow-y-auto px-2 pb-2 space-y-0.5 custom-scrollbar">
+    <div class="flex-1 overflow-y-auto pb-2 space-y-0.5 custom-scrollbar" :class="sidebarExpanded ? 'px-2' : 'px-1 pt-2'">
         <template x-for="set in filteredSets" :key="set.id">
             <div @contextmenu.prevent="openSetContextMenu($event, set)">
                 <button @click="loadSet(set.id)" 
-                        class="w-full text-left px-3 py-3 rounded-xl text-sm transition-all duration-150 group relative overflow-hidden border border-transparent"
-                        :class="activeSet && activeSet.id === set.id ? 'bg-white border-gray-200 shadow-sm' : 'hover:bg-white/50 hover:border-gray-100 text-gray-600'">
+                        class="w-full py-3 rounded-xl text-sm transition-all duration-150 group relative overflow-hidden border border-transparent"
+                        :class="[activeSet && activeSet.id === set.id ? 'bg-white border-gray-200 shadow-sm' : 'hover:bg-white/50 hover:border-gray-100 text-gray-600', sidebarExpanded ? 'text-left px-3' : 'px-1']">
                     
                     <div x-show="activeSet && activeSet.id === set.id" class="absolute left-0 top-0 bottom-0 w-1 bg-orange-500 rounded-l-lg"></div>
                     
-                    <div class="pl-2 flex justify-between items-start">
-                        <span class="font-semibold text-gray-900 truncate pr-2 flex-1" x-text="set.name"></span>
-                    </div>
-                    
-                    <div class="pl-2 text-[11px] text-gray-400 mt-1 flex justify-between items-center">
-                        <span x-text="formatDate(set.created_at)"></span>
-                        <span class="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-500" x-text="set.track_count"></span>
+                    <div class="flex items-center gap-3" :class="sidebarExpanded ? 'pl-2' : 'justify-center'">
+                        <div class="flex items-center justify-center w-9 h-9 rounded-xl border border-gray-200 bg-white text-gray-500"
+                             :class="activeSet && activeSet.id === set.id ? 'border-orange-200 bg-orange-50 text-orange-600' : ''">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5h12M9 12h12M9 19h12M5 5h.01M5 12h.01M5 19h.01" /></svg>
+                        </div>
+                        <div class="flex-1 min-w-0" x-show="sidebarExpanded" x-cloak>
+                            <div class="flex justify-between items-start">
+                                <span class="font-semibold text-gray-900 truncate pr-2 flex-1" x-text="set.name"></span>
+                                <span class="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-500" x-text="set.track_count"></span>
+                            </div>
+                            <div class="text-[11px] text-gray-400 mt-1 flex justify-between items-center">
+                                <span x-text="formatDate(set.created_at)"></span>
+                            </div>
+                        </div>
+                        <div x-show="!sidebarExpanded" class="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-[11px] font-semibold text-gray-600" x-cloak>
+                            <span x-text="set.track_count"></span>
+                        </div>
                     </div>
                 </button>
             </div>
@@ -43,6 +67,8 @@
         </div>
     </div>
 </aside>
+
+<div x-show="sidebarExpanded && window.innerWidth < 768" x-transition.opacity x-cloak class="fixed inset-0 bg-black/30 md:hidden z-20" @click="toggleSidebar()"></div>
 
 <div x-show="ui.contextMenu.show" 
      x-ref="contextMenu"
