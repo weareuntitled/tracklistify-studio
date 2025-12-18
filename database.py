@@ -77,6 +77,29 @@ def init_db():
 
     cur.execute(
         """
+        CREATE TABLE IF NOT EXISTS folders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS folder_sets (
+            folder_id INTEGER NOT NULL,
+            set_id INTEGER NOT NULL UNIQUE,
+            created_at TEXT DEFAULT (datetime('now')),
+            PRIMARY KEY (folder_id, set_id),
+            FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE,
+            FOREIGN KEY (set_id) REFERENCES sets(id) ON DELETE CASCADE
+        )
+        """
+    )
+
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS set_djs (
             set_id INTEGER NOT NULL,
             dj_id INTEGER NOT NULL,
@@ -369,6 +392,64 @@ def update_set_metadata(set_id, data):
     conn.commit()
     conn.close()
 
+def get_folders_with_sets():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id, name, created_at FROM folders ORDER BY created_at DESC")
+    folders = [dict(r) for r in cur.fetchall()]
+    cur.execute("SELECT folder_id, set_id FROM folder_sets")
+    mapping = cur.fetchall()
+    conn.close()
+
+    sets_by_folder = {}
+    for row in mapping:
+        fid = row["folder_id"]
+        sets_by_folder.setdefault(fid, []).append(row["set_id"])
+
+    for folder in folders:
+        folder["sets"] = sets_by_folder.get(folder["id"], [])
+    return folders
+
+def create_folder(name: str):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO folders (name) VALUES (?)",
+        (name.strip(),),
+    )
+    conn.commit()
+    folder_id = cur.lastrowid
+    cur.execute("SELECT id, name, created_at FROM folders WHERE id = ?", (folder_id,))
+    row = cur.fetchone()
+    conn.close()
+    folder_data = dict(row) if row else {"id": folder_id, "name": name, "created_at": None}
+    folder_data["sets"] = []
+    return folder_data
+
+def assign_set_to_folder(folder_id: int, set_id: int):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM folder_sets WHERE set_id = ?", (set_id,))
+    cur.execute(
+        """
+        INSERT OR IGNORE INTO folder_sets (folder_id, set_id)
+        VALUES (?, ?)
+        """,
+        (folder_id, set_id),
+    )
+    conn.commit()
+    conn.close()
+
+def remove_set_from_folder(folder_id: int, set_id: int):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "DELETE FROM folder_sets WHERE folder_id = ? AND set_id = ?",
+        (folder_id, set_id),
+    )
+    conn.commit()
+    conn.close()
+
 # --- Bestehende Queries (Kurzform der Vollständigkeit halber) ---
 def get_all_sets():
     conn = get_conn()
@@ -376,12 +457,14 @@ def get_all_sets():
     cur.execute("""
         SELECT s.*, COUNT(t.id) as track_count,
                GROUP_CONCAT(DISTINCT d.name) as dj_names,
-               l.name AS label_name
+               l.name AS label_name,
+               MAX(fs.folder_id) as folder_id
         FROM sets s
         LEFT JOIN tracks t ON t.set_id = s.id
         LEFT JOIN set_djs sd ON sd.set_id = s.id
         LEFT JOIN djs d ON sd.dj_id = d.id
         LEFT JOIN labels l ON s.label_id = l.id
+        LEFT JOIN folder_sets fs ON fs.set_id = s.id
         GROUP BY s.id ORDER BY s.created_at DESC
     """)
     rows = [dict(r) for r in cur.fetchall()]

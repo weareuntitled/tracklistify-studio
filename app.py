@@ -35,7 +35,9 @@ from backend.models import (
     SetRenameRequest,
     ToggleFavoriteRequest,
     PurchaseToggleRequest,
-    TrackFlagRequest
+    TrackFlagRequest,
+    FolderAssignRequest,
+    FolderCreateRequest
 )
 from services.user_store import (
     DEFAULT_ADMIN_EMAIL,
@@ -345,6 +347,24 @@ def purchase_track(tid):
 @app.route("/api/tracks/purchases")
 def purchased_tracks():
     return jsonify(database.get_purchased_tracks())
+
+@app.route("/api/folders", methods=["GET", "POST"])
+def folders():
+    if request.method == "GET":
+        return jsonify({"folders": database.get_folders_with_sets()})
+
+    payload = parse_body(FolderCreateRequest)
+    folder = database.create_folder(payload.name)
+    return jsonify({"ok": True, "folder": folder})
+
+@app.route("/api/folders/<int:folder_id>/sets", methods=["POST", "DELETE"])
+def assign_folder(folder_id: int):
+    payload = parse_body(FolderAssignRequest)
+    if request.method == "DELETE":
+        database.remove_set_from_folder(folder_id, payload.set_id)
+    else:
+        database.assign_set_to_folder(folder_id, payload.set_id)
+    return jsonify({"ok": True, "folders": database.get_folders_with_sets()})
 
 @app.route("/api/producers/<int:pid>/like", methods=["POST"])
 def like_producer(pid):

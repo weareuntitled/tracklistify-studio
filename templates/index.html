@@ -685,23 +685,61 @@
             <input class="input" x-model="search" type="text" placeholder="Filter sets">
             <span class="hint">Drag sets into folders to organize them.</span>
         </div>
-        <div class="folder-list">
-            <div class="folder">
-                <div class="meta">
-                    <div class="name">All Sets</div>
-                    <div class="count" x-text="filteredSets.length + ' total'"></div>
+
+        <div class="swiss-section space-y-2">
+            <div class="flex items-center justify-between text-[11px] font-bold">
+                <span>FOLDERS</span>
+                <button @click="createFolder" class="swiss-button text-[10px] px-2 py-1">NEW</button>
+            </div>
+            <div class="flex flex-col gap-2">
+                <template x-for="folder in folders" :key="folder.id">
+                    <div
+                        class="flex items-center justify-between gap-2 px-3 py-2 border text-[12px] font-bold transition-all duration-150"
+                        :class="folderHoverId === folder.id ? 'contrast-active ring-2 ring-black' : 'accent-hover'"
+                        @dragenter="onFolderDragEnter(folder, $event)"
+                        @dragleave="onFolderDragLeave(folder)"
+                        @dragover.prevent="onFolderDragOver($event)"
+                        @drop="onDropToFolder(folder, $event)"
+                    >
+                        <div class="flex items-center gap-2 truncate">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18v10H3V7zm3-3h12v3H6V4z"/></svg>
+                            <span class="truncate" x-text="folder.name"></span>
+                        </div>
+                        <span class="text-[10px] font-bold pill" x-text="(folder.sets?.length || 0) + 'x'"></span>
+                    </div>
+                </template>
+                <div x-show="folders.length === 0" class="text-[11px] muted">NO FOLDERS</div>
+                <div
+                    class="border-2 border-dashed text-center text-[11px] py-2 px-2 transition-all duration-150"
+                    :class="trashHover ? 'contrast-active ring-2 ring-black' : 'border-gray-300'"
+                    @dragenter="onTrashDragEnter($event)"
+                    @dragover.prevent="onTrashDragEnter($event)"
+                    @dragleave="onTrashDragLeave"
+                    @drop="onDropToTrash"
+                >
+                    DROP HERE TO DELETE
                 </div>
             </div>
-            <template x-for="folder in folders" :key="folder.id">
-                <div class="folder"
-                     :class="folderHoverId === folder.id ? 'is-hovered' : ''"
-                     @dragenter="onFolderDragEnter(folder, $event)"
-                     @dragleave="onFolderDragLeave(folder)"
-                     @dragover="onFolderDragOver"
-                     @drop="onDropToFolder(folder, $event)">
-                    <div class="meta">
-                        <div class="name" x-text="folder.name"></div>
-                        <div class="count" x-text="(folder.sets || []).length + ' sets'"></div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto">
+            <template x-for="set in filteredSets" :key="set.id">
+                <button @click="loadSet(set)" class="w-full text-left px-4 py-3 border-b last:border-b-0 transition-all duration-150 cursor-move"
+                        draggable="true"
+                        @dragstart="onDragSet(set, $event)"
+                        @dragend="onDragEnd"
+                        :class="[activeSet && activeSet.id === set.id ? 'contrast-active' : '', draggingSet && draggingSet.id === set.id ? 'opacity-70' : '']">
+                    <div class="flex items-center justify-between text-[12px] font-bold gap-2">
+                        <div class="flex items-center gap-2 truncate">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-2v13" /></svg>
+                            <span class="truncate" x-text="set.name"></span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <template x-if="set.folder_id">
+                                <span class="text-[10px] pill" x-text="(folders.find(f => f.id === set.folder_id) || {}).name || 'FOLDER'"></span>
+                            </template>
+                            <span class="font-mono px-2 py-0.5 pill" x-text="set.track_count"></span>
+                        </div>
                     </div>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h6l2 3h8v13H4z"/></svg>
                 </div>
@@ -745,7 +783,47 @@
                 </template>
                 <button class="cta" @click="ui.showAddModal = true">Add Set</button>
             </div>
-        </div>
+        </header>
+
+        <div class="flex-1 overflow-auto">
+            <section x-show="currentView === 'dashboard'" class="p-6 space-y-4" x-cloak>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="tile">
+                        <strong>SETS</strong>
+                        <span class="value" x-text="dashboardStats.total_sets"></span>
+                    </div>
+                    <div class="tile">
+                        <strong>TRACKS</strong>
+                        <span class="value" x-text="dashboardStats.total_tracks"></span>
+                    </div>
+                    <div class="tile">
+                        <strong>LIKES</strong>
+                        <span class="value" x-text="dashboardStats.total_likes"></span>
+                    </div>
+                    <div class="tile">
+                        <strong>DISCOVERY</strong>
+                        <span class="value" x-text="dashboardStats.discovery_rate + '%' "></span>
+                    </div>
+                </div>
+                <div class="tile">
+                    <div class="text-[10px] font-bold mb-2">RECENT SETS</div>
+                    <div class="divide-y divide-swiss">
+                        <template x-for="item in dashboardStats.recent_sets" :key="item.id">
+                            <button class="w-full flex items-center justify-between py-3 text-left accent-hover cursor-move"
+                                    draggable="true"
+                                    @dragstart="onDragSet(item, $event)"
+                                    @dragend="onDragEnd"
+                                    @click="loadSet(item.id)">
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-bold" x-text="item.name"></span>
+                                    <span class="text-[10px] muted" x-text="formatDate(item.created_at)"></span>
+                                </div>
+                                <span class="text-[10px] font-bold" x-text="item.track_count + ' TRACKS'"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </section>
 
         <div class="stat-row">
             <div class="stat">
