@@ -14,6 +14,7 @@ document.addEventListener('alpine:init', () => {
         rescanCandidates: [],
         youtubeFeed: [],
         folders: [],
+        activeFolderId: null,
         draggingSet: null,
         folderHoverId: null,
         trashHover: false,
@@ -127,8 +128,7 @@ document.addEventListener('alpine:init', () => {
 
             // Suche Watcher
             this.$watch('search', val => {
-                if(!val) this.filteredSets = this.sets;
-                else this.filteredSets = this.sets.filter(s => s.name.toLowerCase().includes(val.toLowerCase()));
+                this.updateFilteredSets();
             });
             
             // Player Init
@@ -606,8 +606,8 @@ document.addEventListener('alpine:init', () => {
         async fetchSets() { 
             const res = await fetch('/api/sets'); 
             this.sets = await res.json(); 
-            this.filteredSets = this.sets; 
             this.syncFolderAssignments(); 
+            this.updateFilteredSets();
         },
         async fetchLikes() { const res = await fetch('/api/tracks/likes'); this.likedTracks = await res.json(); },
         async fetchPurchases() { const res = await fetch('/api/tracks/purchases'); this.purchasedTracks = await res.json(); },
@@ -792,6 +792,45 @@ document.addEventListener('alpine:init', () => {
         // =====================================================================
         // FOLDER MANAGEMENT
         // =====================================================================
+        defaultFolderName() {
+            return `Ordner ${ (this.folders?.length || 0) + 1 }`;
+        },
+
+        resetFolderForm() {
+            this.folderForm.name = this.defaultFolderName();
+        },
+
+        updateFilteredSets() {
+            const searchTerm = (this.search || '').toLowerCase();
+            let scopedSets = Array.isArray(this.sets) ? [...this.sets] : [];
+
+            if (this.activeFolderId) {
+                const activeFolder = (this.folders || []).find(folder => folder.id === this.activeFolderId);
+                if (!activeFolder) {
+                    this.activeFolderId = null;
+                } else {
+                    const allowedIds = new Set((activeFolder.sets || []).map(item => typeof item === 'object' ? item.id : item));
+                    scopedSets = scopedSets.filter(set => allowedIds.has(set.id));
+                }
+            }
+
+            if (searchTerm) {
+                scopedSets = scopedSets.filter(set => set.name.toLowerCase().includes(searchTerm));
+            }
+
+            this.filteredSets = scopedSets;
+        },
+
+        toggleFolderForm() {
+            this.folderForm.open = !this.folderForm.open;
+            if (this.folderForm.open) this.resetFolderForm();
+        },
+
+        selectFolder(folder) {
+            this.activeFolderId = this.activeFolderId === folder.id ? null : folder.id;
+            this.updateFilteredSets();
+        },
+
         async loadFolders() {
             try {
                 const res = await fetch('/api/folders');
@@ -806,6 +845,7 @@ document.addEventListener('alpine:init', () => {
             const cached = localStorage.getItem('tracklistify_folders');
             this.ensureFolderStructure(cached ? JSON.parse(cached) : []);
             this.syncFolderAssignments();
+            this.resetFolderForm();
         },
 
         ensureFolderStructure(folders = this.folders) {
@@ -849,13 +889,18 @@ document.addEventListener('alpine:init', () => {
             });
 
             this.persistFoldersLocally();
+            this.updateFilteredSets();
         },
 
         async createFolder() {
-            const defaultName = `Ordner ${this.folders.length + 1}`;
-            const name = prompt('Ordnername', defaultName) || defaultName;
-            const optimisticFolder = { id: `local-${Date.now()}`, name, sets: [] };
-            let created = optimisticFolder;
+            const name = (this.folderForm.name || '').trim() || this.defaultFolderName();
+            const optimisticId = `local-${Date.now()}`;
+            const optimisticFolder = { id: optimisticId, name, sets: [] };
+            this.folders = [optimisticFolder, ...this.folders];
+            this.ensureFolderStructure();
+            this.persistFoldersLocally();
+            this.activeFolderId = optimisticId;
+            this.updateFilteredSets();
 
             try {
                 const res = await fetch('/api/folders', { 
@@ -865,8 +910,12 @@ document.addEventListener('alpine:init', () => {
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    created = data.folder || data;
+                    const created = data.folder || data;
                     created.sets = created.sets || [];
+                    this.folders = this.folders.map(folder => folder.id === optimisticId ? created : folder);
+                    this.activeFolderId = created.id;
+                    this.ensureFolderStructure();
+                    this.syncFolderAssignments();
                 }
             } catch (e) {}
 
@@ -1074,6 +1123,31 @@ document.addEventListener('alpine:init', () => {
             return 'Verarbeite...';
         },
 
+        statHighlights() {
+            return [
+                { key: 'sets', label: 'SETS', value: this.dashboardStats.total_sets || 0 },
+                { key: 'tracks', label: 'TRACKS', value: this.dashboardStats.total_tracks || 0 },
+                { key: 'likes', label: 'LIKES', value: this.dashboardStats.total_likes || 0 },
+                { key: 'discovery', label: 'DISCOVERY', value: (this.dashboardStats.discovery_rate || 0) + '%' }
+            ];
+        },
+
+        hasSetThumbnail(set) {
+            return Boolean(set?.thumbnail || set?.thumbnail_url);
+        },
+
+        setCardBackground(set) {
+            const thumb = set?.thumbnail || set?.thumbnail_url;
+            if (!thumb) return '';
+            return `background-image: linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.55)), url('${thumb}')`;
+        },
+
+        setFolderLabel(set) {
+            if (!set?.folder_id) return 'NO FOLDER';
+            const match = (this.folders || []).find(f => f.id === set.folder_id);
+            return match ? match.name : 'NO FOLDER';
+        },
+        
         cleanLogMessage(msg) {
             const parts = msg.split(' - ');
             const level = parts[0]?.toLowerCase();
