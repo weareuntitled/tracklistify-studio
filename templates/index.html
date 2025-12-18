@@ -21,6 +21,7 @@
     <script src="/static/js/app.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
+        :root { --swiss-accent: #e63946; --swiss-soft: #ffe9ee; }
         body { font-family: 'Inter', sans-serif; letter-spacing: 0.05em; text-transform: uppercase; background: radial-gradient(circle at 20% 20%, #f7f9ff, #e9eef8 35%, #d9dfec 80%); }
         [x-cloak] { display: none !important; }
         *, *:focus { border-radius: 0 !important; box-shadow: none !important; }
@@ -36,6 +37,9 @@
         .nav-button:hover { transform: translateY(-1px); }
         .contrast-active { background: #0f172a; color: #fff !important; border-color: #0f172a; }
         .contrast-active svg { color: #fff; }
+        .folder-row { border: 1px dashed #0f172a; background: #f8fafc; }
+        .folder--hover { border: 2px solid var(--swiss-accent); background: var(--swiss-soft); }
+        .set--grouped { border: 1px solid #e2e8f0; background: #f8fafc; }
     </style>
 </head>
 <body class="h-full flex flex-col text-gray-900" x-data="tracklistify()">
@@ -62,16 +66,46 @@
             </div>
         </div>
 
+        <div class="px-4 py-2 border-b border-gray-200">
+            <button @click="createFolder" class="w-full px-3 py-3 text-[11px] font-bold border border-[var(--swiss-accent)] text-white bg-[var(--swiss-accent)] hover:opacity-90 transition-all">
+                NEUER ORDNER
+            </button>
+        </div>
+
         <div class="flex-1 overflow-y-auto divide-y divide-gray-200">
+            <div class="px-4 pt-3 pb-2 text-[10px] font-bold text-gray-500">FOLDER</div>
+            <template x-for="folder in folders" :key="folder.id">
+                <div class="px-4 py-3 folder-row flex items-center justify-between gap-2 transition-all duration-150"
+                     :class="folderHoverId === folder.id ? 'folder--hover' : ''"
+                     @dragenter="onFolderDragEnter(folder, $event)"
+                     @dragover="onFolderDragOver($event)"
+                     @dragleave="onFolderDragLeave(folder)"
+                     @drop="onDropToFolder(folder, $event)">
+                    <div class="flex items-center gap-2 truncate">
+                        <span class="text-[10px] font-bold px-2 py-1 border border-dashed border-gray-400">FOLDER</span>
+                        <span class="text-[12px] font-bold truncate" x-text="folder.name"></span>
+                    </div>
+                    <span class="text-[10px] text-gray-600 font-mono" x-text="(folder.sets?.length || 0) + ' SETS'"></span>
+                </div>
+            </template>
+            <div x-show="!folders.length" class="px-4 pb-4 text-[11px] text-gray-500">NO FOLDERS YET</div>
+
+            <div class="px-4 pt-4 pb-2 text-[10px] font-bold text-gray-500">SETS</div>
             <template x-for="set in filteredSets" :key="set.id">
                 <button @click="loadSet(set)" class="w-full text-left px-4 py-3 border-b border-gray-200 last:border-b-0 hover:bg-gray-200/60 transition-all duration-150"
-                        :class="activeSet && activeSet.id === set.id ? 'contrast-active rounded-lg shadow-md' : 'rounded-lg'">
+                        :class="[(activeSet && activeSet.id === set.id ? 'contrast-active rounded-lg shadow-md' : 'rounded-lg'), set.folder_id ? 'set--grouped' : '']"
+                        draggable="true"
+                        @dragstart="onDragSet(set, $event)"
+                        @dragend="onDragEnd">
                     <div class="flex items-center justify-between text-[12px] font-bold gap-2">
                         <div class="flex items-center gap-2 truncate">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-2v13" /></svg>
                             <span class="truncate" x-text="set.name"></span>
                         </div>
-                        <span class="font-mono px-2 py-0.5 rounded-md" :class="activeSet && activeSet.id === set.id ? 'bg-white/10' : 'bg-gray-100 text-gray-600'" x-text="set.track_count"></span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[9px] px-2 py-0.5 border border-gray-900/30 text-gray-700" x-show="set.folder_id">FOLDER</span>
+                            <span class="font-mono px-2 py-0.5 rounded-md" :class="activeSet && activeSet.id === set.id ? 'bg-white/10' : 'bg-gray-100 text-gray-600'" x-text="set.track_count"></span>
+                        </div>
                     </div>
                     <div class="text-[10px] text-gray-500" x-text="formatDate(set.created_at)"></div>
                 </button>
