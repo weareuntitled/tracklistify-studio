@@ -19,7 +19,7 @@
 
     <div class="flex-1 overflow-y-auto px-2 pb-2 space-y-0.5 custom-scrollbar">
         <template x-for="set in filteredSets" :key="set.id">
-            <div @contextmenu.prevent="openSetContextMenu($event, set)">
+            <div @contextmenu.prevent="openContextMenu($event, { type: 'set', item: set })">
                 <button @click="loadSet(set.id)" 
                         class="w-full text-left px-3 py-3 rounded-xl text-sm transition-all duration-150 group relative overflow-hidden border border-transparent"
                         :class="activeSet && activeSet.id === set.id ? 'bg-white border-gray-200 shadow-sm' : 'hover:bg-white/50 hover:border-gray-100 text-gray-600'">
@@ -45,7 +45,7 @@
 </aside>
 
 <div x-show="ui.contextMenu.show" 
-     @click.away="ui.contextMenu.show = false"
+     @click.away="closeContextMenu()"
      x-cloak
      class="fixed bg-white border border-gray-200 shadow-xl rounded-xl py-1 w-48 z-50 overflow-hidden animate-row"
      :style="'top: ' + ui.contextMenu.y + 'px; left: ' + ui.contextMenu.x + 'px'">
@@ -62,14 +62,19 @@
         Neu analysieren
     </button>
 
-    <button @click="renameSetContext()" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2 transition-colors">
+    <button @click="renameItem()" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2 transition-colors">
         <svg class="w-4 h-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
         Umbenennen
+    </button>
+
+    <button @click="showDetails()" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2 transition-colors">
+        <svg class="w-4 h-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        Details anzeigen
     </button>
     
     <div class="border-t border-gray-100 my-1"></div>
     
-    <button @click="deleteSetContext()" class="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
+    <button @click="deleteItem()" class="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
         <svg class="w-4 h-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
         Löschen
     </button>

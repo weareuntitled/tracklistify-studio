@@ -369,6 +369,40 @@ def update_set_metadata(set_id, data):
     conn.commit()
     conn.close()
 
+
+def update_track_metadata(track_id, data):
+    if not track_id:
+        return 0
+
+    allowed_fields = {
+        "title": "title",
+        "artist": "artist",
+        "position": "position",
+        "start_time": "start_time",
+        "end_time": "end_time"
+    }
+
+    updates = []
+    values = []
+
+    for key, column in allowed_fields.items():
+        if key in data:
+            updates.append(f"{column} = ?")
+            values.append(data.get(key))
+
+    if not updates:
+        return 0
+
+    values.append(track_id)
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(f"UPDATE tracks SET {', '.join(updates)} WHERE id = ?", tuple(values))
+    conn.commit()
+    updated = cur.rowcount
+    conn.close()
+    return updated
+
 # --- Bestehende Queries (Kurzform der Vollständigkeit halber) ---
 def get_all_sets():
     conn = get_conn()

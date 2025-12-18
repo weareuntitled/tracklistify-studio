@@ -64,7 +64,7 @@
 
         <div class="flex-1 overflow-y-auto divide-y divide-gray-200">
             <template x-for="set in filteredSets" :key="set.id">
-                <button @click="loadSet(set)" class="w-full text-left px-4 py-3 border-b border-gray-200 last:border-b-0 hover:bg-gray-200/60 transition-all duration-150"
+                <button @click="loadSet(set)" @contextmenu.prevent="openContextMenu($event, { type: 'set', item: set })" class="w-full text-left px-4 py-3 border-b border-gray-200 last:border-b-0 hover:bg-gray-200/60 transition-all duration-150"
                         :class="activeSet && activeSet.id === set.id ? 'contrast-active rounded-lg shadow-md' : 'rounded-lg'">
                     <div class="flex items-center justify-between text-[12px] font-bold gap-2">
                         <div class="flex items-center gap-2 truncate">
@@ -227,7 +227,7 @@
                         </thead>
                         <tbody class="bg-white/70">
                             <template x-for="(track, index) in tracks" :key="track.id">
-                                <tr class="border-b border-gray-100 hover:bg-gray-100/60 transition-colors">
+                                <tr class="border-b border-gray-100 hover:bg-gray-100/60 transition-colors" @contextmenu.prevent="openContextMenu($event, { type: 'track', item: track })">
                                     <td class="px-2 py-3 text-center">
                                         <button @click.stop="toggleFlag(track)" class="text-[11px] font-bold" :class="track.flag === 3 ? 'text-red-600' : ''" x-text="track.flag === 3 ? '???' : track.position"></button>
                                     </td>
@@ -322,6 +322,147 @@
                 </div>
             </section>
         </div>
+    </div>
+</div>
+
+<!-- Context Menu -->
+<div x-show="ui.contextMenu.show"
+     @click.away="closeContextMenu()"
+     x-cloak
+     class="fixed bg-white border border-gray-200 shadow-xl rounded-xl py-1 w-56 z-50 overflow-hidden animate-row"
+     :style="'top: ' + ui.contextMenu.y + 'px; left: ' + ui.contextMenu.x + 'px'">
+
+    <div class="px-4 py-2 text-[10px] font-bold text-gray-400 bg-gray-50 border-b border-gray-100 uppercase tracking-wider mb-1" x-text="ui.contextMenu.type === 'track' ? 'Track Optionen' : 'Set Optionen'"></div>
+
+    <template x-if="ui.contextMenu.type === 'set'">
+        <div class="flex flex-col">
+            <button @click="openEditSetModal()" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2 transition-colors">
+                <svg class="w-4 h-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Info / Tags
+            </button>
+
+            <button @click="rescanSetContext()" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2 transition-colors">
+                <svg class="w-4 h-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                Neu analysieren
+            </button>
+
+            <button @click="renameItem()" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2 transition-colors">
+                <svg class="w-4 h-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                Umbenennen
+            </button>
+
+            <button @click="showDetails()" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2 transition-colors">
+                <svg class="w-4 h-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Details anzeigen
+            </button>
+
+            <div class="border-t border-gray-100 my-1"></div>
+
+            <button @click="deleteItem()" class="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
+                <svg class="w-4 h-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                Löschen
+            </button>
+        </div>
+    </template>
+
+    <template x-if="ui.contextMenu.type === 'track'">
+        <div class="flex flex-col">
+            <button @click="renameItem()" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2 transition-colors">
+                <svg class="w-4 h-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                Umbenennen
+            </button>
+
+            <button @click="showDetails()" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2 transition-colors">
+                <svg class="w-4 h-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Details anzeigen
+            </button>
+
+            <div class="border-t border-gray-100 my-1"></div>
+
+            <button @click="deleteItem()" class="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
+                <svg class="w-4 h-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                Löschen
+            </button>
+        </div>
+    </template>
+
+    <div class="border-t border-gray-100 mt-1 pt-1">
+        <div class="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Ordner</div>
+        <template x-if="folders.length">
+            <div class="flex flex-col">
+                <template x-for="folder in folders" :key="folder.id">
+                    <button @click="moveItemToFolder(folder)" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2 transition-colors">
+                        <svg class="w-4 h-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7h18M3 12h18M3 17h18" /></svg>
+                        <span x-text="folder.name"></span>
+                    </button>
+                </template>
+            </div>
+        </template>
+        <div x-show="!folders.length" class="px-4 py-2 text-xs text-gray-500">Keine Ordner definiert.</div>
+    </div>
+</div>
+
+<!-- Detail Panel -->
+<div x-show="ui.detailPanel.show" x-cloak class="fixed inset-0 z-40 flex items-stretch justify-end">
+    <div class="flex-1 bg-black/30" @click="closeDetailPanel()"></div>
+    <div class="w-full max-w-md bg-white border-l border-gray-200 shadow-2xl overflow-y-auto p-6 space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="text-[10px] font-bold text-gray-500 uppercase" x-text="ui.detailPanel.type === 'track' ? 'Track Details' : 'Set Details'"></div>
+                <div class="text-lg font-bold" x-text="ui.detailPanel.item && (ui.detailPanel.item.title || ui.detailPanel.item.name)"></div>
+            </div>
+            <button @click="closeDetailPanel()" class="px-3 py-1 border border-gray-200 text-xs font-bold">Close</button>
+        </div>
+
+        <template x-if="ui.detailPanel.type === 'set' && ui.detailPanel.item">
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Artists</span>
+                    <span class="font-semibold" x-text="ui.detailPanel.item.artists || '-' "></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Event</span>
+                    <span class="font-semibold" x-text="ui.detailPanel.item.event || '-' "></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Tags</span>
+                    <span class="font-semibold" x-text="ui.detailPanel.item.tags || '-' "></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Tracks</span>
+                    <span class="font-semibold" x-text="ui.detailPanel.item.track_count || tracks.length"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Erstellt</span>
+                    <span class="font-semibold" x-text="formatDate(ui.detailPanel.item.created_at)"></span>
+                </div>
+            </div>
+        </template>
+
+        <template x-if="ui.detailPanel.type === 'track' && ui.detailPanel.item">
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Artist</span>
+                    <span class="font-semibold" x-text="ui.detailPanel.item.artist || '-' "></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Set</span>
+                    <span class="font-semibold" x-text="ui.detailPanel.item.set_name || (activeSet ? activeSet.name : '-')"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Start</span>
+                    <span class="font-semibold" x-text="formatTime(ui.detailPanel.item.start_time)"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Confidence</span>
+                    <span class="font-semibold" x-text="formatConf(ui.detailPanel.item.confidence)"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Gekauft</span>
+                    <span class="font-semibold" x-text="ui.detailPanel.item.purchased ? 'Ja' : 'Nein'"></span>
+                </div>
+            </div>
+        </template>
     </div>
 </div>
 

@@ -49,6 +49,17 @@ def delete_set(sid):
     database.delete_set(sid)
     return jsonify({"ok": True})
 
+
+@app.route("/api/tracks/<int:tid>", methods=["PATCH", "DELETE"])
+def update_or_delete_track(tid):
+    if request.method == "DELETE":
+        deleted = database.delete_track(tid)
+        return jsonify({"ok": True, "deleted": deleted})
+
+    data = request.get_json(force=True) or {}
+    database.update_track_metadata(tid, data)
+    return jsonify({"ok": True})
+
 @app.route("/api/tracks/<int:tid>/like", methods=["POST"])
 def like_track(tid):
     data = request.get_json(force=True)
