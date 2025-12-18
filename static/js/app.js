@@ -1,3 +1,200 @@
+class AudioController {
+    constructor(ctx) {
+        this.ctx = ctx;
+        this.progressEl = null;
+        this.dragging = false;
+        this.boundMove = (e) => this.handleSeekMove(e);
+        this.boundEnd = (e) => this.stopSeek(e);
+    }
+
+    get player() {
+        return this.ctx?.$refs?.player || null;
+    }
+
+    syncVolume() {
+        if (this.player) this.player.volume = this.ctx.audio.volume;
+    }
+
+    registerProgressEl(el) {
+        if (el) this.progressEl = el;
+    }
+
+    async playTrack(target) {
+        const track = typeof target === 'object' ? target : null;
+        const query = typeof target === 'string'
+            ? target
+            : (track?.streamUrl || track?.audio_file || track?.source_url || `${track?.artist || ''} ${track?.title || ''}`.trim());
+
+        if (!query) {
+            this.ctx.showToast('Keine Quelle', 'Track enthält keinen Stream.', 'error');
+            return;
+        }
+
+        this.ctx.activeTrack = track || this.ctx.activeTrack;
+        this.ctx.ui.loadingId = track?.id || null;
+        this.ctx.audio.currentTime = 0;
+        this.ctx.audio.progressPercent = 0;
+
+        try {
+            const url = await this.resolveUrl(query, track);
+            await this.startPlayback(url, track);
+            const label = track ? `${track.artist || 'Unknown'} - ${track.title || ''}` : 'Stream gestartet';
+            this.ctx.showToast('Play', label.trim(), 'info');
+        } catch (error) {
+            this.ctx.ui.playingId = null;
+            this.ctx.showToast('Playback Fehler', error?.message || 'Konnte Stream nicht laden.', 'error');
+            throw error;
+        } finally {
+            this.ctx.ui.loadingId = null;
+        }
+    }
+
+    async resolveUrl(query, track) {
+        if (track?.streamUrl) return track.streamUrl;
+
+        const res = await fetch('/api/resolve_audio', {
+            method: 'POST',
+            body: JSON.stringify({ query })
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.ok || !data.url) {
+            const message = data.error || 'Keine Quelle gefunden.';
+            throw new Error(message);
+        }
+
+        if (track) track.streamUrl = data.url;
+        return data.url;
+    }
+
+    async startPlayback(url, track) {
+        const player = this.player;
+        if (!player) return;
+
+        player.src = url;
+        this.syncVolume();
+
+        try {
+            await player.play();
+            this.ctx.ui.playingId = track?.id || this.ctx.ui.playingId;
+            this.ctx.audio.paused = false;
+        } catch (error) {
+            this.ctx.audio.paused = true;
+            throw error;
+        }
+    }
+
+    async toggle(track) {
+        const player = this.player;
+        if (!player) return;
+
+        if (this.ctx.ui.playingId === track?.id && this.ctx.activeTrack) {
+            if (player.paused) { await player.play(); this.ctx.audio.paused = false; }
+            else { player.pause(); this.ctx.audio.paused = true; }
+            return;
+        }
+
+        return this.playTrack(track);
+    }
+
+    handleTimeUpdate(event) {
+        if (this.dragging) return;
+        const { currentTime, duration, paused } = event.target;
+        this.ctx.audio.currentTime = currentTime;
+        this.ctx.audio.duration = duration;
+        this.ctx.audio.progressPercent = duration ? (currentTime / duration) * 100 : 0;
+        this.ctx.audio.paused = paused;
+    }
+
+    seekFromEvent(event, element = null) {
+        const player = this.player;
+        const target = element || this.progressEl || event?.currentTarget;
+        if (!player || !target || !player.duration) return;
+
+        const rect = target.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+        const nextTime = pct * player.duration;
+
+        this.ctx.audio.progressPercent = pct * 100;
+        this.ctx.audio.currentTime = nextTime;
+        player.currentTime = nextTime;
+    }
+
+    startSeek(event) {
+        this.progressEl = event?.currentTarget || this.progressEl;
+        if (!this.player?.duration || !this.progressEl) return;
+
+        this.dragging = true;
+        this.seekFromEvent(event, this.progressEl);
+        window.addEventListener('pointermove', this.boundMove);
+        window.addEventListener('pointerup', this.boundEnd);
+    }
+
+    handleSeekMove(event) {
+        if (!this.dragging) return;
+        this.seekFromEvent(event, this.progressEl);
+    }
+
+    stopSeek(event) {
+        if (!this.dragging) return;
+        this.seekFromEvent(event, this.progressEl);
+        this.dragging = false;
+        window.removeEventListener('pointermove', this.boundMove);
+        window.removeEventListener('pointerup', this.boundEnd);
+    }
+
+    handleEnded() {
+        this.ctx.audio.paused = true;
+        this.ctx.audio.progressPercent = 0;
+        const advanced = this.next();
+        if (!advanced) this.ctx.ui.playingId = null;
+    }
+
+    handleError() {
+        this.ctx.ui.playingId = null;
+        this.ctx.ui.loadingId = null;
+        this.ctx.audio.paused = true;
+        this.ctx.showToast('Playback Fehler', 'Audio konnte nicht geladen werden.', 'error');
+    }
+
+    next() {
+        const queue = Array.isArray(this.ctx.tracks) ? this.ctx.tracks : [];
+        if (!queue.length) return false;
+
+        const currentId = this.ctx.ui.playingId || this.ctx.activeTrack?.id;
+        const currentIndex = queue.findIndex(t => t.id === currentId);
+        if (currentIndex === -1) return false;
+        const nextIndex = currentIndex + 1;
+
+        if (nextIndex >= 0 && nextIndex < queue.length) {
+            this.playTrack(queue[nextIndex]);
+            return true;
+        }
+
+        this.ctx.ui.playingId = null;
+        this.ctx.audio.progressPercent = 0;
+        return false;
+    }
+
+    previous() {
+        const queue = Array.isArray(this.ctx.tracks) ? this.ctx.tracks : [];
+        if (!queue.length) return false;
+
+        const currentId = this.ctx.ui.playingId || this.ctx.activeTrack?.id;
+        const currentIndex = queue.findIndex(t => t.id === currentId);
+        if (currentIndex === -1) return false;
+
+        if (currentIndex > 0) {
+            this.playTrack(queue[currentIndex - 1]);
+            return true;
+        }
+
+        if (this.player && this.player.currentTime > 2) {
+            this.player.currentTime = 0;
+            return true;
+        }
+
+        return false;
 class UploadManager {
     constructor(component) {
         this.component = component;
@@ -184,6 +381,7 @@ document.addEventListener('alpine:init', () => {
             contextMenu: { show: false, x: 0, y: 0, target: null, type: null },
             trackViewOnly: false
         },
+        audioController: null,
         
         toasts: [],
         lastLogLine: '', 
@@ -219,6 +417,8 @@ document.addEventListener('alpine:init', () => {
             this.fetchYoutube();
             this.loadFolders();
 
+            this.audioController = new AudioController(this);
+
             // Volume wiederherstellen
             const vol = localStorage.getItem('tracklistify_volume');
             if (vol !== null) this.audio.volume = parseFloat(vol);
@@ -240,6 +440,10 @@ document.addEventListener('alpine:init', () => {
             // Player Init
             this.$nextTick(() => {
                 if(this.$refs.player) this.$refs.player.volume = this.audio.volume;
+                if (this.audioController) {
+                    this.audioController.syncVolume();
+                    if (this.$refs.footerProgress) this.audioController.registerProgressEl(this.$refs.footerProgress);
+                }
             });
         },
 
@@ -670,58 +874,28 @@ document.addEventListener('alpine:init', () => {
             const val = parseFloat(e.target.value);
             this.audio.volume = val;
             if(this.$refs.player) this.$refs.player.volume = val;
+            if (this.audioController) this.audioController.syncVolume();
             localStorage.setItem('tracklistify_volume', val);
         },
         
         async togglePlay(track) {
-            const player = this.$refs.player;
-            player.volume = this.audio.volume;
-
-            if (this.ui.playingId === track.id) {
-                if (player.paused) { player.play(); this.audio.paused = false; }
-                else { player.pause(); this.audio.paused = true; }
-                return;
-            }
-
-            this.ui.loadingId = track.id;
-            this.audio.progressPercent = 0;
-            this.activeTrack = track;
-
-            let url = track.streamUrl;
-            
-            // Fallback: Ad-hoc laden
-            if (!url) {
-                try {
-                    const res = await fetch('/api/resolve_audio', { 
-                        method: 'POST', 
-                        body: JSON.stringify({ query: `${track.artist} - ${track.title}` }) 
-                    });
-                    const data = await res.json();
-                    if (data.ok) url = data.url;
-                } catch(e) { console.error(e); }
-            }
-
-            if (url) {
-                track.streamUrl = url;
-                player.src = url;
-                player.play().then(() => {
-                    this.ui.playingId = track.id;
-                    this.audio.paused = false;
-                }).catch(() => this.showToast("Autoplay verhindert", "Browser Policy", "info"));
-            } else {
-                this.showToast("Stream nicht verfügbar", "Keine Quelle gefunden.", "info");
-            }
-            this.ui.loadingId = null;
+            if (!track) return;
+            if (this.audioController) return this.audioController.toggle(track);
         },
         
         togglePlayPauseGlobal() {
-            const player = this.$refs.player;
-            if (!this.activeTrack) return;
-            if (player.paused) { player.play(); this.audio.paused = false; }
-            else { player.pause(); this.audio.paused = true; }
+            if (!this.activeTrack && !this.ui.playingId) return;
+            const current = this.tracks.find(t => t.id === this.ui.playingId) || this.activeTrack;
+            if (current && this.audioController) return this.audioController.toggle(current);
+            if (!this.audioController && this.$refs.player) {
+                const player = this.$refs.player;
+                if (player.paused) { player.play(); this.audio.paused = false; }
+                else { player.pause(); this.audio.paused = true; }
+            }
         },
         
         updateProgress(e) {
+            if (this.audioController) return this.audioController.handleTimeUpdate(e);
             const { currentTime, duration } = e.target;
             this.audio.currentTime = currentTime;
             this.audio.duration = duration;
@@ -730,29 +904,27 @@ document.addEventListener('alpine:init', () => {
         },
         
         seekGlobal(e) {
-            const player = this.$refs.player;
-            if (!player.duration) return;
-            const rect = e.currentTarget.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const pct = Math.max(0, Math.min(1, x / rect.width));
-            player.currentTime = pct * player.duration;
+            if (this.audioController) this.audioController.seekFromEvent(e, e.currentTarget);
         },
         
         seek(e, track) {
-            // Scrubbing in der Liste
+            if (!track) return;
             const player = this.$refs.player;
-            const rect = e.currentTarget.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const pct = Math.max(0, Math.min(1, x / rect.width));
-            
-            if (this.ui.playingId === track.id) {
-                if (player.duration) player.currentTime = pct * player.duration;
-            } else {
+            if (this.ui.playingId !== track.id) {
                 this.togglePlay(track).then(() => {
-                    if (player.duration) player.currentTime = pct * player.duration;
+                    if (this.audioController) this.audioController.seekFromEvent(e, e.currentTarget);
                 });
+                return;
             }
+
+            if (this.audioController && player?.duration) this.audioController.seekFromEvent(e, e.currentTarget);
         },
+
+        startProgressDrag(e) { if (this.audioController) this.audioController.startSeek(e); },
+        dragProgress(e) { if (this.audioController) this.audioController.handleSeekMove(e); },
+        endProgressDrag(e) { if (this.audioController) this.audioController.stopSeek(e); },
+        playNextInQueue() { if (this.audioController) this.audioController.next(); },
+        playPreviousInQueue() { if (this.audioController) this.audioController.previous(); },
 
         // --- Preloading Engine ---
         startPreloading() {
@@ -1383,10 +1555,10 @@ class UIManager {
         // =====================================================================
         // UTILS & HELPERS
         // =====================================================================
-        onAudioEnded() { this.ui.playingId = null; this.audio.progressPercent = 0; this.audio.paused = true; },
+        onAudioEnded() { if (this.audioController) this.audioController.handleEnded(); else { this.ui.playingId = null; this.audio.progressPercent = 0; this.audio.paused = true; } },
         onAudioPaused() { this.audio.paused = true; },
         onAudioPlaying() { this.audio.paused = false; },
-        onAudioError() { this.ui.playingId = null; this.ui.loadingId = null; }, // Silent error
+        onAudioError() { if (this.audioController) this.audioController.handleError(); else { this.ui.playingId = null; this.ui.loadingId = null; } },
         
         showToast(title, subtitle = '', type = 'default') {
             const id = Date.now();
@@ -1442,21 +1614,6 @@ class UIManager {
             const match = (this.folders || []).find(f => f.id === set.folder_id);
             return match ? match.name : 'NO FOLDER';
         },
-
-        setProgress(set) {
-            const candidates = [set?.progress, set?.analysis_progress, set?.completion, set?.percent_complete];
-            const explicit = candidates.find(v => v !== undefined && v !== null);
-            if (explicit !== undefined) {
-                const numeric = Number(explicit);
-                if (!Number.isNaN(numeric)) return Math.max(4, Math.min(100, numeric));
-            }
-
-            const count = Number(set?.track_count || 0);
-            if (count > 0) {
-                return Math.min(100, 30 + Math.min(count, 24) * 3);
-            }
-            return 12;
-        },
         
         cleanLogMessage(msg) {
             const parts = msg.split(' - ');
@@ -1464,6 +1621,13 @@ class UIManager {
 
             if (parts.length >= 3 && ['info', 'debug', 'warning', 'error'].includes(level)) {
                 return parts.slice(2).join(' - ').trim();
+    renderStats(stats = {}) {
+        Object.entries(this.statsEls).forEach(([key, el]) => {
+            if (!el) return;
+            if (key === 'discovery_rate') {
+                el.textContent = `${stats[key] ?? 0}%`;
+            } else {
+                el.textContent = stats[key] ?? 0;
             }
         });
     }
