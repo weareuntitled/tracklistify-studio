@@ -819,50 +819,10 @@
         </div>
         <div class="library-search">
             <input class="input" x-model="search" type="text" placeholder="Filter sets or artists">
-            <span class="hint">Drag sets into folders to organize them.</span>
-        </div>
-        <div style="padding:0 20px;">
-            <button @click="createFolder" class="ghost-button" style="width:100%; padding:10px 12px;">New Folder</button>
+            <span class="hint">Browse your collection.</span>
         </div>
 
         <div class="library-stack">
-            <div class="section-card">
-                <div class="section-heading">
-                    <span>Folders</span>
-                </div>
-                <div class="folder-list">
-                    <template x-for="folder in folders" :key="folder.id">
-                        <div
-                            class="folder"
-                            :class="folderHoverId === folder.id ? 'is-hovered' : ''"
-                            @dragenter="onFolderDragEnter(folder, $event)"
-                            @dragleave="onFolderDragLeave(folder)"
-                            @dragover.prevent="onFolderDragOver($event)"
-                            @drop="onDropToFolder(folder, $event)"
-                            @contextmenu.prevent="openFolderContextMenu($event, folder)"
-                        >
-                            <div class="meta">
-                                <div class="name" x-text="folder.name"></div>
-                                <div class="count" x-text="(folder.sets?.length || 0) + ' sets'"></div>
-                            </div>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v10H3V7zm3-3h12v3H6z"/></svg>
-                        </div>
-                    </template>
-                    <div x-show="folders.length === 0" class="hint">No folders yet.</div>
-                </div>
-                <div
-                    class="trash-zone"
-                    :class="trashHover ? 'is-hovered' : ''"
-                    @dragenter="onTrashDragEnter($event)"
-                    @dragover.prevent="onTrashDragEnter($event)"
-                    @dragleave="onTrashDragLeave"
-                    @drop="onDropToTrash"
-                >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                    <span>Drop here to delete</span>
-                </div>
-            </div>
-
             <div class="section-card">
                 <div class="section-heading">
                     <span>Library Sets</span>
@@ -872,8 +832,6 @@
                     <template x-for="set in filteredSets" :key="set.id">
                         <button @click="loadSet(set)"
                                 @contextmenu.prevent="openContextMenu($event, 'set', set)"
-                                draggable="true"
-                                @dragstart="onDragSet(set, $event)" @dragend="onDragEnd"
                                 class="set-row"
                                 :class="activeSet && activeSet.id === set.id ? 'contrast-active' : ''">
                             <div class="meta">
@@ -947,7 +905,7 @@
         <div class="studio-hero">
             <div class="hero-copy">
                 <div class="hero-title">Curate &amp; perform</div>
-                <div class="hero-subtitle">Full-page workspace for organizing sets, folders, and tracklists.</div>
+                <div class="hero-subtitle">Full-page workspace for organizing sets and tracklists.</div>
             </div>
             <div style="display:flex; gap:10px;">
                 <button class="pill" @click="copyTracklist" x-show="activeSet">Copy Active List</button>
@@ -983,9 +941,6 @@
                 <div class="set-grid">
                     <template x-for="set in filteredSets" :key="set.id">
                         <div class="set-card"
-                             draggable="true"
-                             @dragstart="onDragSet(set, $event)"
-                             @dragend="onDragEnd"
                              @click="loadSet(set)"
                              @contextmenu.prevent="openSetContextMenu($event, set)">
                             <div class="set-thumb" :style="set.thumbnail ? `background-image:url(${set.thumbnail})` : ''">
@@ -1009,9 +964,7 @@
                             </div>
                         </div>
                     </template>
-                    <div x-show="filteredSets.length === 0" class="set-card" style="display:flex; align-items:center; justify-content:center; text-transform:uppercase; letter-spacing:0.1em;">
-                        No sets yet
-                    </div>
+                    <div x-show="filteredSets.length === 0" class="hint" style="padding:14px 10px;">No sets available.</div>
                 </div>
 
                 <div class="track-panel">
@@ -1068,55 +1021,27 @@
      @click.outside="closeContextMenu()"
      :style="'top: ' + ui.contextMenu.y + 'px; left: ' + ui.contextMenu.x + 'px'">
     <div class="px-3 py-2 text-[10px] font-bold tracking-wide">
-        <span x-text="ui.contextMenu.type === 'folder' ? 'FOLDER ACTIONS' : 'SET ACTIONS'"></span>
+        <span>SET ACTIONS</span>
     </div>
 
-    <template x-if="ui.contextMenu.type === 'set'">
-        <div class="py-1 space-y-1">
-            <button @click="openEditSetModal()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <span>Info & Tags</span>
-            </button>
-            <button @click="renameSetContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                <span>Umbenennen</span>
-            </button>
-            <button @click="promptMoveSetContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h7" /></svg>
-                <span>In Ordner verschieben</span>
-            </button>
-            <div x-show="folders.length" class="pt-1">
-                <div class="px-4 py-1 text-[10px] muted">Oder hierhin bewegen</div>
-                <template x-for="folder in folders" :key="folder.id">
-                    <button @click="moveSetToFolderFromMenu(folder)" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 7a2 2 0 012-2h2m14 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7m18 0l-3.34-4H8.34L5 7" /></svg>
-                        <span class="truncate" x-text="folder.name"></span>
-                    </button>
-                </template>
-            </div>
-            <button @click="rescanSetContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                <span>Neu analysieren</span>
-            </button>
-            <button @click="deleteSetContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2 text-red-600">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                <span>Set löschen</span>
-            </button>
-        </div>
-    </template>
-
-    <template x-if="ui.contextMenu.type === 'folder'">
-        <div class="py-1 space-y-1">
-            <button @click="renameFolderContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2" /></svg>
-                <span>Ordner umbenennen</span>
-            </button>
-            <button @click="deleteFolderContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2 text-red-600">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" /></svg>
-                <span>Ordner löschen</span>
-            </button>
-        </div>
-    </template>
+    <div class="py-1 space-y-1">
+        <button @click="openEditSetModal()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span>Info & Tags</span>
+        </button>
+        <button @click="renameSetContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+            <span>Umbenennen</span>
+        </button>
+        <button @click="rescanSetContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            <span>Neu analysieren</span>
+        </button>
+        <button @click="deleteSetContext()" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2 text-red-600">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            <span>Set löschen</span>
+        </button>
+    </div>
 </div>
 
 <!-- Add Set Modal -->
