@@ -1,117 +1,766 @@
 <!DOCTYPE html>
-<html lang="de" class="h-full bg-white">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tracklistify Studio</title>
-    <script>
-      const originalWarn = console.warn.bind(console);
-      console.warn = (...args) => {
-        if (typeof args[0] === 'string' && args[0].includes('Play CDN is not intended for production use')) return;
-        originalWarn(...args);
-      };
-      window.tailwind = window.tailwind || {};
-      tailwind.config = {
-        theme: { extend: {} },
-        corePlugins: { preflight: true }
-      };
-    </script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
-    <script src="/static/js/app.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --swiss-bg: #ffffff;
-            --swiss-ink: #0b0b0b;
-            --swiss-muted: #e5e7eb;
-            --swiss-accent: #ff5500;
-            --swiss-radius: 0;
-            --swiss-font: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+            --bg: #05070c;
+            --bg-glow: radial-gradient(circle at 20% 20%, rgba(255, 107, 0, 0.16), transparent 30%),
+                        radial-gradient(circle at 80% 0%, rgba(76, 151, 255, 0.1), transparent 28%),
+                        radial-gradient(circle at 50% 90%, rgba(255, 255, 255, 0.04), transparent 30%);
+            --panel: rgba(15, 19, 28, 0.7);
+            --glass: rgba(255, 255, 255, 0.04);
+            --border: rgba(255, 255, 255, 0.08);
+            --muted: #9ca3af;
+            --text: #f3f4f6;
+            --accent: #ff6b00;
+            --accent-strong: #ff7f22;
+            --success: #16a34a;
+            --radius: 16px;
+            --shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+            --signal: #ff6b00;
+            --surface-strong: rgba(255, 255, 255, 0.06);
+            --surface-muted: rgba(255, 255, 255, 0.02);
+            --card-height: 320px;
+            --card-gap: 16px;
         }
+
+        * { box-sizing: border-box; }
 
         body {
-            font-family: var(--swiss-font);
-            background: var(--swiss-bg);
-            color: var(--swiss-ink);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            line-height: 1.5;
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg);
+            background-image: var(--bg-glow);
+            color: var(--text);
+            letter-spacing: 0.02em;
         }
 
-        h1, h2, h3, h4, h5, h6 { font-weight: 700; }
+        h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+        p { margin: 0; }
+        a { color: inherit; text-decoration: none; }
+        button { font-family: inherit; cursor: pointer; }
         [x-cloak] { display: none !important; }
-        *, *:focus { border-radius: var(--swiss-radius) !important; box-shadow: none !important; }
+        .muted { color: var(--muted); }
+        .accent-hover { transition: all 0.2s ease; }
+        .accent-hover:hover { border-color: var(--accent); background: var(--glass); }
+        .contrast-active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.2); }
 
-        .swiss-shell { display: flex; flex: 1; min-height: 100vh; border: 2px solid var(--swiss-ink); background: var(--swiss-bg); box-shadow: 18px 18px 0 var(--swiss-muted); }
-        .swiss-sidebar { width: 18rem; border-right: 2px solid var(--swiss-ink); display: flex; flex-direction: column; background: var(--swiss-bg); }
-        .swiss-section { border-bottom: 1px solid var(--swiss-muted); padding: 1.25rem; display: grid; gap: 0.75rem; }
-        .swiss-header { border-bottom: 2px solid var(--swiss-ink); padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center; background: var(--swiss-bg); gap: 1rem; }
-        .swiss-brand { display: grid; gap: 0.2rem; line-height: 1; }
-        .swiss-brand span:first-child { font-size: 0.7rem; letter-spacing: 0.24em; }
-        .swiss-brand span:last-child { font-size: 0.95rem; font-weight: 800; }
+        .app-shell {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+            padding: 24px;
+            min-height: 100vh;
+        }
 
-        .swiss-input, .swiss-select { width: 100%; padding: 0.65rem 0.75rem; border: 1.5px solid var(--swiss-muted); background: var(--swiss-bg); color: var(--swiss-ink); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; transition: border-color 0.2s ease, background 0.2s ease; }
-        .swiss-input:focus-visible, .swiss-select:focus-visible { border-color: var(--swiss-accent); outline: none; background: color-mix(in srgb, var(--swiss-bg) 90%, var(--swiss-accent)); }
+        .glass-panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            backdrop-filter: blur(18px);
+            box-shadow: var(--shadow);
+        }
 
-        .swiss-button, button, .nav-button { border: 1.5px solid var(--swiss-ink); background: var(--swiss-bg); color: var(--swiss-ink); font-weight: 800; letter-spacing: 0.08em; padding: 0.65rem 0.85rem; transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease, border-color 0.2s ease; }
-        .swiss-button:hover, button:hover, .nav-button:hover { background: var(--swiss-accent); color: var(--swiss-bg); border-color: var(--swiss-ink); }
-        .swiss-button:active, button:active, .nav-button:active { transform: translateY(1px); background: var(--swiss-ink); color: var(--swiss-bg); }
-        .nav-button { display: inline-flex; align-items: center; gap: 0.5rem; }
+        .library {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
 
-        .accent-hover:hover { background: color-mix(in srgb, var(--swiss-bg) 80%, var(--swiss-accent)); }
-        .contrast-hover:hover { background: var(--swiss-ink); color: var(--swiss-bg); }
-        .border { border-color: var(--swiss-ink) !important; }
-        .border-b, .border-t, .border-r, .border-l { border-color: var(--swiss-muted) !important; }
-        .divide-swiss > :not([hidden]) ~ :not([hidden]) { border-top: 1px solid var(--swiss-muted); }
+        .library-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border);
+        }
 
-        .contrast-active { background: var(--swiss-ink); color: var(--swiss-bg) !important; border-color: var(--swiss-ink); }
-        .contrast-active svg { color: var(--swiss-bg); }
+        .brand {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
 
-        .pill { border: 1px solid var(--swiss-ink); padding: 0.2rem 0.5rem; font-size: 0.7rem; }
-        .muted { color: color-mix(in srgb, var(--swiss-ink) 60%, var(--swiss-muted)); }
+        .brand .eyebrow {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            color: var(--muted);
+        }
 
-        .grid-icon span { width: 6px; height: 6px; background: var(--swiss-ink); display: block; }
+        .brand .title {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+        }
 
-        .alert-text { color: var(--swiss-accent); }
+        .icon-button {
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--glass);
+            color: var(--text);
+            transition: all 0.2s ease;
+        }
 
-        .tile { border: 1.5px solid var(--swiss-muted); padding: 1rem; background: var(--swiss-bg); display: grid; gap: 0.35rem; }
-        .tile strong { font-size: 0.75rem; letter-spacing: 0.14em; }
-        .tile .value { font-size: 1.4rem; font-weight: 800; }
+        .icon-button:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            transform: translateY(-1px);
+        }
 
-        .table-grid { width: 100%; border-collapse: collapse; }
-        .table-grid th, .table-grid td { border: 1px solid var(--swiss-muted); padding: 0.75rem 0.5rem; text-align: left; }
-        .table-grid thead { background: color-mix(in srgb, var(--swiss-bg) 92%, var(--swiss-muted)); }
-        .table-grid tbody tr:hover { background: color-mix(in srgb, var(--swiss-bg) 92%, var(--swiss-accent)); }
+        .library-search {
+            padding: 0 20px;
+            display: grid;
+            gap: 10px;
+        }
 
-        a { color: var(--swiss-ink); font-weight: 700; letter-spacing: 0.08em; }
-        a:hover { color: var(--swiss-accent); }
+        .input {
+            width: 100%;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text);
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+        }
 
-        .avatar-ring { border-radius: 9999px !important; border: 2px solid var(--swiss-ink); }
+        .input:focus {
+            outline: 1px solid var(--accent);
+            border-color: var(--accent);
+        }
+
+        .hint {
+            font-size: 11px;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .folder-list {
+            display: grid;
+            gap: 10px;
+            padding: 0 20px 10px;
+        }
+
+        .folder {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.02);
+            transition: all 0.2s ease;
+        }
+
+        .folder.is-hovered, .folder-drop-target {
+            border-color: var(--accent);
+            background: rgba(255, 107, 0, 0.08);
+            box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.15);
+        }
+
+        .folder-quiet {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .folder.is-hovered {
+            border-color: var(--accent);
+            background: rgba(255, 107, 0, 0.08);
+        }
+
+        .folder .meta {
+            display: grid;
+            gap: 4px;
+        }
+
+        .folder .name {
+            font-weight: 700;
+            letter-spacing: 0.06em;
+        }
+
+        .folder .count {
+            font-size: 11px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .trash-zone {
+            margin: 10px 20px 20px;
+            padding: 14px;
+            border: 1px dashed var(--border);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            background: rgba(255, 255, 255, 0.02);
+            transition: all 0.2s ease;
+        }
+
+        .trash-zone.is-hovered {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(255, 107, 0, 0.08);
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .top-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo-mark {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-ring {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(255, 107, 0, 0.18), rgba(76, 151, 255, 0.18));
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+        }
+
+        .logo-text {
+            display: grid;
+            line-height: 1.1;
+        }
+
+        .logo-text span:first-child {
+            font-size: 12px;
+            letter-spacing: 0.14em;
+            color: var(--muted);
+        }
+
+        .logo-text span:last-child {
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: 0.2em;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .pill {
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.04);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .pill-link {
+            border-color: transparent;
+            color: var(--muted);
+            transition: color 0.2s ease;
+        }
+
+        .pill-link:hover { color: var(--accent); }
+
+        .cta {
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            border: none;
+            color: #0c0b0b;
+            font-weight: 800;
+            padding: 12px 18px;
+            border-radius: 12px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            box-shadow: 0 16px 40px rgba(255, 107, 0, 0.32);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .cta:hover { transform: translateY(-1px); box-shadow: 0 22px 48px rgba(255, 107, 0, 0.42); }
+        .cta:active { transform: translateY(0); }
+
+        .user-chip {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255, 107, 0, 0.24), rgba(76, 151, 255, 0.24));
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+        }
+
+        .stat-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            padding: 12px 16px 16px;
+        }
+
+        .stat {
+            padding: 16px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(12px);
+            display: grid;
+            gap: 6px;
+        }
+
+        .stat .label {
+            font-size: 11px;
+            letter-spacing: 0.14em;
+            color: var(--muted);
+        }
+
+        .stat .value {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+        }
+
+        .content {
+            padding: 0 16px 16px;
+            display: grid;
+            gap: 18px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 0 4px;
+        }
+
+        .section-header h2 {
+            font-size: 14px;
+        }
+
+        .set-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: var(--card-gap);
+        }
+
+        .set-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(15, 19, 28, 0.7));
+            display: flex;
+            flex-direction: column;
+            height: var(--card-height);
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .set-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(15, 19, 28, 0.9));
+        }
+
+        .set-card.is-dragging {
+            opacity: 0.35;
+            filter: contrast(0.85);
+            transform: scale(0.985);
+            border-color: var(--border);
+        }
+
+        .set-card.is-drop-target {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.3);
+            filter: contrast(1.05);
+        }
+
+        .set-thumb {
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            height: 160px;
+        }
+
+        .set-thumb::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, transparent 20%, rgba(0, 0, 0, 0.55));
+        }
+
+        .set-thumb .fallback {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            letter-spacing: 0.18em;
+            color: rgba(255, 255, 255, 0.7);
+            background: linear-gradient(135deg, rgba(255, 107, 0, 0.22), rgba(76, 151, 255, 0.22));
+        }
+
+        .set-meta {
+            padding: 14px 16px 16px;
+            display: grid;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .set-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            font-size: 11px;
+            letter-spacing: 0.12em;
+        }
+
+        .set-title {
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+        }
+
+        .set-artist {
+            font-size: 12px;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+        }
+
+        .set-progress {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 107, 0, 0.12);
+            border-radius: 999px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .set-progress span {
+            display: block;
+            height: 100%;
+            background: linear-gradient(90deg, var(--signal), var(--accent-strong));
+            box-shadow: 0 8px 18px rgba(255, 107, 0, 0.32);
+            transition: width 0.25s ease;
+        }
+
+        .set-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px 16px;
+            font-size: 12px;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+        }
+
+        .set-footer .tag {
+            padding: 6px 10px;
+            border-radius: 10px;
+            background: var(--surface-muted);
+            border: 1px solid var(--border);
+            color: var(--text);
+            letter-spacing: 0.08em;
+            font-weight: 700;
+            font-size: 11px;
+        }
+
+        .track-panel {
+            padding: 16px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .track-panel.focused {
+            border-color: rgba(255, 107, 0, 0.4);
+            box-shadow: 0 16px 40px rgba(255, 107, 0, 0.15);
+        }
+
+        .track-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .track-panel-header .title {
+            display: grid;
+            gap: 4px;
+        }
+
+        .track-panel-header .title span:first-child {
+            font-size: 12px;
+            letter-spacing: 0.14em;
+            color: var(--muted);
+        }
+
+        .track-panel-header .title span:last-child {
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+        }
+
+        .action-link {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            font-size: 11px;
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .tracklist {
+            display: grid;
+            gap: 10px;
+        }
+
+        .track {
+            display: grid;
+            grid-template-columns: 60px 1fr 140px 90px 100px;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+        }
+
+        .track:hover { border-color: var(--accent); }
+
+        .track .pos {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.08em;
+        }
+
+        .track .names {
+            display: grid;
+            gap: 4px;
+        }
+
+        .track .names .song {
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        .track .names .artist {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .track .controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .ghost-button {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-size: 11px;
+            transition: border-color 0.2s ease, color 0.2s ease;
+        }
+
+        .ghost-button:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .context-menu {
+            position: fixed;
+            z-index: 70;
+            background: rgba(12, 14, 20, 0.95);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 8px;
+            min-width: 200px;
+            box-shadow: var(--shadow);
+        }
+
+        .context-menu button {
+            width: 100%;
+            background: none;
+            border: none;
+            color: var(--text);
+            padding: 10px 12px;
+            border-radius: 10px;
+            text-align: left;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-size: 11px;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+
+        .context-menu button:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--accent);
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 80;
+            padding: 16px;
+        }
+
+        .modal {
+            width: 100%;
+            max-width: 640px;
+            background: rgba(12, 14, 20, 0.92);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .modal h3 {
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .modal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .label {
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        .modal-actions {
+            margin-top: 16px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .toast-stack {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 90;
+            display: grid;
+            gap: 10px;
+        }
+
+        .toast {
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.08);
+            letter-spacing: 0.06em;
+        }
+
+        .toast .title {
+            font-weight: 700;
+        }
+
+        .toast .subtitle {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        audio { display: none; }
+        @media (max-width: 1100px) {
+            .app-shell { grid-template-columns: 1fr; }
+            .library { order: 2; }
+            .main { order: 1; }
+            .set-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        @media (max-width: 720px) {
+            .track { grid-template-columns: 1fr; }
+            .app-shell { padding: 14px; }
+            .top-nav { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .set-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
-<body class="h-full flex flex-col" x-data="tracklistify()">
-<div class="swiss-shell">
-    <aside class="swiss-sidebar">
-        <div class="swiss-section flex items-center justify-between">
-            <div class="swiss-brand leading-none">
-                <span>TRACKLISTIFY</span>
-                <span>STUDIO</span>
+<body class="app-body"
+      x-data="tracklistify()"
+      @keydown.window.escape="closeContextMenu()"
+      @mousedown.window="handleContextMenuOutside($event)"
+      @resize.window="positionContextMenu()">
+<div class="app-shell">
+    <aside class="sidebar glass-panel">
+        <div class="sidebar-header">
+            <div class="brand">
+                <span class="brand-eyebrow">Tracklistify</span>
+                <span class="brand-title">Studio</span>
             </div>
-            <button @click="showDashboard" class="swiss-button text-[11px]">HOME</button>
-        </div>
-
-        <div class="swiss-section flex items-center justify-between gap-3">
-            <button @click="ui.showAddModal = true" class="swiss-button flex-1 text-[11px]">ADD SET</button>
-            <button @click="openAdmin" class="swiss-button grid grid-cols-2 gap-0.5 grid-icon" title="Admin">
-                <span></span><span></span><span></span><span></span>
+            <button class="icon-button" @click="createFolder()" title="New Folder">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h6l2 3h8v13H4z"/><path d="M12 11v6"/><path d="M9 14h6"/></svg>
             </button>
         </div>
 
-        <div class="swiss-section">
-            <div class="relative">
-                <input type="text" x-model="search" placeholder="FILTER SETS" class="swiss-input">
-            </div>
+        <div class="sidebar-section">
+            <label class="label">Search</label>
+            <input class="input-field" x-model="search" type="text" placeholder="Filter sets">
+            <span class="hint">Drag sets into folders to organize them.</span>
         </div>
 
         <div class="flex-1 overflow-y-auto">
@@ -120,148 +769,183 @@
                         :class="activeSet && activeSet.id === set.id ? 'contrast-active rounded-lg shadow-md' : 'rounded-lg'">
                     <div class="flex items-center justify-between text-[12px] font-bold gap-2">
                         <div class="flex items-center gap-2 truncate">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-2v13" /></svg>
-                            <span class="truncate" x-text="set.name"></span>
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18v10H3V7zm3-3h12v3H6V4z"/></svg>
+                            <span class="truncate" x-text="folder.name"></span>
                         </div>
-                        <span class="font-mono px-2 py-0.5 pill" x-text="set.track_count"></span>
+                        <span class="pill" x-text="(folder.sets?.length || 0) + 'x'"></span>
                     </div>
-                    <div class="text-[10px] muted" x-text="formatDate(set.created_at)"></div>
-                </button>
-            </template>
-            <div x-show="sets.length === 0" class="px-4 py-6 text-[12px] muted">NO SETS YET</div>
+                </template>
+                <div class="empty-hint" x-show="folders.length === 0" x-cloak>NO FOLDERS</div>
+            </div>
         </div>
 
-        <div class="swiss-section flex items-center gap-3">
-            <div class="w-12 h-12 avatar-ring overflow-hidden bg-white flex items-center justify-center">
-                <template x-if="profile.avatar_url">
-                    <img :src="profile.avatar_url" alt="Avatar" class="w-full h-full object-cover rounded-full">
-                </template>
-                <template x-if="!profile.avatar_url">
-                    <span class="text-sm font-bold" x-text="(profile.display_name || (auth.user ? (auth.user.name || auth.user.dj_name || auth.user.email) : 'DJ'))[0]"></span>
-                </template>
-            </div>
-            <div class="flex-1 leading-tight">
-                <div class="text-[12px] font-bold" x-text="profile.display_name || (auth.user ? (auth.user.name || auth.user.dj_name || auth.user.email) : 'GUEST')"></div>
-                <div class="text-[10px] muted flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 14.5l8-5v10l-8-5z"/></svg>
-                    <span x-text="profile.dj_name || 'NO DJ NAME'"></span>
-                    <a :href="profile.soundcloud_url || '#'" target="_blank" class="flex items-center gap-1 underline" :class="profile.soundcloud_url ? '' : 'pointer-events-none opacity-40'">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.5A2.5 2.5 0 005.5 20H19a2 2 0 001.995-1.85L21 18a2 2 0 00-2-2h-.016A5.5 5.5 0 0013.5 5.5c-1.408 0-2.69.513-3.676 1.36a3.5 3.5 0 00-4.826 3.19A3.5 3.5 0 003 13.5v4z"/></svg>
-                        <span>SC</span>
-                    </a>
+        <div class="flex-1 overflow-y-auto divide-y divide-swiss">
+            <div class="px-4 py-4 space-y-3">
+                <div class="flex items-center justify-between text-[10px] font-bold">
+                    <span>FOLDERS</span>
+                    <button @click="createFolder()" class="swiss-button text-[10px] px-2 py-1">NEW</button>
                 </div>
-                <button @click="ui.showProfileModal = true" class="mt-2 swiss-button text-[10px]">EDIT PROFILE</button>
+
+                <div class="space-y-2">
+                    <template x-for="folder in folders" :key="folder.id">
+                        <div class="px-3 py-2 border flex items-center justify-between text-[11px] gap-3 transition-colors"
+                             :class="folderHoverId === folder.id ? 'folder-drop-target contrast-active' : 'folder-quiet accent-hover'"
+                             @contextmenu.prevent="openFolderContextMenu($event, folder)"
+                             @dragenter.prevent="onFolderDragEnter(folder, $event)" @dragover.prevent="onFolderDragOver($event)" @dragleave="onFolderDragLeave(folder)"
+                             @drop.prevent="onDropToFolder(folder, $event)">
+                            <div class="flex items-center gap-2 truncate">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 7a2 2 0 012-2h2m14 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7m18 0l-3.34-4H8.34L5 7" /></svg>
+                                <span class="truncate" x-text="folder.name"></span>
+                            </div>
+                            <span class="pill text-[10px]" x-text="(folder.sets?.length || 0) + ' SETS'"></span>
+                        </div>
+                    </template>
+                    <div x-show="!folders.length" class="text-[11px] muted">NO FOLDERS</div>
+                </div>
+
+                <div class="border border-dashed px-3 py-4 text-center text-[11px] muted transition-colors"
+                     style="border-color: var(--swiss-muted);"
+                     :class="draggingSet ? 'contrast-active' : ''"
+                     @dragover.prevent @dragenter.prevent @drop.prevent="onDropToTrash($event)">
+                    DROP SET HERE TO DELETE
+                </div>
+            </div>
+            <div class="set-list">
+                <template x-for="set in filteredSets" :key="set.id">
+                    <button @click="focusOnSet(set)"
+                            @contextmenu.prevent="openContextMenu($event, 'set', set)"
+                            draggable="true"
+                            @dragstart="onDragSet(set, $event)"
+                            @dragend="onDragEnd">
+                        <div class="set-list-titles">
+                            <span class="set-list-name" x-text="set.name"></span>
+                            <span class="muted" x-text="formatDate(set.created_at)"></span>
+                        </div>
+                        <span class="pill" x-text="set.track_count + ' tracks'"></span>
+                    </button>
+                </template>
+                <div class="empty-hint" x-show="sets.length === 0" x-cloak>NO SETS YET</div>
             </div>
         </div>
+
+        <div class="trash-zone"
+             :class="trashHover ? 'is-hovered' : ''"
+             @dragenter.prevent="onTrashDragEnter($event)"
+             @dragover.prevent="onTrashDragEnter($event)"
+             @dragleave="onTrashDragLeave"
+             @drop="onDropToTrash">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            <span>Trash Zone</span>
+        </div>
+        <div class="flex-1 overflow-y-auto" id="sets-list"></div>
     </aside>
 
-    <div class="flex-1 flex flex-col min-w-0">
-        <header class="swiss-header">
-            <div class="flex gap-2 text-[11px] font-bold">
-                <button @click="showDashboard" :class="currentView === 'dashboard' ? 'contrast-active' : ''" class="nav-button">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6"/></svg>
-                    DASHBOARD
-                </button>
-                <button @click="currentView='sets'" :class="currentView === 'sets' ? 'contrast-active' : ''" class="nav-button">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-2v13M3 7h3M3 12h3M3 17h3"/></svg>
-                    SETS
-                </button>
-                <button @click="showQueueView" :class="currentView === 'queue' ? 'contrast-active' : ''" class="nav-button">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8h18M3 16h18M7 4v4m0 8v4"/></svg>
-                    QUEUE
-                </button>
-                <button @click="showRescanView" :class="currentView === 'rescan' ? 'contrast-active' : ''" class="nav-button">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                    RESCAN
-                </button>
-                <button @click="showCollections" :class="currentView === 'collections' ? 'contrast-active' : ''" class="nav-button">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 12h14M5 16h14"/></svg>
-                    COLLECTIONS
-                </button>
+    <main class="main-content">
+        <header class="topbar glass-panel">
+            <div class="topbar-left">
+                <div class="logo-mark">
+                    <div class="logo-ring">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h6l2 3h8v9H4z"/><circle cx="9" cy="13" r="2"/><circle cx="15" cy="13" r="2"/></svg>
+                    </div>
+                    <div class="logo-text">
+                        <span>Tracklistify</span>
+                        <span>Studio</span>
+                    </div>
+                </div>
+                <div class="view-switcher">
+                    <button class="chip-button" :class="currentView === 'dashboard' ? 'is-active' : ''" @click="showDashboard">Dashboard</button>
+                    <button class="chip-button" :class="currentView === 'sets' ? 'is-active' : ''" @click="currentView = 'sets'">Sets</button>
+                    <button class="chip-button" :class="currentView === 'queue' ? 'is-active' : ''" @click="showQueueView">Queue</button>
+                    <button class="chip-button" :class="currentView === 'rescan' ? 'is-active' : ''" @click="showRescanView">Rescan</button>
+                    <button class="chip-button" :class="currentView === 'likes' ? 'is-active' : ''" @click="showLikesView">Likes</button>
+                </div>
             </div>
-            <div class="flex items-center gap-3 text-[11px] font-bold">
-                <span class="px-2 py-1 border" x-text="auth.user ? 'SIGNED IN' : 'GUEST'"></span>
-
+            <div class="topbar-actions">
+                <button class="chip-button pill-link" @click="openAdmin">Admin</button>
                 <template x-if="auth.user">
-                    <div class="relative" @click.outside="auth.dropdownOpen = false">
-                        <button @click="auth.dropdownOpen = !auth.dropdownOpen" class="flex items-center gap-2 px-3 py-2 border">
-                            <div class="w-8 h-8 rounded-full contrast-active flex items-center justify-center uppercase" x-text="(auth.user.name || auth.user.dj_name || auth.user.email)[0]"></div>
-                            <div class="hidden sm:flex flex-col leading-none text-left">
-                                <span class="text-xs font-semibold" x-text="auth.user.name || auth.user.dj_name || auth.user.email"></span>
-                                <span class="text-[10px] muted">Profile</span>
-                            </div>
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                        </button>
-                        <div x-show="auth.dropdownOpen" x-transition class="absolute right-0 mt-2 w-56 border bg-white overflow-hidden z-30">
-                            <div class="px-4 py-3 border-b">
-                                <p class="text-[10px] muted">Signed in as</p>
-                                <p class="text-sm font-semibold" x-text="auth.user.name || auth.user.dj_name || auth.user.email"></p>
-                            </div>
-                            <nav class="p-2 flex flex-col gap-1">
-                                <a href="/profile" class="flex items-center gap-2 px-3 py-2 contrast-hover text-sm">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A10 10 0 1118.88 17.8 7 7 0 005 17.8z"/></svg>
-                                    Profile
-                                </a>
-                                <button class="flex items-center gap-2 px-3 py-2 contrast-hover text-sm text-left" @click="logout()">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 11-4 0v-1m4-10V5a2 2 0 10-4 0v1"/></svg>
-                                    Logout
-                                </button>
-                            </nav>
+                    <div class="user-chip">
+                        <div class="avatar" x-text="(auth.user.name || auth.user.dj_name || auth.user.email || 'DJ')[0]"></div>
+                        <div class="names">
+                            <div class="user-name" x-text="auth.user.name || auth.user.dj_name || auth.user.email"></div>
+                            <div class="user-meta">Signed in</div>
                         </div>
                     </div>
                 </template>
-
                 <template x-if="!auth.user">
-                    <a href="/login" class="px-3 py-2 border">LOGIN</a>
+                    <a href="/login" class="chip-button pill-link">Guest</a>
                 </template>
+                <button class="cta" @click="ui.uploadTab = 'url'; ui.showAddModal = true">Add Set</button>
             </div>
         </header>
 
-        <div class="flex-1 overflow-auto">
-            <section x-show="currentView === 'dashboard'" class="p-6 space-y-4" x-cloak>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="tile">
-                        <strong>SETS</strong>
-                        <span class="value" x-text="dashboardStats.total_sets"></span>
+        <section class="panel" x-show="currentView === 'dashboard'" x-cloak>
+            <div class="stat-grid">
+                <template x-for="stat in statHighlights()" :key="stat.key">
+                    <div class="stat-card">
+                        <span class="label" x-text="stat.label"></span>
+                        <span class="stat-value" x-text="stat.value"></span>
                     </div>
-                    <div class="tile">
-                        <strong>TRACKS</strong>
-                        <span class="value" x-text="dashboardStats.total_tracks"></span>
-                    </div>
-                    <div class="tile">
-                        <strong>LIKES</strong>
-                        <span class="value" x-text="dashboardStats.total_likes"></span>
-                    </div>
-                    <div class="tile">
-                        <strong>DISCOVERY</strong>
-                        <span class="value" x-text="dashboardStats.discovery_rate + '%' "></span>
-                    </div>
+                </template>
+            </div>
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>Recent Sets</h2>
+                    <span class="hint">Drag to folders or open</span>
                 </div>
                 <div class="tile">
-                    <div class="text-[10px] font-bold mb-2">RECENT SETS</div>
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-[10px] font-bold">RECENT SETS</div>
+                        <div class="flex items-center gap-2" x-show="uploadState.isProcessing">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-orange-50 text-orange-600 border border-orange-200">Processing</span>
+                            <span class="text-[10px] text-gray-500" x-text="processingLabel()"></span>
+                        </div>
+                    </div>
                     <div class="divide-y divide-swiss">
                         <template x-for="item in dashboardStats.recent_sets" :key="item.id">
-                            <button class="w-full flex items-center justify-between py-3 text-left accent-hover" @click="loadSet(item.id)">
+                            <button class="w-full flex items-center justify-between py-3 text-left accent-hover cursor-move"
+                                    draggable="true"
+                                    @dragstart="onDragSet(item, $event)"
+                                    @dragend="onDragEnd"
+                                    @click="focusOnSet(item.id)">
                                 <div class="flex flex-col">
                                     <span class="text-sm font-bold" x-text="item.name"></span>
                                     <span class="text-[10px] muted" x-text="formatDate(item.created_at)"></span>
+                <div class="set-grid">
+                    <template x-for="item in dashboardStats.recent_sets" :key="item.id">
+                        <div class="set-card"
+                             draggable="true"
+                             @dragstart="onDragSet(item, $event)"
+                             @dragend="onDragEnd"
+                             @click="loadSet(item.id)"
+                             @contextmenu.prevent="openSetContextMenu($event, item)">
+                            <div class="set-thumb" :style="setCardBackground(item)">
+                                <div class="set-thumb-fallback" x-show="!hasSetThumbnail(item)" x-text="(item.artists || item.dj_names || item.name || 'SET').slice(0, 6).toUpperCase()"></div>
+                            </div>
+                            <div class="set-meta">
+                                <div class="set-pill">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h6l2 3h8v9H4z"/></svg>
+                                    <span x-text="item.track_count + ' tracks'"></span>
                                 </div>
-                                <span class="text-[10px] font-bold" x-text="item.track_count + ' TRACKS'"></span>
-                            </button>
-                        </template>
-                    </div>
+                                <div class="set-title" x-text="item.name"></div>
+                                <div class="set-artist" x-text="item.artists || item.dj_names || 'Unknown Artist'"></div>
+                            </div>
+                            <div class="set-footer">
+                                <span x-text="formatDate(item.created_at)"></span>
+                                <span x-text="item.event || 'Ready'"></span>
+                            </div>
+                        </div>
+                    </template>
+                    <div class="empty-card" x-show="!dashboardStats.recent_sets.length" x-cloak>No recent sets</div>
                 </div>
-            </section>
+            </div>
+        </section>
 
-            <section x-show="currentView === 'sets'" class="flex flex-col h-full" x-cloak>
-                <div class="border-b px-6 py-3 flex items-center justify-between">
-                    <div class="flex flex-col">
-                        <span class="text-sm font-bold" x-text="activeSet ? activeSet.name : 'SELECT A SET'"></span>
-                        <span class="text-[10px] muted" x-show="activeSet" x-text="tracks.length + ' TRACKS'"></span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button @click="copyTracklist" class="swiss-button text-[11px]" x-show="activeSet">COPY LIST</button>
-                    </div>
+        <div class="content">
+            <div class="section-header">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <h2 x-text="ui.trackViewOnly ? 'Tracklist' : 'Sets'"></h2>
+                    <span class="hint" x-show="!ui.trackViewOnly">Right-click for quick actions</span>
+                    <span class="hint" x-show="ui.trackViewOnly && activeSet" x-text="activeSet.name"></span>
                 </div>
                 <div class="flex-1 overflow-auto">
                     <table class="table-grid text-xs">
@@ -321,60 +1005,217 @@
                     </table>
                     <div x-show="!activeSet" class="p-8 text-center text-[12px] muted">SELECT A SET TO SEE TRACKS</div>
                 </div>
-            </section>
-
-            <section x-show="currentView === 'queue'" class="p-6 space-y-4" x-cloak>
-                <div class="tile">
-                    <div class="flex justify-between items-center text-sm font-bold">
-                        <span>QUEUE STATUS</span>
-                        <button @click="stopQueue" class="swiss-button text-[10px]">STOP</button>
-                    </div>
-                    <div class="mt-3 text-[12px]">
-                        <div>ACTIVE: <span x-text="queueStatus.active ? queueStatus.active.label : 'NONE'"></span></div>
-                        <div>PENDING: <span x-text="queueStatus.queue.length"></span></div>
-                    </div>
-                </div>
-            </section>
-
-            <section x-show="currentView === 'rescan'" class="p-6 space-y-4" x-cloak>
-                <div class="flex items-center justify-between">
-                    <span class="text-sm font-bold">RESCAN CANDIDATES</span>
-                    <button @click="runRescan" class="swiss-button text-[10px]">RESCAN</button>
-                </div>
-                <div class="tile divide-y divide-swiss">
-                    <template x-for="candidate in rescanCandidates" :key="candidate.id">
-                        <div class="py-3 flex items-center justify-between">
-                            <div class="flex flex-col">
-                                <span class="text-sm font-bold" x-text="candidate.title"></span>
-                                <span class="text-[10px] muted" x-text="candidate.artist"></span>
-                            </div>
-                            <button @click="toggleFlag(candidate)" class="swiss-button text-[10px] px-2 py-1">CLEAR</button>
+            </div>
+            <div class="set-grid" x-show="!ui.trackViewOnly">
+                <template x-for="set in filteredSets" :key="set.id">
+                    <div class="set-card"
+                         draggable="true"
+                         @dragstart="onDragSet(set, $event)"
+                         @dragend="onDragEnd"
+                         @dragenter.prevent="onCardDragEnter(set)"
+                         @dragover.prevent="onCardDragOver($event)"
+                         @dragleave="onCardDragLeave(set)"
+                         @drop.prevent="onCardDrop(set, $event)"
+                         @click="focusOnSet(set)"
+                         @contextmenu.prevent="openSetContextMenu($event, set)"
+                         :class="setCardClasses(set)">
+                        <div class="set-thumb" :style="set.thumbnail ? `background-image:url(${set.thumbnail})` : ''">
+                            <div class="fallback" x-show="!set.thumbnail" x-text="(set.artists || set.dj_names || set.name || 'SET').slice(0, 6).toUpperCase()"></div>
                         </div>
-                    </template>
-                    <div x-show="rescanCandidates.length === 0" class="py-6 text-center text-[12px] muted">NO ITEMS</div>
-                </div>
-            </section>
-
-            <section x-show="currentView === 'collections'" class="p-6 space-y-4" x-cloak>
-                <div class="text-sm font-bold">FAVORITES</div>
-                <div class="tile divide-y divide-swiss">
-                    <template x-for="track in likedTracks" :key="'like-' + track.id">
-                        <div class="py-3 flex items-center justify-between">
-                            <div class="flex flex-col">
-                                <span class="text-sm font-bold" x-text="track.title"></span>
-                                <span class="text-[10px] muted" x-text="(track.set_name || '') + ' / ' + (track.artist || '')"></span>
+                        <div class="set-meta">
+                            <div class="set-pill">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h6l2 3h8v9H4z"/></svg>
+                                <span x-text="set.track_count + ' tracks'"></span>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <button @click="togglePlay(track)" class="swiss-button text-[10px] px-2 py-1">PLAY</button>
-                                <button @click="toggleLike(track)" class="swiss-button text-[10px] px-2 py-1">REMOVE</button>
+                            <div class="set-title" x-text="set.name"></div>
+                            <div class="set-artist" x-text="set.artists || set.dj_names || 'Unknown Artist'"></div>
+                            <div class="set-progress" aria-hidden="true">
+                                <span :style="`width:${setProgress(set)}%`"></span>
                             </div>
                         </div>
-                    </template>
-                    <div x-show="likedTracks.length === 0" class="py-6 text-center text-[12px] muted">NO FAVORITES</div>
+                        <div class="set-footer">
+                            <span x-text="formatDate(set.created_at)"></span>
+                            <span class="tag" x-text="set.event || setFolderLabel(set)"></span>
+                        </div>
+                    </div>
+                </template>
+                <div class="empty-card" x-show="filteredSets.length === 0" x-cloak>No sets yet</div>
+            </div>
+
+            <div class="track-panel" :class="ui.trackViewOnly && activeSet ? 'focused' : ''">
+                <div class="track-panel-header">
+                    <div class="title">
+                        <span>Active Set</span>
+                        <span x-text="activeSet ? activeSet.name : 'Select a set to view tracks'"></span>
+                    </div>
+                    <div class="controls" style="display:flex; gap:8px;"></div>
                 </div>
-            </section>
-        </div>
+                <div class="tracklist" x-show="activeSet" x-cloak>
+                    <template x-for="(track, index) in tracks" :key="track.id">
+                        <div class="track-row">
+                            <div class="track-position">
+                                <button class="icon-button compact" @click.stop="togglePlay(track)">
+                                    <svg x-show="ui.playingId !== track.id" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                                    <svg x-show="ui.playingId === track.id" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                                </button>
+                                <span x-text="track.flag === 3 ? '???' : (track.position || index + 1)"></span>
+                            </div>
+                            <div class="track-names">
+                                <div class="track-title" x-text="track.title || 'Unknown Track'"></div>
+                                <div class="track-artist" x-text="track.artist || 'Unknown Artist'"></div>
+                            </div>
+                            <div class="track-meta">
+                                <span class="muted">Start</span>
+                                <strong x-text="formatTime(track.start_time)"></strong>
+                            </div>
+                            <div class="track-meta">
+                                <span class="muted">Confidence</span>
+                                <strong x-text="formatConf(track.confidence)"></strong>
+                            </div>
+                            <div class="track-controls">
+                                <button class="ghost-button" @click.stop="togglePurchase(track)" x-text="track.purchased ? 'Bought' : 'Buy'"></button>
+                                <button class="ghost-button" @click.stop="toggleLike(track)">
+                                    <span x-text="track.liked ? 'Liked' : 'Like'"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <div class="empty-hint" x-show="!activeSet" x-cloak>Choose a set to see its tracks.</div>
+            </div>
+        </section>
+
+        <section class="panel" x-show="currentView === 'queue'" x-cloak>
+            <div class="panel-header">
+                <h2>Queue</h2>
+                <button class="ghost-button" @click="stopQueue">Stop Active</button>
+            </div>
+            <div class="queue-state">
+                <div>
+                    <span class="label">Active</span>
+                    <div class="value" x-text="queueStatus.active?.label || 'None'"></div>
+                </div>
+                <div>
+                    <span class="label">Waiting</span>
+                    <div class="value" x-text="queueStatus.queue?.length || 0"></div>
+                </div>
+                <div>
+                    <span class="label">Finished</span>
+                    <div class="value" x-text="queueStatus.history?.length || 0"></div>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-header">
+                    <h3>Upcoming</h3>
+                </div>
+                <div class="set-list">
+                    <template x-for="job in queueStatus.queue" :key="job.id">
+                        <div class="set-list-item">
+                            <div class="set-list-titles">
+                                <span class="set-list-name" x-text="job.label"></span>
+                                <span class="muted" x-text="job.phase"></span>
+                            </div>
+                            <span class="pill" x-text="job.progress ? Math.round(job.progress) + '%' : 'Queued'"></span>
+                        </div>
+                    </template>
+                    <div class="empty-hint" x-show="!queueStatus.queue || !queueStatus.queue.length" x-cloak>No pending jobs</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel" x-show="currentView === 'rescan'" x-cloak>
+            <div class="panel-header">
+                <h2>Rescan Candidates</h2>
+                <button class="ghost-button" @click="runRescan">Run Rescan</button>
+            </div>
+            <div class="set-list">
+                <template x-for="track in rescanCandidates" :key="track.id">
+                    <div class="set-list-item">
+                        <div class="set-list-titles">
+                            <span class="set-list-name" x-text="track.title"></span>
+                            <span class="muted" x-text="track.artist"></span>
+                        </div>
+                        <button class="chip-button" @click="toggleFlag(track)">Toggle Flag</button>
+                    </div>
+                </template>
+                <div class="empty-hint" x-show="!rescanCandidates || !rescanCandidates.length" x-cloak>No tracks marked for rescan.</div>
+            </div>
+        </section>
+
+        <section class="panel" x-show="currentView === 'likes'" x-cloak>
+            <div class="panel-header">
+                <h2>Likes & Purchases</h2>
+            </div>
+            <div class="set-list">
+                <template x-for="track in likedTracks" :key="track.id">
+                    <div class="set-list-item">
+                        <div class="set-list-titles">
+                            <span class="set-list-name" x-text="track.title"></span>
+                            <span class="muted" x-text="track.artist"></span>
+                        </div>
+                        <span class="pill">Liked</span>
+                    </div>
+                </template>
+                <div class="empty-hint" x-show="!likedTracks || !likedTracks.length" x-cloak>No liked tracks yet.</div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div x-show="ui.contextMenu.show" x-ref="contextMenu" x-cloak
+     class="context-menu glass-panel"
+     @contextmenu.prevent
+     @click.outside="closeContextMenu()"
+     :style="'top: ' + ui.contextMenu.y + 'px; left: ' + ui.contextMenu.x + 'px'">
+    <div class="context-menu-header">
+        <span x-text="ui.contextMenu.type === 'folder' ? 'FOLDER ACTIONS' : 'SET ACTIONS'"></span>
     </div>
+    <template x-if="ui.contextMenu.type === 'set'">
+        <div class="py-1 space-y-1">
+            <button @click="handleContextAction('edit')" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>Info & Tags</span>
+            </button>
+            <button @click="handleContextAction('rename')" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                <span>Umbenennen</span>
+            </button>
+            <button @click="handleContextAction('move')" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h7" /></svg>
+                <span>In Ordner verschieben</span>
+            </button>
+            <div x-show="folders.length" class="pt-1">
+                <div class="px-4 py-1 text-[10px] muted">Oder hierhin bewegen</div>
+                <template x-for="folder in folders" :key="folder.id">
+                    <button @click="moveSetToFolderFromMenu(folder)" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 7a2 2 0 012-2h2m14 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7m18 0l-3.34-4H8.34L5 7" /></svg>
+                        <span class="truncate" x-text="folder.name"></span>
+                    </button>
+                </template>
+            </div>
+            <button @click="handleContextAction('rescan')" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                <span>Neu analysieren</span>
+            </button>
+            <button @click="handleContextAction('delete')" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2 text-red-600">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                <span>Set löschen</span>
+            </button>
+        </div>
+    </template>
+
+    <template x-if="ui.contextMenu.type === 'folder'">
+        <div class="py-1 space-y-1">
+            <button @click="handleContextAction('rename')" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2" /></svg>
+                <span>Ordner umbenennen</span>
+            </button>
+            <button @click="handleContextAction('delete')" class="w-full text-left px-4 py-2 text-[12px] hover:bg-gray-100 flex items-center gap-2 text-red-600">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" /></svg>
+                <span>Ordner löschen</span>
+            </button>
+        </div>
+    </template>
 </div>
 
 <!-- Context Menu -->
@@ -521,97 +1362,267 @@
 <!-- Add Set Modal -->
 <div x-show="ui.showAddModal" x-cloak class="fixed inset-0 z-[80] flex items-center justify-center">
     <div class="fixed inset-0 bg-black/70" @click="ui.showAddModal = false"></div>
-    <div class="bg-white border w-full max-w-lg p-6 space-y-4 z-10">
-        <div class="text-sm font-bold">IMPORT SET</div>
-        <div class="space-y-2">
-            <label class="text-[10px] font-bold">URL</label>
-            <div class="flex gap-2">
-                <input type="text" x-model="inputs.url" class="flex-1 swiss-input text-[11px]">
-                <button @click="fetchUrlMetadata(inputs.url)" class="swiss-button text-[11px]">FETCH</button>
+    <div class="bg-white border w-full max-w-2xl p-6 space-y-4 z-10 rounded-2xl shadow-xl">
+        <div class="flex items-center justify-between gap-3">
+            <div class="text-sm font-bold uppercase tracking-wide text-gray-800">Import Set</div>
+            <div class="flex items-center gap-2" x-show="uploadState.isProcessing">
+                <span class="px-2 py-1 rounded-full text-[10px] font-bold uppercase bg-orange-50 text-orange-600 border border-orange-200">Processing</span>
+                <span class="text-[11px] text-gray-500" x-text="queueStatus.active ? queueStatus.active.label : 'Waiting jobs'"></span>
+<div x-show="ui.showAddModal" x-cloak class="modal-backdrop">
+    <div class="modal glass-panel">
+        <div class="modal-header">
+            <h3>Import Set</h3>
+            <button class="icon-button" @click="ui.showAddModal = false">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="modal-tabs">
+            <button class="tab" :class="ui.uploadTab === 'url' ? 'is-active' : ''" @click="ui.uploadTab = 'url'">URL</button>
+            <button class="tab" :class="ui.uploadTab === 'file' ? 'is-active' : ''" @click="ui.uploadTab = 'file'">File</button>
+        </div>
+
+        <div class="modal-content">
+            <div class="modal-row" x-show="ui.uploadTab === 'url'" x-cloak>
+                <label class="label">Source URL</label>
+                <div class="input-row">
+                    <input type="text" class="input-field" x-model="inputs.url" placeholder="https://...">
+                    <button class="ghost-button" @click="fetchUrlMetadata(inputs.url)" :disabled="inputs.isLoadingMeta">Fetch</button>
+                </div>
+            </div>
+
+            <div class="modal-row" x-show="ui.uploadTab === 'file'" x-cloak>
+                <label class="label">Audio File</label>
+                <input type="file" class="input-field" x-ref="fileInput" @change="inputs.file = $refs.fileInput.files[0]; parseFileMetadata();">
+            </div>
+
+            <div class="modal-grid">
+                <div class="modal-field">
+                    <label class="label">Artist / DJ</label>
+                    <input type="text" class="input-field" x-model="inputs.metaArtist">
+                </div>
+                <div class="modal-field">
+                    <label class="label">Title</label>
+                    <input type="text" class="input-field" x-model="inputs.metaName">
+                </div>
+                <div class="modal-field">
+                    <label class="label">Event / Info</label>
+                    <input type="text" class="input-field" x-model="inputs.metaEvent">
+                </div>
+                <div class="modal-field">
+                    <label class="label">Tags</label>
+                    <input type="text" class="input-field" x-model="inputs.metaTags">
+                </div>
+            </div>
+
+            <div class="modal-row inline">
+                <label class="checkbox">
+                    <input type="checkbox" x-model="inputs.is_b2b">
+                    <span>B2B</span>
+                </label>
+                <span class="hint" x-text="queueStatus.queue.length + ' waiting'"></span>
             </div>
         </div>
-        <div class="space-y-2">
-            <label class="text-[10px] font-bold">FILE</label>
-            <input type="file" x-ref="fileInput" @change="parseFileMetadata()" class="w-full text-[11px]">
-        </div>
-        <div class="grid grid-cols-2 gap-2 text-[11px]">
-            <div class="flex flex-col gap-1">
-                <label class="text-[10px] font-bold">ARTIST / DJ</label>
-                <input type="text" x-model="inputs.metaArtist" class="swiss-input">
-            </div>
-            <div class="flex flex-col gap-1">
-                <label class="text-[10px] font-bold">TITLE</label>
-                <input type="text" x-model="inputs.metaName" class="swiss-input">
-            </div>
-            <div class="col-span-2 flex flex-col gap-1">
-                <label class="text-[10px] font-bold">EVENT / INFO</label>
-                <input type="text" x-model="inputs.metaEvent" class="swiss-input">
-            </div>
-            <div class="col-span-2 flex items-center gap-3">
-                <label class="flex items-center gap-2 text-[11px]"><input type="checkbox" x-model="inputs.is_b2b"> B2B</label>
-                <input type="text" x-model="inputs.metaTags" placeholder="TAGS" class="flex-1 swiss-input">
-            </div>
-        </div>
-        <div class="flex justify-between items-center text-[11px]">
-            <span x-text="queueStatus.queue.length + ' waiting'"></span>
-            <div class="flex gap-2">
-                <button @click="ui.showAddModal = false" class="swiss-button">CLOSE</button>
-                <button @click="inputs.url ? addToQueue('url') : addToQueue('file')" class="swiss-button">START</button>
-            </div>
+
+        <div class="modal-actions">
+            <button class="ghost-button" @click="ui.showAddModal = false">Close</button>
+            <button class="cta" @click="addToQueue(ui.uploadTab)" :disabled="ui.uploadTab === 'url' ? !inputs.url : !inputs.file">Start</button>
         </div>
     </div>
 </div>
 
-<!-- Profile Modal -->
-<div x-show="ui.showProfileModal" x-cloak class="fixed inset-0 z-[80] flex items-center justify-center">
-    <div class="fixed inset-0 bg-black/70" @click="ui.showProfileModal = false"></div>
-    <div class="bg-white border w-full max-w-md p-6 space-y-3 z-10">
-        <div class="text-sm font-bold">EDIT PROFILE</div>
-        <div class="space-y-2 text-[11px]">
-            <label class="text-[10px] font-bold">NAME</label>
-            <input type="text" x-model="profile.display_name" class="w-full swiss-input">
-            <label class="text-[10px] font-bold">DJ NAME</label>
-            <input type="text" x-model="profile.dj_name" class="w-full swiss-input">
-            <label class="text-[10px] font-bold">SOUNDCLOUD</label>
-            <input type="text" x-model="profile.soundcloud_url" class="w-full swiss-input">
-            <label class="text-[10px] font-bold">AVATAR</label>
-            <input type="file" x-ref="avatarInput" class="w-full text-[11px]">
+<div x-show="ui.showEditSetModal" x-cloak class="modal-backdrop">
+    <div class="modal glass-panel">
+        <div class="modal-header">
+            <h3>Edit Set</h3>
+            <button class="icon-button" @click="ui.showEditSetModal = false">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+            </button>
         </div>
-        <div class="flex justify-end gap-2 text-[11px]">
-            <button @click="ui.showProfileModal = false" class="swiss-button">CANCEL</button>
-            <button @click="saveProfile" class="swiss-button">SAVE</button>
+
+        <div class="flex gap-2 bg-gray-50 border border-gray-200 rounded-xl p-1 text-[12px] font-bold uppercase tracking-wide">
+            <button class="flex-1 py-2 rounded-lg transition-colors"
+                    :class="uploadState.tab === 'url' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500'"
+                    @click="uploadManager.setTab('url')">URL</button>
+            <button class="flex-1 py-2 rounded-lg transition-colors"
+                    :class="uploadState.tab === 'file' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500'"
+                    @click="uploadManager.setTab('file')">File</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-3" x-show="uploadState.tab === 'url'">
+                <label class="text-[10px] font-bold text-gray-500">Paste URL</label>
+                <div class="flex gap-2">
+                    <input type="text"
+                           :value="inputs.url"
+                           @input="uploadManager.handleUrlInput($event.target.value)"
+                           @paste.prevent="uploadManager.handlePaste($event)"
+                           placeholder="YouTube / Mixcloud / SoundCloud ..."
+                           class="flex-1 swiss-input text-[11px]">
+                    <button @click="fetchUrlMetadata(inputs.url)"
+                            class="swiss-button text-[11px] flex items-center gap-2"
+                            :class="inputs.isLoadingMeta ? 'opacity-60 pointer-events-none' : ''">
+                        <svg x-show="inputs.isLoadingMeta" class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12a8 8 0 018-8"/></svg>
+                        <span>Fetch</span>
+                    </button>
+                </div>
+                <p class="text-[11px] text-gray-500 leading-tight">Smart metadata lookup will prefill details after you paste or type.</p>
+            </div>
+
+            <div class="space-y-3" x-show="uploadState.tab === 'file'">
+                <label class="text-[10px] font-bold text-gray-500">Upload file</label>
+                <input type="file"
+                       x-ref="fileInput"
+                       @change="uploadManager.handleFileChange($event.target.files[0])"
+                       class="flex-1 swiss-input text-[11px]">
+                <p class="text-[11px] text-gray-500 leading-tight">Drop a local recording to analyse. We will extract hints from the filename automatically.</p>
+            </div>
+        </div>
+
+        <div class="modal-grid">
+            <div class="modal-field">
+                <label class="label">Name</label>
+                <input type="text" class="input-field" x-model="editSetData.name">
+            </div>
+            <div class="modal-field">
+                <label class="label">Artists</label>
+                <input type="text" class="input-field" x-model="editSetData.artists">
+            </div>
+            <div class="modal-field">
+                <label class="label">Event</label>
+                <input type="text" class="input-field" x-model="editSetData.event">
+            </div>
+            <div class="modal-field">
+                <label class="label">Tags</label>
+                <input type="text" class="input-field" x-model="editSetData.tags">
+            </div>
+        </div>
+        <div class="modal-row inline">
+            <label class="checkbox">
+                <input type="checkbox" x-model="editSetData.is_b2b">
+                <span>B2B</span>
+            </label>
+            <span class="hint" x-text="queueStatus.queue_count ? queueStatus.queue_count + ' waiting' : 'Queue idle'"></span>
+        </div>
+        <div class="modal-actions">
+            <button class="ghost-button" @click="ui.showAddModal = false">Close</button>
+            <button class="cta"
+                    :disabled="uploadState.isSubmitting || (uploadState.tab === 'url' ? !inputs.url : !inputs.file)"
+                    :class="uploadState.isSubmitting ? 'opacity-60 pointer-events-none' : ''"
+                    @click="uploadManager.submit()">
+                <span x-text="uploadState.tab === 'url' ? 'Submit URL' : 'Upload File'"></span>
+            </button>
+        </div>
+        <div class="modal-actions">
+            <button class="ghost-button" @click="ui.showEditSetModal = false">Cancel</button>
+            <button class="cta" @click="saveSetMetadata">Save</button>
         </div>
     </div>
 </div>
 
-<!-- Admin Modal -->
-<div x-show="admin.show" x-cloak class="fixed inset-0 z-[80] flex items-center justify-center">
-    <div class="fixed inset-0 bg-black/70" @click="admin.show = false"></div>
-    <div class="bg-white border w-full max-w-2xl p-6 space-y-4 z-10">
-        <div class="flex items-center justify-between text-sm font-bold">
-            <span>ADMIN CONSOLE</span>
-            <button @click="admin.show = false" class="swiss-button">CLOSE</button>
+<div x-show="ui.showProfileModal" x-cloak class="modal-backdrop">
+    <div class="modal glass-panel">
+        <div class="modal-header">
+            <h3>Edit Profile</h3>
+            <button class="icon-button" @click="ui.showProfileModal = false">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+            </button>
         </div>
-        <div class="flex items-center gap-2 text-[11px]">
-            <input type="text" x-model="admin.invite.username" placeholder="USERNAME" class="swiss-input flex-1">
-            <input type="text" x-model="admin.invite.password" placeholder="PASSWORD (AUTO IF EMPTY)" class="swiss-input flex-1">
-            <button @click="inviteUser" class="swiss-button">INVITE</button>
+        <div class="modal-grid">
+            <div class="modal-field">
+                <label class="label">Name</label>
+                <input type="text" class="input-field" x-model="profile.display_name">
+            </div>
+            <div class="modal-field">
+                <label class="label">DJ Name</label>
+                <input type="text" class="input-field" x-model="profile.dj_name">
+            </div>
+            <div class="modal-field">
+                <label class="label">SoundCloud</label>
+                <input type="text" class="input-field" x-model="profile.soundcloud_url">
+            </div>
+            <div class="modal-field">
+                <label class="label">Avatar</label>
+                <input type="file" class="input-field" x-ref="avatarInput">
+            </div>
         </div>
-        <div class="tile divide-y divide-swiss">
+        <div class="modal-actions">
+            <button class="ghost-button" data-action="close-upload">Cancel</button>
+            <button class="cta" data-action="submit-upload">Start</button>
+        </div>
+    </div>
+</div>
+
+<div x-show="admin.show" x-cloak class="modal-backdrop">
+    <div class="modal glass-panel">
+        <div class="modal-header">
+            <h3>Admin Console</h3>
+            <button class="icon-button" @click="admin.show = false">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="modal-grid">
+            <div class="modal-field">
+                <label class="label">Username</label>
+                <input type="text" class="input-field" x-model="admin.invite.username">
+            </div>
+            <div class="modal-field">
+                <label class="label">Password</label>
+                <input type="text" class="input-field" x-model="admin.invite.password">
+            </div>
+            <div class="modal-field">
+                <label class="label">Temp Password</label>
+                <input type="text" class="input-field" x-model="admin.invite.generated" readonly>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="ghost-button" @click="inviteUser">Invite User</button>
+            <button class="ghost-button" @click="admin.show = false">Close</button>
+        </div>
+        <div class="set-list">
             <template x-for="user in admin.users" :key="user.id">
-                <div class="flex items-center justify-between px-4 py-3">
-                    <div class="flex flex-col">
-                        <span class="text-sm font-bold" x-text="user.username"></span>
-                        <span class="text-[10px] muted" x-text="formatDate(user.created_at)"></span>
+                <div class="set-list-item">
+                    <div class="set-list-titles">
+                        <span class="set-list-name" x-text="user.username"></span>
+                        <span class="muted" x-text="formatDate(user.created_at)"></span>
                     </div>
-                    <button @click="deleteUser(user.id)" class="swiss-button text-[10px] px-2 py-1">DELETE</button>
+                    <button class="chip-button" @click="deleteUser(user.id)">Delete</button>
                 </div>
             </template>
-            <div x-show="admin.users.length === 0" class="px-4 py-6 text-center text-[12px] muted">NO USERS</div>
+            <div class="empty-hint" x-show="!admin.users || !admin.users.length" x-cloak>No users yet.</div>
         </div>
-        <div class="text-[11px] font-bold" x-show="admin.invite.generated">TEMP PASSWORD: <span x-text="admin.invite.generated"></span></div>
     </div>
 </div>
+
+<div class="toast-stack">
+    <template x-for="toast in toasts" :key="toast.id">
+        <div class="toast glass-panel">
+            <div class="toast-title" x-text="toast.title"></div>
+            <div class="toast-subtitle" x-text="toast.subtitle"></div>
+        </div>
+    </template>
+</div>
+
+<footer class="player-bar glass-panel" x-show="activeTrack" x-cloak>
+    <div class="player-meta">
+        <button class="icon-button compact" @click="togglePlayPauseGlobal">
+            <svg x-show="audio.paused" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <svg x-show="!audio.paused" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
+        <div class="player-text">
+            <div class="player-title" x-text="activeTrack?.title || 'Now Playing'"></div>
+            <div class="player-artist" x-text="activeTrack?.artist || activeSet?.name"></div>
+        </div>
+    </div>
+    <div class="player-progress" @click="seekGlobal">
+        <div class="progress-bar">
+            <div class="progress-fill" :style="`width: ${audio.progressPercent || 0}%`"></div>
+        </div>
+        <div class="progress-times">
+            <span x-text="formatTime(audio.currentTime)"></span>
+            <span x-text="formatTime(audio.duration)"></span>
+        </div>
+    </div>
+</footer>
 
 <audio x-ref="player" @timeupdate="updateProgress" @ended="onAudioEnded" @pause="onAudioPaused" @play="onAudioPlaying" @error="onAudioError"></audio>
 </body>

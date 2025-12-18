@@ -1,3 +1,301 @@
+class AudioController {
+    constructor(ctx) {
+        this.ctx = ctx;
+        this.progressEl = null;
+        this.dragging = false;
+        this.boundMove = (e) => this.handleSeekMove(e);
+        this.boundEnd = (e) => this.stopSeek(e);
+    }
+
+    get player() {
+        return this.ctx?.$refs?.player || null;
+    }
+
+    syncVolume() {
+        if (this.player) this.player.volume = this.ctx.audio.volume;
+    }
+
+    registerProgressEl(el) {
+        if (el) this.progressEl = el;
+    }
+
+    async playTrack(target) {
+        const track = typeof target === 'object' ? target : null;
+        const query = typeof target === 'string'
+            ? target
+            : (track?.streamUrl || track?.audio_file || track?.source_url || `${track?.artist || ''} ${track?.title || ''}`.trim());
+
+        if (!query) {
+            this.ctx.showToast('Keine Quelle', 'Track enthält keinen Stream.', 'error');
+            return;
+        }
+
+        this.ctx.activeTrack = track || this.ctx.activeTrack;
+        this.ctx.ui.loadingId = track?.id || null;
+        this.ctx.audio.currentTime = 0;
+        this.ctx.audio.progressPercent = 0;
+
+        try {
+            const url = await this.resolveUrl(query, track);
+            await this.startPlayback(url, track);
+            const label = track ? `${track.artist || 'Unknown'} - ${track.title || ''}` : 'Stream gestartet';
+            this.ctx.showToast('Play', label.trim(), 'info');
+        } catch (error) {
+            this.ctx.ui.playingId = null;
+            this.ctx.showToast('Playback Fehler', error?.message || 'Konnte Stream nicht laden.', 'error');
+            throw error;
+        } finally {
+            this.ctx.ui.loadingId = null;
+        }
+    }
+
+    async resolveUrl(query, track) {
+        if (track?.streamUrl) return track.streamUrl;
+
+        const res = await fetch('/api/resolve_audio', {
+            method: 'POST',
+            body: JSON.stringify({ query })
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.ok || !data.url) {
+            const message = data.error || 'Keine Quelle gefunden.';
+            throw new Error(message);
+        }
+
+        if (track) track.streamUrl = data.url;
+        return data.url;
+    }
+
+    async startPlayback(url, track) {
+        const player = this.player;
+        if (!player) return;
+
+        player.src = url;
+        this.syncVolume();
+
+        try {
+            await player.play();
+            this.ctx.ui.playingId = track?.id || this.ctx.ui.playingId;
+            this.ctx.audio.paused = false;
+        } catch (error) {
+            this.ctx.audio.paused = true;
+            throw error;
+        }
+    }
+
+    async toggle(track) {
+        const player = this.player;
+        if (!player) return;
+
+        if (this.ctx.ui.playingId === track?.id && this.ctx.activeTrack) {
+            if (player.paused) { await player.play(); this.ctx.audio.paused = false; }
+            else { player.pause(); this.ctx.audio.paused = true; }
+            return;
+        }
+
+        return this.playTrack(track);
+    }
+
+    handleTimeUpdate(event) {
+        if (this.dragging) return;
+        const { currentTime, duration, paused } = event.target;
+        this.ctx.audio.currentTime = currentTime;
+        this.ctx.audio.duration = duration;
+        this.ctx.audio.progressPercent = duration ? (currentTime / duration) * 100 : 0;
+        this.ctx.audio.paused = paused;
+    }
+
+    seekFromEvent(event, element = null) {
+        const player = this.player;
+        const target = element || this.progressEl || event?.currentTarget;
+        if (!player || !target || !player.duration) return;
+
+        const rect = target.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+        const nextTime = pct * player.duration;
+
+        this.ctx.audio.progressPercent = pct * 100;
+        this.ctx.audio.currentTime = nextTime;
+        player.currentTime = nextTime;
+    }
+
+    startSeek(event) {
+        this.progressEl = event?.currentTarget || this.progressEl;
+        if (!this.player?.duration || !this.progressEl) return;
+
+        this.dragging = true;
+        this.seekFromEvent(event, this.progressEl);
+        window.addEventListener('pointermove', this.boundMove);
+        window.addEventListener('pointerup', this.boundEnd);
+    }
+
+    handleSeekMove(event) {
+        if (!this.dragging) return;
+        this.seekFromEvent(event, this.progressEl);
+    }
+
+    stopSeek(event) {
+        if (!this.dragging) return;
+        this.seekFromEvent(event, this.progressEl);
+        this.dragging = false;
+        window.removeEventListener('pointermove', this.boundMove);
+        window.removeEventListener('pointerup', this.boundEnd);
+    }
+
+    handleEnded() {
+        this.ctx.audio.paused = true;
+        this.ctx.audio.progressPercent = 0;
+        const advanced = this.next();
+        if (!advanced) this.ctx.ui.playingId = null;
+    }
+
+    handleError() {
+        this.ctx.ui.playingId = null;
+        this.ctx.ui.loadingId = null;
+        this.ctx.audio.paused = true;
+        this.ctx.showToast('Playback Fehler', 'Audio konnte nicht geladen werden.', 'error');
+    }
+
+    next() {
+        const queue = Array.isArray(this.ctx.tracks) ? this.ctx.tracks : [];
+        if (!queue.length) return false;
+
+        const currentId = this.ctx.ui.playingId || this.ctx.activeTrack?.id;
+        const currentIndex = queue.findIndex(t => t.id === currentId);
+        if (currentIndex === -1) return false;
+        const nextIndex = currentIndex + 1;
+
+        if (nextIndex >= 0 && nextIndex < queue.length) {
+            this.playTrack(queue[nextIndex]);
+            return true;
+        }
+
+        this.ctx.ui.playingId = null;
+        this.ctx.audio.progressPercent = 0;
+        return false;
+    }
+
+    previous() {
+        const queue = Array.isArray(this.ctx.tracks) ? this.ctx.tracks : [];
+        if (!queue.length) return false;
+
+        const currentId = this.ctx.ui.playingId || this.ctx.activeTrack?.id;
+        const currentIndex = queue.findIndex(t => t.id === currentId);
+        if (currentIndex === -1) return false;
+
+        if (currentIndex > 0) {
+            this.playTrack(queue[currentIndex - 1]);
+            return true;
+        }
+
+        if (this.player && this.player.currentTime > 2) {
+            this.player.currentTime = 0;
+            return true;
+        }
+
+        return false;
+class UploadManager {
+    constructor(component) {
+        this.component = component;
+        this.debounceTimer = null;
+    }
+
+    setTab(tab) {
+        this.component.uploadState.tab = tab;
+        this.component.inputs.url = tab === 'url' ? this.component.inputs.url : '';
+        if (tab === 'url') {
+            this.resetFile();
+        } else {
+            this.component.inputs.metaName = '';
+            this.component.inputs.metaArtist = '';
+            this.component.inputs.metaEvent = '';
+            this.component.inputs.metaTags = '';
+        }
+    }
+
+    resetFile() {
+        this.component.inputs.file = null;
+        if (this.component.$refs.fileInput) {
+            this.component.$refs.fileInput.value = '';
+        }
+    }
+
+    handleUrlInput(value) {
+        const url = (value || '').trim();
+        this.component.inputs.url = url;
+        this.component.uploadState.tab = 'url';
+        this.triggerMetadataResolve(url);
+    }
+
+    handlePaste(event) {
+        const pasted = event.clipboardData?.getData('text') || '';
+        if (pasted) {
+            this.handleUrlInput(pasted);
+        }
+    }
+
+    triggerMetadataResolve(url) {
+        clearTimeout(this.debounceTimer);
+        if (!url) return;
+        this.debounceTimer = setTimeout(() => {
+            this.component.fetchUrlMetadata(url);
+        }, 350);
+    }
+
+    handleFileChange(file) {
+        this.component.uploadState.tab = 'file';
+        this.component.inputs.file = file || null;
+        this.component.parseFileMetadata(file);
+    }
+
+    async submit(typeOverride = null) {
+        if (!this.component.ensureAuthenticated()) return;
+
+        const type = typeOverride || this.component.uploadState.tab;
+        const metadata = {
+            name: this.component.inputs.metaName,
+            artist: this.component.inputs.metaArtist,
+            event: this.component.inputs.metaEvent,
+            tags: this.component.inputs.metaTags,
+            is_b2b: this.component.inputs.is_b2b
+        };
+
+        this.component.uploadState.isSubmitting = true;
+        try {
+            if (type === 'url') {
+                if (!this.component.inputs.url) return;
+                const res = await fetch('/api/queue/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'url',
+                        value: this.component.inputs.url,
+                        metadata
+                    })
+                });
+                if (res.status === 401) return this.component.ensureAuthenticated();
+            } else {
+                const file = this.component.inputs.file || (this.component.$refs.fileInput?.files || [])[0];
+                if (!file) return;
+                const fd = new FormData();
+                fd.append('type', 'file');
+                fd.append('file', file);
+                fd.append('metadata', JSON.stringify(metadata));
+                const res = await fetch('/api/queue/add', { method: 'POST', body: fd });
+                if (res.status === 401) return this.component.ensureAuthenticated();
+            }
+
+            this.component.ui.showAddModal = false;
+            this.component.showQueueView();
+            this.component.resetUploadInputs();
+            await this.component.pollQueue();
+        } finally {
+            this.component.uploadState.isSubmitting = false;
+        }
+    }
+}
+
 document.addEventListener('alpine:init', () => {
     Alpine.data('tracklistify', () => ({
         // =====================================================================
@@ -15,8 +313,11 @@ document.addEventListener('alpine:init', () => {
         rescanCandidates: [],
         youtubeFeed: [],
         folders: [],
+        activeFolderId: null,
         draggingSet: null,
         folderHoverId: null,
+        trashHover: false,
+        cardHoverId: null,
 
         auth: {
             user: null,
@@ -51,7 +352,9 @@ document.addEventListener('alpine:init', () => {
         // UI STATE
         // =====================================================================
         currentView: 'dashboard',
-        queueStatus: { active: null, queue: [], history: [] },
+        queueStatus: { active: null, queue: [], history: [], queue_count: 0 },
+        uploadManager: null,
+        uploadState: { tab: 'url', lastResolvedUrl: '', isSubmitting: false, isProcessing: false },
         
         // Inputs für Upload Modal
         inputs: {
@@ -79,6 +382,7 @@ document.addEventListener('alpine:init', () => {
             contextMenu: { show: false, x: 0, y: 0, type: null, target: null, folderTarget: null },
             detailPanel: { show: false, type: null, item: null }
         },
+        audioController: null,
         
         toasts: [],
         lastLogLine: '', 
@@ -103,6 +407,7 @@ document.addEventListener('alpine:init', () => {
         // INITIALIZATION
         // =====================================================================
         init() {
+            this.uploadManager = new UploadManager(this);
             this.fetchSets();
             this.fetchLikes();
             this.fetchPurchases();
@@ -112,6 +417,8 @@ document.addEventListener('alpine:init', () => {
             this.fetchProfile();
             this.fetchYoutube();
             this.loadFolders();
+
+            this.audioController = new AudioController(this);
 
             // Volume wiederherstellen
             const vol = localStorage.getItem('tracklistify_volume');
@@ -128,13 +435,16 @@ document.addEventListener('alpine:init', () => {
 
             // Suche Watcher
             this.$watch('search', val => {
-                if(!val) this.filteredSets = this.sets;
-                else this.filteredSets = this.sets.filter(s => s.name.toLowerCase().includes(val.toLowerCase()));
+                this.updateFilteredSets();
             });
             
             // Player Init
             this.$nextTick(() => {
                 if(this.$refs.player) this.$refs.player.volume = this.audio.volume;
+                if (this.audioController) {
+                    this.audioController.syncVolume();
+                    if (this.$refs.footerProgress) this.audioController.registerProgressEl(this.$refs.footerProgress);
+                }
             });
         },
 
@@ -149,6 +459,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 const res = await fetch('/api/resolve_metadata', {
                     method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url })
                 });
                 const data = await res.json();
@@ -158,6 +469,7 @@ document.addEventListener('alpine:init', () => {
                     if (!this.inputs.metaName) this.inputs.metaName = data.name || '';
                     if (!this.inputs.metaArtist) this.inputs.metaArtist = data.artist || '';
                     if (!this.inputs.metaEvent) this.inputs.metaEvent = data.event || '';
+                    this.uploadState.lastResolvedUrl = url;
 
                     this.showToast("Infos gefunden", data.name || "Metadaten geladen", "info");
                 } else {
@@ -172,9 +484,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         // 2. Client: Regex Parser für lokale Dateinamen
-        parseFileMetadata() {
-            if (this.$refs.fileInput && this.$refs.fileInput.files[0]) {
-                const raw = this.$refs.fileInput.files[0].name.replace(/\.[^/.]+$/, "");
+        parseFileMetadata(file = null) {
+            const targetFile = file || (this.$refs.fileInput && this.$refs.fileInput.files[0]);
+            if (targetFile) {
+                const raw = targetFile.name.replace(/\.[^/.]+$/, "");
                 let clean = raw.replace(/_/g, ' ').replace(/\(.*?\)/g, '').replace(/\[.*?\]/g, '').trim();
                 
                 // Muster: Artist - Title @ Event
@@ -194,46 +507,19 @@ document.addEventListener('alpine:init', () => {
         // QUEUE & JOBS
         // =====================================================================
         async addToQueue(type) {
-            if (!this.ensureAuthenticated()) return;
+            return this.uploadManager.submit(type);
+        },
 
-            const fd = new FormData();
-            fd.append('type', type);
-            
-            const meta = { 
-                name: this.inputs.metaName, 
-                artist: this.inputs.metaArtist, 
-                event: this.inputs.metaEvent, 
-                tags: this.inputs.metaTags, 
-                is_b2b: this.inputs.is_b2b 
-            };
-            fd.append('metadata', JSON.stringify(meta));
-
-            if (type === 'url') {
-                if (!this.inputs.url) return;
-                fd.append('value', this.inputs.url);
-            } else {
-                const f = this.$refs.fileInput;
-                if (!f.files.length) return;
-                fd.append('file', f.files[0]);
-                f.value = '';
-            }
-
-            // Direkt Modal schließen und zur Queue springen
-            this.ui.showAddModal = false;
-            this.showQueueView();
-
-            const res = await fetch('/api/queue/add', { method: 'POST', body: fd });
-            if (res.status === 401) return this.ensureAuthenticated();
-
-            // UI Reset
+        resetUploadInputs() {
             this.inputs.url = '';
             this.inputs.metaName = '';
             this.inputs.metaArtist = '';
             this.inputs.metaEvent = '';
             this.inputs.metaTags = '';
-
-            // Zur Queue wechseln
-            this.pollQueue();
+            this.inputs.is_b2b = false;
+            this.uploadState.tab = 'url';
+            this.uploadState.lastResolvedUrl = '';
+            this.uploadManager.resetFile();
         },
 
         async pollQueue() {
@@ -251,8 +537,22 @@ document.addEventListener('alpine:init', () => {
                 // Live Log Toasties
                 this.handleLiveLog(status);
 
-                this.queueStatus = status;
+                this.queueStatus = {
+                    active: status.active || null,
+                    queue: status.queue || [],
+                    history: status.history || [],
+                    queue_count: typeof status.queue_count === 'number' ? status.queue_count : (status.queue || []).length
+                };
+                this.uploadState.isProcessing = !!(status?.active || (status?.queue || []).length);
             } catch(e) {}
+        },
+
+        processingLabel() {
+            if (this.queueStatus?.active) return this.queueStatus.active.label || 'Processing';
+            if (this.queueStatus?.queue && this.queueStatus.queue.length) {
+                return this.queueStatus.queue[0].label || 'Queued';
+            }
+            return '';
         },
 
         async stopQueue() {
@@ -272,12 +572,14 @@ document.addEventListener('alpine:init', () => {
             this.currentView = 'dashboard'; 
             this.activeSet = null; 
             this.fetchDashboard(); 
+            this.ui.trackViewOnly = false;
         },
         
         showQueueView() { 
             this.currentView = 'queue'; 
             this.activeSet = null; 
             this.ui.showLikes = false; 
+            this.ui.trackViewOnly = false;
         },
         
         showRescanView() {
@@ -285,6 +587,7 @@ document.addEventListener('alpine:init', () => {
             this.activeSet = null;
             this.fetchRescan();
             this.ui.showLikes = false;
+            this.ui.trackViewOnly = false;
         },
 
         showLikesView() {
@@ -293,15 +596,25 @@ document.addEventListener('alpine:init', () => {
             this.fetchLikes();
             this.fetchPurchases();
             this.fetchProducerLikes();
+            this.ui.trackViewOnly = false;
         },
 
         showCollections() {
             this.currentView = 'collections';
             this.fetchLikes();
+            this.ui.trackViewOnly = false;
         },
 
         showSetView(set) {
             this.loadSet(set);
+        },
+        focusOnSet(setOrId) {
+            this.ui.trackViewOnly = true;
+            this.loadSet(setOrId);
+        },
+        resetTrackView() {
+            this.ui.trackViewOnly = false;
+            this.currentView = 'sets';
         },
 
         // =====================================================================
@@ -336,6 +649,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.currentView = 'sets';
+            this.ui.trackViewOnly = true;
 
             const res = await fetch(`/api/sets/${id}/tracks`);
             this.tracks = await res.json();
@@ -528,58 +842,28 @@ document.addEventListener('alpine:init', () => {
             const val = parseFloat(e.target.value);
             this.audio.volume = val;
             if(this.$refs.player) this.$refs.player.volume = val;
+            if (this.audioController) this.audioController.syncVolume();
             localStorage.setItem('tracklistify_volume', val);
         },
         
         async togglePlay(track) {
-            const player = this.$refs.player;
-            player.volume = this.audio.volume;
-
-            if (this.ui.playingId === track.id) {
-                if (player.paused) { player.play(); this.audio.paused = false; }
-                else { player.pause(); this.audio.paused = true; }
-                return;
-            }
-
-            this.ui.loadingId = track.id;
-            this.audio.progressPercent = 0;
-            this.activeTrack = track;
-
-            let url = track.streamUrl;
-            
-            // Fallback: Ad-hoc laden
-            if (!url) {
-                try {
-                    const res = await fetch('/api/resolve_audio', { 
-                        method: 'POST', 
-                        body: JSON.stringify({ query: `${track.artist} - ${track.title}` }) 
-                    });
-                    const data = await res.json();
-                    if (data.ok) url = data.url;
-                } catch(e) { console.error(e); }
-            }
-
-            if (url) {
-                track.streamUrl = url;
-                player.src = url;
-                player.play().then(() => {
-                    this.ui.playingId = track.id;
-                    this.audio.paused = false;
-                }).catch(() => this.showToast("Autoplay verhindert", "Browser Policy", "info"));
-            } else {
-                this.showToast("Stream nicht verfügbar", "Keine Quelle gefunden.", "info");
-            }
-            this.ui.loadingId = null;
+            if (!track) return;
+            if (this.audioController) return this.audioController.toggle(track);
         },
         
         togglePlayPauseGlobal() {
-            const player = this.$refs.player;
-            if (!this.activeTrack) return;
-            if (player.paused) { player.play(); this.audio.paused = false; }
-            else { player.pause(); this.audio.paused = true; }
+            if (!this.activeTrack && !this.ui.playingId) return;
+            const current = this.tracks.find(t => t.id === this.ui.playingId) || this.activeTrack;
+            if (current && this.audioController) return this.audioController.toggle(current);
+            if (!this.audioController && this.$refs.player) {
+                const player = this.$refs.player;
+                if (player.paused) { player.play(); this.audio.paused = false; }
+                else { player.pause(); this.audio.paused = true; }
+            }
         },
         
         updateProgress(e) {
+            if (this.audioController) return this.audioController.handleTimeUpdate(e);
             const { currentTime, duration } = e.target;
             this.audio.currentTime = currentTime;
             this.audio.duration = duration;
@@ -588,29 +872,27 @@ document.addEventListener('alpine:init', () => {
         },
         
         seekGlobal(e) {
-            const player = this.$refs.player;
-            if (!player.duration) return;
-            const rect = e.currentTarget.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const pct = Math.max(0, Math.min(1, x / rect.width));
-            player.currentTime = pct * player.duration;
+            if (this.audioController) this.audioController.seekFromEvent(e, e.currentTarget);
         },
         
         seek(e, track) {
-            // Scrubbing in der Liste
+            if (!track) return;
             const player = this.$refs.player;
-            const rect = e.currentTarget.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const pct = Math.max(0, Math.min(1, x / rect.width));
-            
-            if (this.ui.playingId === track.id) {
-                if (player.duration) player.currentTime = pct * player.duration;
-            } else {
+            if (this.ui.playingId !== track.id) {
                 this.togglePlay(track).then(() => {
-                    if (player.duration) player.currentTime = pct * player.duration;
+                    if (this.audioController) this.audioController.seekFromEvent(e, e.currentTarget);
                 });
+                return;
             }
+
+            if (this.audioController && player?.duration) this.audioController.seekFromEvent(e, e.currentTarget);
         },
+
+        startProgressDrag(e) { if (this.audioController) this.audioController.startSeek(e); },
+        dragProgress(e) { if (this.audioController) this.audioController.handleSeekMove(e); },
+        endProgressDrag(e) { if (this.audioController) this.audioController.stopSeek(e); },
+        playNextInQueue() { if (this.audioController) this.audioController.next(); },
+        playPreviousInQueue() { if (this.audioController) this.audioController.previous(); },
 
         // --- Preloading Engine ---
         startPreloading() {
@@ -767,209 +1049,71 @@ document.addEventListener('alpine:init', () => {
             this.auth.dropdownOpen = false;
         },
 
-        ensureAuthenticated() {
-            if (this.auth.user) return true;
-            const next = encodeURIComponent(window.location.pathname + window.location.search);
-            window.location.href = `/login?next=${next}`;
+    toggle(source) {
+        if (this.currentTrack === source && !this.audio.paused) {
+            this.audio.pause();
             return false;
-        },
+        }
+        this.play(source);
+        return true;
+    }
+}
 
-        async saveProfile() {
-            if (!this.ensureAuthenticated()) return;
+class UIManager {
+    constructor(options) {
+        this.gridEl = options.gridEl;
+        this.tracklistEl = options.tracklistEl;
+        this.folderListEl = options.folderListEl;
+        this.trashZoneEl = options.trashZoneEl;
+        this.searchInput = options.searchInput;
+        this.statsEls = options.statsEls;
+        this.setsListEl = options.setsListEl;
+        this.toastStack = options.toastStack;
+        this.activeSetTitle = options.activeSetTitle;
+        this.emptyTracklist = options.emptyTracklist;
+        this.uploadModal = options.uploadModal;
+    }
 
-            const fd = new FormData();
-            fd.append('display_name', this.profile.display_name || '');
-            fd.append('dj_name', this.profile.dj_name || '');
-            fd.append('soundcloud_url', this.profile.soundcloud_url || '');
-            if (this.$refs.avatarInput && this.$refs.avatarInput.files[0]) {
-                fd.append('avatar', this.$refs.avatarInput.files[0]);
+    bindSetGridHandlers({ onSelect, onDragStart, onDragEnd }) {
+        if (!this.gridEl) return;
+        this.gridEl.addEventListener('click', (event) => {
+            const card = event.target.closest('[data-set-id]');
+            if (card && onSelect) {
+                onSelect(card.dataset.setId);
             }
-
-            const res = await fetch('/api/auth/profile', { method: 'POST', body: fd });
-            const data = await res.json();
-            if (res.ok && data.ok) {
-                this.profile.avatar_url = data.avatar_url || this.profile.avatar_url;
-                this.ui.showProfileModal = false;
+        });
+        this.gridEl.addEventListener('dragstart', (event) => {
+            const card = event.target.closest('[data-set-id]');
+            if (card && onDragStart) {
+                onDragStart(card.dataset.setId, event);
             }
-        },
+        });
+        this.gridEl.addEventListener('dragend', () => {
+            if (onDragEnd) onDragEnd();
+        });
+    }
 
-        async openAdmin() {
-            if (!this.ensureAuthenticated()) return;
-            await this.loadAdminUsers();
-            this.admin.show = true;
-        },
-
-        async loadAdminUsers() {
-            const res = await fetch('/api/users');
-            const data = await res.json();
-            if (res.ok && data.ok) {
-                this.admin.users = data.users || [];
+    bindFolderHandlers({ onFolderSelect, onDrop }) {
+        if (!this.folderListEl) return;
+        this.folderListEl.addEventListener('click', (event) => {
+            const folder = event.target.closest('[data-folder-id]');
+            if (folder && onFolderSelect) {
+                onFolderSelect(folder.dataset.folderId);
             }
-        },
-
-        async inviteUser() {
-            if (!this.ensureAuthenticated()) return;
-            const payload = { username: this.admin.invite.username, password: this.admin.invite.password };
-            const res = await fetch('/api/users/invite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            const data = await res.json();
-            if (res.ok && data.ok) {
-                this.admin.invite.generated = data.password;
-                this.admin.invite.username = '';
-                this.admin.invite.password = '';
-                await this.loadAdminUsers();
-            }
-        },
-
-        async deleteUser(userId) {
-            if (!this.ensureAuthenticated()) return;
-            await fetch(`/api/users/${userId}`, { method: 'DELETE' });
-            await this.loadAdminUsers();
-        },
-
-        async toggleLike(track) {
-            if (!this.ensureAuthenticated()) return;
-
-            track.liked = !track.liked;
-            // Update Local List
-            if (!track.liked) {
-                this.likedTracks = this.likedTracks.filter(t => t.id !== track.id);
-            } else if (!this.likedTracks.find(t => t.id === track.id)) {
-                this.likedTracks.push({ ...track, set_name: track.set_name || (this.activeSet ? this.activeSet.name : track.set_name) });
-            }
-
-            await fetch(`/api/tracks/${track.id}/like`, {
-                method: 'POST',
-                body: JSON.stringify({liked: track.liked ? 1 : 0})
-            });
-
-            if (this.currentView === 'collections') this.fetchLikes();
-        },
-
-        async togglePurchase(track) {
-            track.purchased = !track.purchased;
-
-            if (!track.purchased) {
-                this.purchasedTracks = this.purchasedTracks.filter(t => t.id !== track.id);
-            }
-
-            await fetch(`/api/tracks/${track.id}/purchase`, {
-                method: 'POST',
-                body: JSON.stringify({purchased: track.purchased ? 1 : 0})
-            });
-
-            this.fetchPurchases();
-        },
-
-        // =====================================================================
-        // FOLDER MANAGEMENT
-        // =====================================================================
-        async loadFolders() {
-            try {
-                const res = await fetch('/api/folders');
-                if (res.ok) {
-                    const data = await res.json();
-                    this.folders = Array.isArray(data) ? data : (data.folders || []);
-                    this.ensureFolderStructure();
-                    this.syncFolderAssignments();
-                    this.persistFoldersLocally();
-                    return;
+        });
+        ['dragenter', 'dragover'].forEach((type) => {
+            this.folderListEl.addEventListener(type, (event) => {
+                const folder = event.target.closest('[data-folder-id]');
+                if (folder) {
+                    event.preventDefault();
+                    folder.classList.add('is-hovered');
                 }
-            } catch (e) {}
-
-            const cached = localStorage.getItem('tracklistify_folders');
-            this.folders = cached ? JSON.parse(cached) : [];
-            this.ensureFolderStructure();
-            this.syncFolderAssignments();
-        },
-
-        ensureFolderStructure() {
-            this.folders = (this.folders || []).map(folder => ({
-                id: folder.id ?? `local-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-                name: folder.name || 'Ordner',
-                sets: (folder.sets || []).map(item => typeof item === 'object' ? item.id : item)
-            }));
-        },
-
-        persistFoldersLocally() {
-            try {
-                localStorage.setItem('tracklistify_folders', JSON.stringify(this.folders));
-            } catch (e) {}
-        },
-
-        syncFolderAssignments() {
-            if (!this.sets || !this.sets.length) return;
-
-            const setMap = new Map(this.sets.map(s => [s.id, s]));
-            this.sets.forEach(set => set.folder_id = null);
-
-            (this.folders || []).forEach(folder => {
-                folder.sets = (folder.sets || []).map(item => typeof item === 'object' ? item.id : item).filter(id => setMap.has(id));
-                folder.sets.forEach(setId => {
-                    const target = setMap.get(setId);
-                    if (target) target.folder_id = folder.id;
-                });
             });
-
             this.persistFoldersLocally();
         },
 
-        async createFolder() {
-            const defaultName = `Ordner ${this.folders.length + 1}`;
-            const name = prompt('Ordnername', defaultName) || defaultName;
-            const optimisticFolder = { id: `local-${Date.now()}`, name, sets: [] };
-            let created = optimisticFolder;
-
-            try {
-                const res = await fetch('/api/folders', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ name }) 
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    created = data.folder || data;
-                    created.sets = created.sets || [];
-                }
-            } catch (e) {}
-
-            this.folders = [created, ...this.folders];
-            this.ensureFolderStructure();
-            this.persistFoldersLocally();
-        },
-
-        onDragSet(set, event) {
-            this.draggingSet = set;
-            this.folderHoverId = null;
-            if (event && event.dataTransfer) {
-                event.dataTransfer.effectAllowed = 'move';
-                event.dataTransfer.setData('text/plain', set.id);
-            }
-        },
-
-        onDragEnd() {
-            this.draggingSet = null;
-            this.folderHoverId = null;
-        },
-
-        onFolderDragEnter(folder, event) {
-            event.preventDefault();
-            this.folderHoverId = folder.id;
-        },
-
-        onFolderDragLeave(folder) {
-            if (this.folderHoverId === folder.id) this.folderHoverId = null;
-        },
-
-        onFolderDragOver(event) {
-            event.preventDefault();
-        },
-
-        async onDropToFolder(folder, event) {
-            event.preventDefault();
-            const set = this.draggingSet;
-            this.draggingSet = null;
-            this.folderHoverId = null;
-            if (!set) return;
+        async assignSetToFolder(set, folder) {
+            if (!set || !folder) return;
 
             (this.folders || []).forEach(f => {
                 f.sets = (f.sets || []).filter(id => id !== set.id);
@@ -985,6 +1129,224 @@ document.addEventListener('alpine:init', () => {
                     headers: { 'Content-Type': 'application/json' }, 
                     body: JSON.stringify({ set_id: set.id }) 
                 });
+            } catch (e) {}
+
+            this.persistFoldersLocally();
+        },
+
+        syncFolderAssignments() {
+            if (!this.sets || !this.sets.length) return;
+
+            this.ensureFolderStructure();
+            const setMap = new Map(this.sets.map(s => [s.id, s]));
+            this.sets.forEach(set => set.folder_id = null);
+
+            (this.folders || []).forEach(folder => {
+                folder.sets = Array.from(new Set((folder.sets || []).map(item => typeof item === 'object' ? item.id : item).filter(id => setMap.has(id))));
+                folder.sets.forEach(setId => {
+                    const target = setMap.get(setId);
+                    if (target) target.folder_id = folder.id;
+                });
+            });
+
+            this.persistFoldersLocally();
+            this.updateFilteredSets();
+        },
+
+        async createFolder() {
+            const name = (this.folderForm.name || '').trim() || this.defaultFolderName();
+            const optimisticId = `local-${Date.now()}`;
+            const optimisticFolder = { id: optimisticId, name, sets: [] };
+            this.folders = [optimisticFolder, ...this.folders];
+            this.ensureFolderStructure();
+            this.persistFoldersLocally();
+            this.activeFolderId = optimisticId;
+            this.updateFilteredSets();
+            let created = null;
+
+            try {
+                const res = await fetch('/api/folders', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ name }) 
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    created = data.folder || data;
+                    created.sets = created.sets || [];
+                    this.folders = this.folders.map(folder => folder.id === optimisticId ? created : folder);
+                    this.activeFolderId = created.id;
+                    this.ensureFolderStructure();
+                    this.syncFolderAssignments();
+                }
+            } catch (e) {}
+
+            if (created) this.ensureFolderStructure([created, ...this.folders]);
+            this.syncFolderAssignments();
+            this.persistFoldersLocally();
+        },
+
+        updateFoldersFromServer(folders) {
+            this.ensureFolderStructure(folders);
+            this.syncFolderAssignments();
+            this.persistFoldersLocally();
+        },
+
+        applyFolderAssignment(folderId, setId) {
+            const targetId = !Number.isNaN(Number(folderId)) ? Number(folderId) : folderId;
+            this.folders = (this.folders || []).map(folder => {
+                const normalizedSets = new Set((folder.sets || []).map(item => typeof item === 'object' ? item.id : item));
+                normalizedSets.delete(setId);
+                if (folder.id === targetId) normalizedSets.add(setId);
+                return { ...folder, sets: Array.from(normalizedSets) };
+            });
+        });
+        this.folderListEl.addEventListener('drop', (event) => {
+            const folder = event.target.closest('[data-folder-id]');
+            if (folder && onDrop) {
+                event.preventDefault();
+                onDrop(folder.dataset.folderId, event);
+            }
+        },
+
+        onDragEnd() {
+            this.draggingSet = null;
+            this.folderHoverId = null;
+            this.trashHover = false;
+            this.cardHoverId = null;
+        },
+
+        setCardClasses(set) {
+            return {
+                'is-dragging': this.draggingSet && this.draggingSet.id === set.id,
+                'is-drop-target': this.cardHoverId === set.id
+            };
+        },
+
+        onCardDragEnter(set) {
+            this.cardHoverId = set?.id || null;
+        },
+
+        onCardDragLeave(set) {
+            if (this.cardHoverId === (set?.id || null)) this.cardHoverId = null;
+        },
+
+        onCardDragOver(event) {
+            if (event && event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+        },
+
+        onCardDrop(set, event) {
+            event.preventDefault();
+            this.cardHoverId = null;
+            const target = set || this.resolveDraggedSet(event);
+            if (target) this.focusOnSet(target);
+            this.onDragEnd();
+        },
+
+        resolveDraggedSet(event) {
+            if (this.draggingSet) return this.draggingSet;
+            const dataTransfer = event?.dataTransfer;
+            if (!dataTransfer) return null;
+
+            const json = dataTransfer.getData('application/json');
+            if (json) {
+                try {
+                    const payload = JSON.parse(json);
+                    const payloadId = payload.setId ?? payload.set_id ?? payload.id;
+                    const numericId = !Number.isNaN(Number(payloadId)) ? Number(payloadId) : payloadId;
+                    if (payloadId) {
+                        return this.sets.find(s => s.id === numericId) || { id: numericId };
+                    }
+                } catch (e) {}
+            }
+
+            const text = dataTransfer.getData('text/plain');
+            const idFromText = parseInt(text, 10);
+            if (idFromText) return this.sets.find(s => s.id === idFromText) || { id: idFromText };
+            return null;
+        },
+
+        onFolderDragEnter(folder, event) {
+            event.preventDefault();
+            this.draggingSet = this.draggingSet || this.resolveDraggedSet(event);
+            this.folderHoverId = folder.id;
+        },
+
+        onFolderDragLeave(folder) {
+            if (this.folderHoverId === folder.id) this.folderHoverId = null;
+        },
+
+        onFolderDragOver(event) {
+            event.preventDefault();
+            if (event && event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+        },
+
+        async onDropToFolder(folder, event) {
+            event.preventDefault();
+            const dragged = this.resolveDraggedSet(event);
+            const resolvedSet = dragged ? (this.sets.find(s => s.id === dragged.id) || dragged) : null;
+            this.draggingSet = null;
+            this.folderHoverId = null;
+            this.cardHoverId = null;
+            if (!resolvedSet) return;
+            await this.assignSetToFolder(resolvedSet, folder);
+        },
+
+        async renameFolderContext(folder = this.ui.contextMenu.target) {
+            this.closeContextMenu();
+            if (!folder) return;
+            const next = prompt('Ordner umbenennen', folder.name) || folder.name;
+            if (next === folder.name) return;
+            folder.name = next;
+
+            try {
+                const res = await fetch(`/api/folders/${folder.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: next })
+                });
+                if (res && res.ok) {
+                    const data = await res.json();
+                    if (data.folders) this.updateFoldersFromServer(data.folders);
+                }
+            } catch (e) {}
+            this.persistFoldersLocally();
+        },
+
+        onTrashDragEnter(event) {
+            event.preventDefault();
+            this.draggingSet = this.draggingSet || this.resolveDraggedSet(event);
+            this.trashHover = true;
+        },
+
+        onTrashDragLeave() {
+            this.trashHover = false;
+        },
+
+        async onDropToTrash(event) {
+            event.preventDefault();
+            const set = this.resolveDraggedSet(event);
+            this.draggingSet = null;
+            this.folderHoverId = null;
+            this.trashHover = false;
+            this.cardHoverId = null;
+            if (!set) return;
+            await this.deleteSet(set, { prompt: true });
+        },
+
+        async deleteFolderContext(folder = this.ui.contextMenu.target) {
+            this.closeContextMenu();
+            if (!folder) return;
+
+            if (!confirm(`Ordner "${folder.name}" löschen?`)) return;
+
+            this.folders = (this.folders || []).filter(f => f.id !== folder.id);
+            this.sets.forEach(set => {
+                if (set.folder_id === folder.id) set.folder_id = null;
+            });
+
+            try {
+                await fetch(`/api/folders/${folder.id}`, { method: 'DELETE' });
             } catch (e) {}
 
             this.persistFoldersLocally();
@@ -1006,6 +1368,123 @@ document.addEventListener('alpine:init', () => {
                 method: 'POST',
                 body: JSON.stringify({ liked: nextStatus ? 1 : 0 })
             });
+        });
+        ['dragleave', 'drop'].forEach((type) => {
+            this.trashZoneEl.addEventListener(type, () => this.trashZoneEl.classList.remove('is-hovered'));
+        });
+        this.trashZoneEl.addEventListener('drop', (event) => {
+            event.preventDefault();
+            if (onDrop) onDrop(event);
+        });
+    }
+
+    renderFolders(folders, activeFolderId) {
+        if (!this.folderListEl) return;
+        const frag = document.createDocumentFragment();
+        folders.forEach((folder) => {
+            const item = document.createElement('div');
+            item.className = `folder ${activeFolderId === String(folder.id) ? 'is-hovered' : ''}`;
+            item.dataset.folderId = folder.id;
+            item.innerHTML = `
+                <div class="meta">
+                    <div class="name">${folder.name}</div>
+                    <div class="count">${(folder.sets?.length || 0)} sets</div>
+                </div>
+                <span class="pill">${(folder.sets?.length || 0)}x</span>
+            `;
+            frag.appendChild(item);
+        });
+        if (!folders.length) {
+            const empty = document.createElement('div');
+            empty.className = 'hint';
+            empty.textContent = 'No folders yet';
+            frag.appendChild(empty);
+        }
+        this.folderListEl.replaceChildren(frag);
+    }
+
+    renderSetGrid(sets) {
+        if (!this.gridEl) return;
+        const frag = document.createDocumentFragment();
+        sets.forEach((set) => frag.appendChild(this.createSetCard(set)));
+        if (!sets.length) {
+            const empty = document.createElement('div');
+            empty.className = 'set-card';
+            empty.style.display = 'flex';
+            empty.style.alignItems = 'center';
+            empty.style.justifyContent = 'center';
+            empty.textContent = 'No sets yet';
+            frag.appendChild(empty);
+        }
+        this.gridEl.replaceChildren(frag);
+    }
+
+    renderSetList(sets) {
+        if (!this.setsListEl) return;
+        const frag = document.createDocumentFragment();
+        sets.forEach((set) => {
+            const button = document.createElement('button');
+            button.className = 'w-full text-left px-4 py-3 border-b last:border-b-0';
+            button.dataset.setId = set.id;
+            button.innerHTML = `
+                <div class="flex items-center justify-between text-[12px] font-bold gap-2">
+                    <div class="flex items-center gap-2 truncate">
+                        <span class="truncate">${set.name}</span>
+                    </div>
+                    <span class="font-mono px-2 py-0.5 pill">${set.track_count || 0}</span>
+                </div>
+                <div class="text-[10px] muted">${this.formatDate(set.created_at)}</div>
+            `;
+            frag.appendChild(button);
+        });
+        if (!sets.length) {
+            const empty = document.createElement('div');
+            empty.className = 'hint';
+            empty.style.padding = '12px 16px';
+            empty.textContent = 'No sets yet';
+            frag.appendChild(empty);
+        }
+        this.setsListEl.replaceChildren(frag);
+    }
+
+    renderTracks(tracks) {
+        if (!this.tracklistEl) return;
+        const frag = document.createDocumentFragment();
+        tracks.forEach((track, index) => {
+            const row = document.createElement('div');
+            row.className = 'track';
+            row.dataset.trackId = track.id;
+            row.innerHTML = `
+                <div class="pos">
+                    <button class="icon-button" data-action="play-track" data-track-id="${track.id}" style="width:32px; height:32px; border-radius:10px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                    <span>${track.flag === 3 ? '???' : (track.position || index + 1)}</span>
+                </div>
+                <div class="names">
+                    <div class="song">${track.title || 'Unknown Track'}</div>
+                    <div class="artist">${track.artist || 'Unknown Artist'}</div>
+                </div>
+                <div class="names">
+                    <div class="artist">Start</div>
+                    <div class="song" style="font-size:13px;">${this.formatTime(track.start_time)}</div>
+                </div>
+                <div class="names">
+                    <div class="artist">Confidence</div>
+                    <div class="song" style="font-size:13px;">${this.formatConf(track.confidence)}</div>
+                </div>
+                <div class="controls">
+                    <button class="ghost-button" data-action="purchase-track" data-track-id="${track.id}">${track.purchased ? 'Bought' : 'Buy'}</button>
+                    <button class="ghost-button" data-action="like-track" data-track-id="${track.id}">${track.liked ? 'Liked' : 'Like'}</button>
+                </div>
+            `;
+            frag.appendChild(row);
+        });
+        this.tracklistEl.replaceChildren(frag);
+        if (this.emptyTracklist) {
+            this.emptyTracklist.classList.toggle('is-hidden', tracks.length > 0);
+        }
+    }
 
             await this.fetchProducerLikes();
         },
@@ -1034,10 +1513,10 @@ document.addEventListener('alpine:init', () => {
         // =====================================================================
         // UTILS & HELPERS
         // =====================================================================
-        onAudioEnded() { this.ui.playingId = null; this.audio.progressPercent = 0; this.audio.paused = true; },
+        onAudioEnded() { if (this.audioController) this.audioController.handleEnded(); else { this.ui.playingId = null; this.audio.progressPercent = 0; this.audio.paused = true; } },
         onAudioPaused() { this.audio.paused = true; },
         onAudioPlaying() { this.audio.paused = false; },
-        onAudioError() { this.ui.playingId = null; this.ui.loadingId = null; }, // Silent error
+        onAudioError() { if (this.audioController) this.audioController.handleError(); else { this.ui.playingId = null; this.ui.loadingId = null; } },
         
         showToast(title, subtitle = '', type = 'default') {
             const id = Date.now();
@@ -1069,88 +1548,414 @@ document.addEventListener('alpine:init', () => {
             return 'Verarbeite...';
         },
 
+        statHighlights() {
+            return [
+                { key: 'sets', label: 'SETS', value: this.dashboardStats.total_sets || 0 },
+                { key: 'tracks', label: 'TRACKS', value: this.dashboardStats.total_tracks || 0 },
+                { key: 'likes', label: 'LIKES', value: this.dashboardStats.total_likes || 0 },
+                { key: 'discovery', label: 'DISCOVERY', value: (this.dashboardStats.discovery_rate || 0) + '%' }
+            ];
+        },
+
+        hasSetThumbnail(set) {
+            return Boolean(set?.thumbnail || set?.thumbnail_url);
+        },
+
+        setCardBackground(set) {
+            const thumb = set?.thumbnail || set?.thumbnail_url;
+            if (!thumb) return '';
+            return `background-image: linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.55)), url('${thumb}')`;
+        },
+
+        setFolderLabel(set) {
+            if (!set?.folder_id) return 'NO FOLDER';
+            const match = (this.folders || []).find(f => f.id === set.folder_id);
+            return match ? match.name : 'NO FOLDER';
+        },
+        
         cleanLogMessage(msg) {
             const parts = msg.split(' - ');
             const level = parts[0]?.toLowerCase();
 
             if (parts.length >= 3 && ['info', 'debug', 'warning', 'error'].includes(level)) {
                 return parts.slice(2).join(' - ').trim();
+    renderStats(stats = {}) {
+        Object.entries(this.statsEls).forEach(([key, el]) => {
+            if (!el) return;
+            if (key === 'discovery_rate') {
+                el.textContent = `${stats[key] ?? 0}%`;
+            } else {
+                el.textContent = stats[key] ?? 0;
             }
+        });
+    }
 
-            return msg;
-        },
-
-        handleLiveLog(status) {
-            if (!status.active) {
-                this.lastLogLine = '';
-                return;
-            }
-
-            if (!status.active.log) return;
-
-            const currentLog = status.active.log.trim();
-            if (currentLog === this.lastLogLine) return;
-            this.lastLogLine = currentLog;
-
-            const cleanMsg = this.cleanLogMessage(currentLog.replace(/\[.*?\]/g, '').trim());
-            const lower = cleanMsg.toLowerCase();
-
-            if (lower.includes('soundcloud profile') || lower.includes('dj profile')) {
-                this.showToast('DJ verknüpft', cleanMsg, 'dj');
-                return;
-            }
-
-            if (lower.includes('beatport profile') || lower.includes('producer')) {
-                this.showToast('Producer gefunden', cleanMsg, 'producer');
-                return;
-            }
-
-            if (lower.includes('artist profile') || lower.includes('artist page') || lower.includes('profil')) {
-                this.showToast('Artist-Profil', cleanMsg, 'artist');
-                return;
-            }
-
-            if (lower.includes('download:')) {
-                this.showToast('Download gestartet', status.active.label, 'info');
-                return;
-            }
-
-            if (lower.includes('identifying segment')) {
-                const match = cleanMsg.match(/(\d+(?:\.\d+)?)s/);
-                const seconds = match ? parseFloat(match[1]) : null;
-                const prettyTime = seconds !== null ? this.formatTime(seconds) : null;
-                const subtitle = prettyTime ? `Analysiere Segment bei ${prettyTime}` : 'Analysiere Segment...';
-                this.showToast('Analyse läuft', subtitle, 'info');
-                return;
-            }
-
-            if (
-                lower.includes('identified') ||
-                lower.includes('track match') ||
-                (lower.includes('found') && lower.includes('track')) ||
-                cleanMsg.includes('=>')
-            ) {
-                this.showToast('Track erkannt', cleanMsg, 'track');
-            }
-        },
-        
-        getSearchLink(track, provider) {
-             const q = encodeURIComponent(`${track.artist} ${track.title}`);
-             const map = {
-                 youtube: `https://www.youtube.com/results?search_query=${q}`,
-                 beatport: track.beatport_url || `https://www.beatport.com/search?q=${q}`,
-                 bandcamp: `https://bandcamp.com/search?q=${q}`,
-                 soundcloud: `https://soundcloud.com/search?q=${q}`,
-                 google: `https://www.google.com/search?q=${q}`
-             };
-             return map[provider] || '#';
-        },
-        
-        copyTracklist() { 
-            if(!this.tracks.length) return; 
-            const list = this.tracks.map(t => `[${this.formatTime(t.start_time)}] ${t.artist} - ${t.title}`).join('\n'); 
-            navigator.clipboard.writeText(list); 
-            this.showToast("Kopiert!", "", "success"); 
+    updateActiveSetTitle(title) {
+        if (this.activeSetTitle) {
+            this.activeSetTitle.textContent = title || 'Select a set to view tracks';
         }
-    }));
+    }
+
+    toggleUploadModal(visible) {
+        if (!this.uploadModal) return;
+        this.uploadModal.classList.toggle('is-hidden', !visible);
+    }
+
+    showToast(title, subtitle = '') {
+        if (!this.toastStack) return;
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `<div class="title">${title}</div><div class="subtitle">${subtitle}</div>`;
+        this.toastStack.appendChild(toast);
+        setTimeout(() => toast.remove(), 4000);
+    }
+
+    createSetCard(set) {
+        const card = document.createElement('div');
+        card.className = 'set-card';
+        card.dataset.setId = set.id;
+        card.draggable = true;
+        const thumbStyle = set.thumbnail ? `style="background-image:url(${set.thumbnail})"` : '';
+        const fallback = (set.artists || set.dj_names || set.name || 'SET').slice(0, 6).toUpperCase();
+        card.innerHTML = `
+            <div class="set-thumb" ${thumbStyle}>
+                ${set.thumbnail ? '' : `<div class="fallback">${fallback}</div>`}
+            </div>
+            <div class="set-meta">
+                <div class="set-pill">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h6l2 3h8v9H4z"/></svg>
+                    <span>${set.track_count || 0} tracks</span>
+                </div>
+                <div class="set-title">${set.name}</div>
+                <div class="set-artist">${set.artists || set.dj_names || 'Unknown Artist'}</div>
+            </div>
+            <div class="set-footer">
+                <span>${this.formatDate(set.created_at)}</span>
+                <span>${set.event || 'Ready'}</span>
+            </div>
+        `;
+        return card;
+    }
+
+    formatDate(value) {
+        if (!value) return '—';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '—';
+        return date.toLocaleDateString();
+    }
+
+    formatTime(seconds) {
+        if (!seconds && seconds !== 0) return '—';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
+        return `${mins}:${secs}`;
+    }
+
+    formatConf(conf) {
+        if (conf === undefined || conf === null) return '—';
+        return `${Math.round(conf * 100)}%`;
+    }
+}
+
+class UploadManager {
+    constructor(modalEl, api, ui) {
+        this.modal = modalEl;
+        this.api = api;
+        this.ui = ui;
+        this.inputs = {
+            url: document.getElementById('upload-url'),
+            artist: document.getElementById('upload-artist'),
+            title: document.getElementById('upload-title'),
+            event: document.getElementById('upload-event'),
+            tags: document.getElementById('upload-tags'),
+            b2b: document.getElementById('upload-b2b')
+        };
+    }
+
+    bind() {
+        document.querySelectorAll('[data-action="open-upload"]').forEach((btn) => btn.addEventListener('click', () => this.ui.toggleUploadModal(true)));
+        document.querySelectorAll('[data-action="close-upload"]').forEach((btn) => btn.addEventListener('click', () => this.ui.toggleUploadModal(false)));
+        const fetchBtn = document.querySelector('[data-action="fetch-metadata"]');
+        if (fetchBtn) fetchBtn.addEventListener('click', () => this.fetchMetadata());
+        const submitBtn = document.querySelector('[data-action="submit-upload"]');
+        if (submitBtn) submitBtn.addEventListener('click', () => this.submit());
+    }
+
+    async fetchMetadata() {
+        const url = this.inputs.url?.value?.trim();
+        if (!url) return;
+        try {
+            const data = await this.api.resolveMetadata(url);
+            if (data?.name && !this.inputs.title.value) this.inputs.title.value = data.name;
+            if (data?.artist && !this.inputs.artist.value) this.inputs.artist.value = data.artist;
+            if (data?.event && !this.inputs.event.value) this.inputs.event.value = data.event;
+            this.ui.showToast('Metadata fetched', data?.name || '');
+        } catch (e) {
+            this.ui.showToast('Could not fetch metadata');
+        }
+    }
+
+    async submit() {
+        const url = this.inputs.url?.value?.trim();
+        if (!url) {
+            this.ui.showToast('Please provide a URL');
+            return;
+        }
+        const metadata = {
+            name: this.inputs.title?.value || '',
+            artist: this.inputs.artist?.value || '',
+            event: this.inputs.event?.value || '',
+            tags: this.inputs.tags?.value || '',
+            is_b2b: !!this.inputs.b2b?.checked
+        };
+
+        const formData = new FormData();
+        formData.append('type', 'url');
+        formData.append('value', url);
+        formData.append('metadata', JSON.stringify(metadata));
+
+        try {
+            await this.api.addToQueue(formData);
+            this.ui.toggleUploadModal(false);
+            this.reset();
+            this.ui.showToast('Import started', 'Added to queue');
+        } catch (e) {
+            this.ui.showToast('Failed to start import');
+        }
+    }
+
+    reset() {
+        Object.values(this.inputs).forEach((input) => {
+            if (input?.type === 'checkbox') {
+                input.checked = false;
+            } else if (input) {
+                input.value = '';
+            }
+        });
+    }
+}
+
+class App {
+    constructor() {
+        const statsEls = {};
+        document.querySelectorAll('[data-stat]').forEach((el) => {
+            statsEls[el.dataset.stat] = el;
+        });
+
+        this.api = new API('/api');
+        this.ui = new UIManager({
+            gridEl: document.querySelector('[data-sets-grid]'),
+            tracklistEl: document.getElementById('tracklist'),
+            folderListEl: document.getElementById('folder-list'),
+            trashZoneEl: document.getElementById('trash-zone'),
+            searchInput: document.getElementById('set-search'),
+            statsEls,
+            setsListEl: document.getElementById('sets-list'),
+            toastStack: document.getElementById('toast-stack'),
+            activeSetTitle: document.getElementById('active-set-title'),
+            emptyTracklist: document.getElementById('empty-tracklist'),
+            uploadModal: document.getElementById('upload-modal')
+        });
+        this.audio = new AudioController(document.getElementById('audio-player'));
+        this.uploads = new UploadManager(document.getElementById('upload-modal'), this.api, this.ui);
+
+        this.sets = [];
+        this.filteredSets = [];
+        this.folders = [];
+        this.activeFolderId = null;
+        this.activeSetId = null;
+        this.tracks = [];
+        this.draggingSetId = null;
+
+        this.onResize = debounce(() => this.refreshGrid(), 200);
+        this.onSearch = debounce((value) => this.applyFilters(value), 200);
+    }
+
+    init() {
+        this.bindEvents();
+        this.refreshAll();
+    }
+
+    bindEvents() {
+        this.ui.bindSetGridHandlers({
+            onSelect: (id) => this.loadSet(id),
+            onDragStart: (id, event) => this.handleDragStart(id, event),
+            onDragEnd: () => this.handleDragEnd()
+        });
+        this.ui.bindFolderHandlers({
+            onFolderSelect: (id) => this.selectFolder(id),
+            onDrop: (folderId, event) => this.dropOnFolder(folderId, event)
+        });
+        this.ui.bindTrashHandlers((event) => this.dropOnTrash(event));
+
+        const searchInput = this.ui.searchInput;
+        if (searchInput) {
+            searchInput.addEventListener('input', (event) => this.onSearch(event.target.value));
+        }
+
+        document.addEventListener('click', (event) => {
+            const setButton = event.target.closest('#sets-list [data-set-id]');
+            if (setButton) this.loadSet(setButton.dataset.setId);
+
+            const trackButton = event.target.closest('[data-action="play-track"]');
+            if (trackButton) this.toggleTrackPlayback(trackButton.dataset.trackId);
+
+            const copyBtn = event.target.closest('[data-action="copy-tracklist"]');
+            if (copyBtn) this.copyTracklist();
+
+            const createFolderBtn = event.target.closest('[data-action="create-folder"]');
+            if (createFolderBtn) this.createFolder();
+        });
+
+        window.addEventListener('resize', this.onResize);
+        this.uploads.bind();
+    }
+
+    async refreshAll() {
+        await Promise.all([this.loadSets(), this.loadDashboard(), this.loadFolders()]);
+    }
+
+    async loadSets() {
+        try {
+            const data = await this.api.getSets();
+            this.sets = Array.isArray(data) ? data : (data?.sets || []);
+            this.applyFilters(this.ui.searchInput?.value || '');
+        } catch (e) {
+            this.ui.showToast('Could not load sets');
+        }
+    }
+
+    applyFilters(searchTerm = '') {
+        const term = searchTerm.toLowerCase();
+        this.filteredSets = this.sets.filter((set) => {
+            const matchesSearch = !term || set.name?.toLowerCase().includes(term) || set.artists?.toLowerCase().includes(term);
+            const matchesFolder = !this.activeFolderId || set.folder_id == this.activeFolderId || (set.folders && set.folders.includes(this.activeFolderId));
+            return matchesSearch && matchesFolder;
+        });
+        this.refreshGrid();
+    }
+
+    refreshGrid() {
+        this.ui.renderSetGrid(this.filteredSets);
+        this.ui.renderSetList(this.filteredSets);
+    }
+
+    async loadSet(setId) {
+        if (!setId) return;
+        this.activeSetId = setId;
+        try {
+            const tracks = await this.api.getTracks(setId);
+            this.tracks = Array.isArray(tracks) ? tracks : (tracks?.tracks || []);
+            const set = this.sets.find((item) => String(item.id) === String(setId));
+            this.ui.updateActiveSetTitle(set?.name || 'Set');
+            this.ui.renderTracks(this.tracks);
+        } catch (e) {
+            this.ui.showToast('Could not load set');
+        }
+    }
+
+    toggleTrackPlayback(trackId) {
+        const track = this.tracks.find((t) => String(t.id) === String(trackId));
+        if (!track || !track.preview_url) return;
+        this.audio.toggle(track.preview_url);
+    }
+
+    async loadDashboard() {
+        try {
+            const data = await this.api.getDashboard();
+            const stats = data?.stats || data || {};
+            this.ui.renderStats(stats);
+        } catch (e) {
+            this.ui.showToast('Could not load dashboard');
+        }
+    }
+
+    async loadFolders() {
+        try {
+            const data = await this.api.getFolders();
+            this.folders = Array.isArray(data) ? data : (data?.folders || []);
+            this.ui.renderFolders(this.folders, this.activeFolderId);
+        } catch (e) {
+            this.ui.renderFolders([], this.activeFolderId);
+        }
+    }
+
+    selectFolder(folderId) {
+        this.activeFolderId = this.activeFolderId === folderId ? null : folderId;
+        this.ui.renderFolders(this.folders, this.activeFolderId);
+        this.applyFilters(this.ui.searchInput?.value || '');
+    }
+
+    handleDragStart(setId, event) {
+        this.draggingSetId = setId;
+        if (event?.dataTransfer) {
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', setId);
+        }
+    }
+
+    handleDragEnd() {
+        this.draggingSetId = null;
+    }
+
+    async dropOnFolder(folderId, event) {
+        event.preventDefault();
+        const setId = this.draggingSetId || event.dataTransfer?.getData('text/plain');
+        if (!setId) return;
+        try {
+            await this.api.assignSetToFolder(folderId, setId);
+            const targetSet = this.sets.find((s) => String(s.id) === String(setId));
+            if (targetSet) targetSet.folder_id = folderId;
+            this.ui.showToast('Set moved', 'Folder updated');
+            this.applyFilters(this.ui.searchInput?.value || '');
+            this.loadFolders();
+        } catch (e) {
+            this.ui.showToast('Could not move set');
+        }
+    }
+
+    async dropOnTrash(event) {
+        event.preventDefault();
+        const setId = this.draggingSetId || event.dataTransfer?.getData('text/plain');
+        if (!setId) return;
+        if (!confirm('Delete this set?')) return;
+        try {
+            await this.api.deleteSet(setId);
+            this.sets = this.sets.filter((s) => String(s.id) !== String(setId));
+            this.applyFilters(this.ui.searchInput?.value || '');
+            this.ui.showToast('Set deleted');
+        } catch (e) {
+            this.ui.showToast('Could not delete set');
+        }
+    }
+
+    async createFolder() {
+        const name = prompt('Folder name');
+        if (!name) return;
+        try {
+            const created = await this.api.createFolder(name);
+            const folder = created?.folder || created;
+            if (folder) this.folders.unshift(folder);
+            this.ui.renderFolders(this.folders, this.activeFolderId);
+            this.ui.showToast('Folder created', folder?.name || '');
+        } catch (e) {
+            this.ui.showToast('Could not create folder');
+        }
+    }
+
+    async copyTracklist() {
+        if (!this.tracks.length) return;
+        const lines = this.tracks.map((track, index) => `${index + 1}. ${track.artist || 'Unknown'} - ${track.title || 'Unknown'}`);
+        try {
+            await navigator.clipboard.writeText(lines.join('\n'));
+            this.ui.showToast('Tracklist copied');
+        } catch (e) {
+            this.ui.showToast('Clipboard unavailable');
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const app = new App();
+    app.init();
 });

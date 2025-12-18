@@ -77,6 +77,29 @@ def init_db():
 
     cur.execute(
         """
+        CREATE TABLE IF NOT EXISTS folders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS folder_sets (
+            folder_id INTEGER NOT NULL,
+            set_id INTEGER NOT NULL UNIQUE,
+            created_at TEXT DEFAULT (datetime('now')),
+            PRIMARY KEY (folder_id, set_id),
+            FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE,
+            FOREIGN KEY (set_id) REFERENCES sets(id) ON DELETE CASCADE
+        )
+        """
+    )
+
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS set_djs (
             set_id INTEGER NOT NULL,
             dj_id INTEGER NOT NULL,
@@ -410,12 +433,14 @@ def get_all_sets():
     cur.execute("""
         SELECT s.*, COUNT(t.id) as track_count,
                GROUP_CONCAT(DISTINCT d.name) as dj_names,
-               l.name AS label_name
+               l.name AS label_name,
+               MAX(fs.folder_id) as folder_id
         FROM sets s
         LEFT JOIN tracks t ON t.set_id = s.id
         LEFT JOIN set_djs sd ON sd.set_id = s.id
         LEFT JOIN djs d ON sd.dj_id = d.id
         LEFT JOIN labels l ON s.label_id = l.id
+        LEFT JOIN folder_sets fs ON fs.set_id = s.id
         GROUP BY s.id ORDER BY s.created_at DESC
     """)
     rows = [dict(r) for r in cur.fetchall()]

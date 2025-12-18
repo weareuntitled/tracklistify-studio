@@ -35,7 +35,9 @@ from backend.models import (
     SetRenameRequest,
     ToggleFavoriteRequest,
     PurchaseToggleRequest,
-    TrackFlagRequest
+    TrackFlagRequest,
+    FolderAssignRequest,
+    FolderCreateRequest
 )
 from services.user_store import (
     DEFAULT_ADMIN_EMAIL,
@@ -346,6 +348,24 @@ def purchase_track(tid):
 def purchased_tracks():
     return jsonify(database.get_purchased_tracks())
 
+@app.route("/api/folders", methods=["GET", "POST"])
+def folders():
+    if request.method == "GET":
+        return jsonify({"folders": database.get_folders_with_sets()})
+
+    payload = parse_body(FolderCreateRequest)
+    folder = database.create_folder(payload.name)
+    return jsonify({"ok": True, "folder": folder})
+
+@app.route("/api/folders/<int:folder_id>/sets", methods=["POST", "DELETE"])
+def assign_folder(folder_id: int):
+    payload = parse_body(FolderAssignRequest)
+    if request.method == "DELETE":
+        database.remove_set_from_folder(folder_id, payload.set_id)
+    else:
+        database.assign_set_to_folder(folder_id, payload.set_id)
+    return jsonify({"ok": True, "folders": database.get_folders_with_sets()})
+
 @app.route("/api/producers/<int:pid>/like", methods=["POST"])
 def like_producer(pid):
     data = parse_body(ToggleFavoriteRequest)
@@ -416,17 +436,25 @@ def get_metadata():
 
 @app.route("/api/queue/add", methods=["POST"])
 def add_job():
-    metadata_raw = request.form.get("metadata")
     metadata: Dict[str, Any] = {}
+    submission_type = None
+    submission_value = None
 
-    if metadata_raw:
-        try:
-            metadata = load_json_value(metadata_raw) or {}
-        except Exception as exc:
-            raise BadRequest(f"Invalid metadata payload: {exc}")
+    if request.is_json:
+        data = request.get_json(force=True)
+        submission_type = data.get("type")
+        submission_value = data.get("value")
+        metadata = data.get("metadata") or {}
+    else:
+        metadata_raw = request.form.get("metadata")
+        if metadata_raw:
+            try:
+                metadata = load_json_value(metadata_raw) or {}
+            except Exception as exc:
+                raise BadRequest(f"Invalid metadata payload: {exc}")
 
-    submission_type = request.form.get("type")
-    submission_value = request.form.get("value")
+        submission_type = request.form.get("type")
+        submission_value = request.form.get("value")
 
     if submission_type == "url":
         if not submission_value:
@@ -434,6 +462,8 @@ def add_job():
         job_manager.add_job("url", submission_value, metadata)
 
     elif submission_type == "file":
+        if request.is_json:
+            raise BadRequest("File upload requires multipart form data")
         if 'file' not in request.files:
             raise BadRequest("File upload required")
         file = request.files['file']
