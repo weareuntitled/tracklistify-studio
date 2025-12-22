@@ -14,7 +14,7 @@
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('tracklistify', () => ({
-                // --- 1. NAVIGATION & UI STATE ---
+                // --- 1. STATE ---
                 currentView: 'dashboard', 
                 search: '',
                 
@@ -29,31 +29,22 @@
                     hoverTrackId: null
                 },
 
-                // --- 2. DATA MODELS ---
+                // Data Models
                 activeSet: null, 
                 activeTrack: null, 
-                
-                // Data Arrays (Initialized empty to prevent "not defined" errors)
                 sets: [],
                 tracks: [],
                 likedTracks: [],
+                purchasedTracks: [],
+                favoriteProducers: [],
                 rescanCandidates: [],
                 folders: [],
                 
-                queueStatus: { 
-                    active: null, 
-                    queue: [], 
-                    history: [] 
-                },
+                queueStatus: { active: null, queue: [], history: [] },
                 
                 dashboardStats: { 
-                    total_sets: 0, 
-                    total_tracks: 0, 
-                    discovery_rate: 0,
-                    top_artists: [],
-                    recent_sets: [],
-                    top_producers: [],
-                    top_djs: []
+                    total_sets: 0, total_tracks: 0, discovery_rate: 0,
+                    top_artists: [], recent_sets: [], top_producers: [], top_djs: []
                 },
 
                 // Inputs
@@ -65,36 +56,30 @@
                 
                 auth: { user: { name: 'User' }, dropdownOpen: false },
                 toasts: [],
-                youtubeFeed: [],
+                
+                // Helper to track previous queue state for auto-refresh
+                _wasProcessing: false,
 
-                // --- 3. INIT ---
+                // --- 2. INIT ---
                 async init() {
-                    console.log("Initializing Tracklistify...");
+                    console.log("Initializing Comfort Mode...");
                     await this.fetchUser();
                     await this.fetchDashboard();
                     await this.fetchSets();
                     await this.fetchQueue();
                     await this.fetchLikes();
                     
-                    // Poll Queue every 3 seconds
-                    setInterval(() => this.fetchQueue(), 3000);
+                    // Setup Keyboard Shortcuts
+                    this.setupMediaKeys();
+                    
+                    // Poll Queue every 2 seconds (Faster feedback)
+                    setInterval(() => this.fetchQueue(), 2000);
                 },
 
-                // --- 4. DATA FETCHING ---
-                async fetchUser() {
-                    try {
-                        const res = await fetch('/api/auth/me');
-                        if (res.ok) this.auth.user = await res.json();
-                    } catch (e) { console.error("Auth check failed", e); }
-                },
-
-                async fetchDashboard() {
-                    try {
-                        const res = await fetch('/api/dashboard/stats');
-                        if (res.ok) this.dashboardStats = await res.json();
-                    } catch (e) { console.error("Dashboard load failed", e); }
-                },
-
+                // --- 3. DATA FETCHING ---
+                async fetchUser() { try { const res = await fetch('/api/auth/me'); if(res.ok) this.auth.user = await res.json(); } catch(e){} },
+                async fetchDashboard() { try { const res = await fetch('/api/dashboard/stats'); if(res.ok) this.dashboardStats = await res.json(); } catch(e){} },
+                
                 async fetchSets() {
                     try {
                         const res = await fetch('/api/sets');
@@ -109,21 +94,47 @@
                     try {
                         const res = await fetch(`/api/sets/${set.id}/tracks`);
                         if (res.ok) this.tracks = await res.json();
-                    } catch (e) { this.showToast('Error', 'Could not load tracks'); }
+                    } catch (e) { this.showToast('Fehler', 'Tracks konnten nicht geladen werden', 'error'); }
                 },
 
+                // SMART QUEUE POLLING (Auto-Refresh)
                 async fetchQueue() {
                     try {
                         const res = await fetch('/api/queue/status');
-                        if (res.ok) this.queueStatus = await res.json();
+                        if (res.ok) {
+                            const data = await res.json();
+                            this.queueStatus = data;
+
+                            // LOGIC: If we were processing, and now we are idle, something finished!
+                            const isProcessing = !!(data.active || data.queue.length > 0);
+                            
+                            if (this._wasProcessing && !isProcessing) {
+                                // Job finished! Auto-Refresh data.
+                                this.showToast('Fertig', 'Verarbeitung abgeschlossen', 'success');
+                                await this.fetchSets();      // Refresh Sidebar
+                                await this.fetchDashboard(); // Refresh Stats
+                                
+                                // If user is on dashboard, refresh the recent list visually
+                                if (this.currentView === 'dashboard') {
+                                    this.fetchDashboard(); 
+                                }
+                            }
+                            this._wasProcessing = isProcessing;
+                        }
                     } catch (e) { }
                 },
 
-                async fetchLikes() {
-                    try {
-                        const res = await fetch('/api/tracks/likes');
-                        if (res.ok) this.likedTracks = await res.json();
-                    } catch (e) { }
+                async fetchLikes() { 
+                    try { 
+                        const res = await fetch('/api/tracks/likes'); 
+                        if(res.ok) this.likedTracks = await res.json(); 
+                        
+                        const res2 = await fetch('/api/tracks/purchases');
+                        if(res2.ok) this.purchasedTracks = await res2.json();
+
+                        const res3 = await fetch('/api/producers/likes');
+                        if(res3.ok) this.favoriteProducers = await res3.json();
+                    } catch(e){} 
                 },
 
                 get filteredSets() {
@@ -131,29 +142,39 @@
                     return this.sets.filter(s => s.name.toLowerCase().includes(this.search.toLowerCase()));
                 },
 
-                // --- 5. AUDIO LOGIC ---
+                // --- 4. PLAYER LOGIC (With Media Keys) ---
                 togglePlay(track) { 
                     const player = this.$refs.player;
                     if (!player) return;
 
-                    // Same track clicked? Toggle pause/play
+                    // 1. Toggle if same track
                     if (this.activeTrack && this.activeTrack.id === track.id) {
                         if (player.paused) player.play(); else player.pause();
                         return;
                     } 
                     
-                    // New track clicked
+                    // 2. Play New Track
                     this.activeTrack = track;
                     this.ui.playingId = track.id;
-                    player.src = `/api/stream/${track.id}`; 
+                    this.ui.loadingId = track.id; 
                     
-                    // Wait for metadata to load before seeking
-                    const onMeta = () => {
-                        player.currentTime = track.start_time || 0;
+                    // Update Browser Title & OS Media Controls
+                    document.title = `▶ ${track.title} - ${track.artist}`;
+                    this.updateMediaSession(track);
+
+                    player.src = `/api/stream/original/${track.id}`;
+                    player.currentTime = 0; 
+                    
+                    player.onloadeddata = () => {
+                        this.ui.loadingId = null;
                         player.play().catch(e => console.log("Auto-play prevented", e));
                     };
                     
-                    player.addEventListener('loadedmetadata', onMeta, { once: true });
+                    player.onerror = () => {
+                        this.ui.loadingId = null;
+                        this.showToast('Fehler', 'Original nicht gefunden', 'error');
+                    };
+
                     player.load();
                 },
 
@@ -162,10 +183,71 @@
                     if (player.paused) player.play(); else player.pause();
                 },
 
+                nextTrack() {
+                    if (!this.activeTrack || this.tracks.length === 0) return;
+                    const idx = this.tracks.findIndex(t => t.id === this.activeTrack.id);
+                    if (idx !== -1 && idx < this.tracks.length - 1) {
+                        this.togglePlay(this.tracks[idx + 1]);
+                    }
+                },
+
+                prevTrack() {
+                    const player = this.$refs.player;
+                    if (!this.activeTrack || this.tracks.length === 0) return;
+                    if (player.currentTime > 3) {
+                        player.currentTime = 0;
+                        return;
+                    }
+                    const idx = this.tracks.findIndex(t => t.id === this.activeTrack.id);
+                    if (idx > 0) {
+                        this.togglePlay(this.tracks[idx - 1]);
+                    }
+                },
+
+                // OS MEDIA INTEGRATION (Keyboard Media Keys)
+                setupMediaKeys() {
+                    if ('mediaSession' in navigator) {
+                        navigator.mediaSession.setActionHandler('play', () => this.togglePlayPauseGlobal());
+                        navigator.mediaSession.setActionHandler('pause', () => this.togglePlayPauseGlobal());
+                        navigator.mediaSession.setActionHandler('previoustrack', () => this.prevTrack());
+                        navigator.mediaSession.setActionHandler('nexttrack', () => this.nextTrack());
+                    }
+                },
+
+                updateMediaSession(track) {
+                    if ('mediaSession' in navigator) {
+                        navigator.mediaSession.metadata = new MediaMetadata({
+                            title: track.title,
+                            artist: track.artist,
+                            album: track.set_name || 'Tracklistify',
+                            artwork: [
+                                { src: '/static/img/icon-512.png', sizes: '512x512', type: 'image/png' }
+                            ]
+                        });
+                    }
+                },
+
+                // KEYBOARD SHORTCUTS HANDLER
+                handleKeydown(e) {
+                    // Ignore typing in inputs
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+                    if (e.code === 'Space') {
+                        e.preventDefault(); // Stop scrolling page
+                        this.togglePlayPauseGlobal();
+                    } else if (e.code === 'ArrowRight' && e.ctrlKey) {
+                        this.nextTrack();
+                    } else if (e.code === 'ArrowLeft' && e.ctrlKey) {
+                        this.prevTrack();
+                    }
+                },
+
                 updateProgress(e) {
-                    this.audio.currentTime = e.target.currentTime;
-                    this.audio.duration = e.target.duration || 0;
-                    this.audio.progressPercent = this.audio.duration ? (this.audio.currentTime / this.audio.duration) * 100 : 0;
+                    const player = e.target;
+                    if (!player.duration) return;
+                    this.audio.currentTime = player.currentTime;
+                    this.audio.duration = player.duration;
+                    this.audio.progressPercent = (player.currentTime / player.duration) * 100;
                 },
 
                 seek(e, track) {
@@ -183,41 +265,33 @@
                     if(player && player.duration) player.currentTime = pos * player.duration;
                 },
 
-                updateVolume(e) { this.$refs.player.volume = e.target.value; },
-                onAudioEnded() { this.audio.paused = true; this.ui.playingId = null; },
+                updateVolume(e) { 
+                    const val = parseFloat(e.target.value);
+                    this.audio.volume = val;
+                    if (this.$refs.player) this.$refs.player.volume = val;
+                },
+
+                onAudioEnded() { 
+                    this.audio.paused = true; 
+                    this.nextTrack();
+                },
+                
                 onAudioPaused() { this.audio.paused = true; },
                 onAudioPlaying() { this.audio.paused = false; },
-                onAudioError() { console.log('Audio Error - Check file path'); },
+                onAudioError() { console.log('Audio Error'); },
 
-                // --- 6. UTILITIES ---
-                
-                queueProgressValue() {
-                    return (this.queueStatus && this.queueStatus.active) ? this.queueStatus.active.progress : 0;
-                },
-
-                getPhaseLabel(phase) {
-                    if (!phase) return 'Bereit';
-                    const map = { downloading: 'Download', analyzing: 'Analyse', importing: 'Import', error: 'Fehler' };
-                    return map[phase] || phase;
-                },
-
+                // --- 5. HELPERS ---
+                queueProgressValue() { return (this.queueStatus && this.queueStatus.active) ? this.queueStatus.active.progress : 0; },
+                getPhaseLabel(phase) { return phase || 'Ready'; },
                 getPhaseColor(phase) { 
                     if(phase === 'error') return 'bg-red-500';
                     if(phase === 'done') return 'bg-green-500';
                     return 'bg-orange-500'; 
                 },
-
-                formatTime(s) { 
-                    if(!s) return '00:00'; 
-                    try {
-                        return new Date(s * 1000).toISOString().substr(14, 5);
-                    } catch(e) { return '00:00'; }
-                },
-                
+                formatTime(s) { if(!s) return '00:00'; try { return new Date(s * 1000).toISOString().substr(14, 5); } catch(e) { return '00:00'; } },
                 formatDate(d) { return d ? new Date(d).toLocaleDateString('de-DE') : ''; },
                 formatConf(v) { return v ? Math.round(v * 100) + '%' : '-'; },
                 getConfColor(v) { return v > 0.8 ? 'text-green-600' : 'text-orange-500'; },
-                
                 getSearchLink(t, s) { 
                     if (!t) return '#';
                     const q = encodeURIComponent(`${t.artist} ${t.title}`);
@@ -225,10 +299,35 @@
                     if (s === 'youtube') return `https://www.youtube.com/results?search_query=${q}`;
                     return '#';
                 },
+                isProducerFavorite(id) { return this.favoriteProducers.some(p => p.id === id); },
 
-                isProducerFavorite(id) { return false; }, // Placeholder
+                // --- 6. ACTIONS ---
+                openContextMenu(e, type, item) {
+                    this.ui.contextMenu.x = e.clientX;
+                    this.ui.contextMenu.y = e.clientY;
+                    this.ui.contextMenu.show = true;
+                    this.ui.contextMenu.target = item;
+                },
+                closeContextMenu() { this.ui.contextMenu.show = false; },
 
-                // --- 7. ACTIONS ---
+                async deleteSetContext() {
+                    const set = this.ui.contextMenu.target;
+                    if(!set) return;
+                    if(!confirm(`Set "${set.name}" wirklich löschen?`)) { this.closeContextMenu(); return; }
+                    try {
+                        const res = await fetch(`/api/sets/${set.id}`, { method: 'DELETE' });
+                        if (res.ok) {
+                            this.showToast('Gelöscht', 'Set wurde entfernt', 'success');
+                            this.sets = this.sets.filter(s => s.id !== set.id);
+                            if(this.activeSet && this.activeSet.id === set.id) {
+                                this.activeSet = null;
+                                this.currentView = 'dashboard';
+                            }
+                        } else { this.showToast('Fehler', 'Konnte nicht löschen', 'error'); }
+                    } catch(e) { this.showToast('Fehler', 'Server Fehler', 'error'); }
+                    this.closeContextMenu();
+                },
+
                 async fetchUrlMetadata(url) {
                     if(!url) return;
                     this.inputs.isLoadingMeta = true;
@@ -243,173 +342,136 @@
                             this.inputs.metaName = data.title;
                             this.inputs.metaArtist = data.artist;
                             this.inputs.metaEvent = data.event;
+                            this.showToast('Gefunden', 'Metadaten geladen', 'success');
                         }
-                    } catch(e) { this.showToast('Error', 'Metadata fetch failed'); }
+                    } catch(e) { this.showToast('Fehler', 'Keine Daten gefunden', 'warning'); }
                     finally { this.inputs.isLoadingMeta = false; }
                 },
 
                 async addToQueue(type) {
-                    const endpoint = type === 'url' ? '/api/import/url' : '/api/queue/add';
-                    
-                    // Specific payload for URL import
-                    let body, headers;
-                    if (type === 'url') {
-                        body = JSON.stringify({
-                            url: this.inputs.url,
-                            artist: this.inputs.metaArtist,
-                            title: this.inputs.metaName,
-                            is_b2b: this.inputs.is_b2b
-                        });
-                        headers = {'Content-Type': 'application/json'};
-                    } else {
-                        // File upload (Mock implementation or Form Data needed here)
-                        // For now assuming URL flow is primary
-                        return; 
-                    }
-
+                    const payload = {
+                        url: this.inputs.url,
+                        artist: this.inputs.metaArtist,
+                        title: this.inputs.metaName,
+                        is_b2b: this.inputs.is_b2b
+                    };
                     try {
-                        const res = await fetch(endpoint, { method: 'POST', headers, body });
+                        const res = await fetch('/api/import/url', {
+                            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+                        });
                         if(res.ok) {
-                            this.showToast('Erfolg', 'Import gestartet');
+                            this.showToast('Gestartet', 'Set wird importiert', 'success');
                             this.ui.showAddModal = false;
                             this.fetchQueue(); 
                             this.inputs.url = ''; 
-                        } else {
-                            this.showToast('Fehler', 'Konnte Job nicht starten');
                         }
-                    } catch(e) { this.showToast('Error', 'Import failed'); }
+                    } catch(e) { this.showToast('Fehler', 'Import gescheitert', 'error'); }
                 },
 
-                openEditSetModal() { 
-                    if (this.activeSet) {
-                        this.editSetData = { ...this.activeSet }; 
-                        this.ui.showEditSetModal = true; 
-                    }
+                async stopQueue() { 
+                    await fetch('/api/queue/stop', { method: 'POST' }); 
+                    this.showToast('Gestoppt', 'Prozesse abgebrochen', 'warning');
+                    this.fetchQueue(); 
                 },
-                
-                async saveSetMetadata() {
-                    try {
+                openEditSetModal() { if (this.activeSet) { this.editSetData = { ...this.activeSet }; this.ui.showEditSetModal = true; } },
+                async saveSetMetadata() { try {
                         const res = await fetch(`/api/sets/${this.editSetData.id}/metadata`, {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify(this.editSetData)
+                            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(this.editSetData)
                         });
                         if(res.ok) {
-                            this.showToast('Gespeichert', 'Metadaten aktualisiert');
+                            this.showToast('Gespeichert', 'Daten aktualisiert', 'success');
                             this.ui.showEditSetModal = false;
                             this.fetchSets();
-                            // Update active view
                             this.activeSet = { ...this.activeSet, ...this.editSetData };
                         }
-                    } catch(e) { this.showToast('Error', 'Speichern fehlgeschlagen'); }
+                    } catch(e) { this.showToast('Fehler', 'Speichern fehlgeschlagen', 'error'); }
+                },
+                async toggleLike(track) { if(!track) return; track.liked = !track.liked; try { await fetch(`/api/tracks/${track.id}/like`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({liked: track.liked})}); this.fetchLikes(); } catch(e) { track.liked = !track.liked; } },
+                async togglePurchase(track) { if(!track) return; track.purchased = !track.purchased; await fetch(`/api/tracks/${track.id}/purchase`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({purchased: track.purchased})}); this.fetchLikes(); },
+                
+                async toggleProducerFavorite(item) { 
+                    const id = item.producer_id || item.id; 
+                    if(!id) return;
+                    // Check if currently favored
+                    const isFav = this.isProducerFavorite(id);
+                    await fetch(`/api/producers/${id}/like`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({liked: !isFav})}); 
+                    this.fetchLikes(); 
                 },
 
-                async deleteSetContext() {
-                    const set = this.ui.contextMenu.target;
-                    if(!confirm(`Set "${set.name}" wirklich löschen?`)) return;
-                    try {
-                        await fetch(`/api/sets/${set.id}`, { method: 'DELETE' });
-                        this.showToast('Gelöscht', 'Set entfernt');
-                        this.fetchSets();
-                        if(this.activeSet && this.activeSet.id === set.id) this.showDashboard();
-                    } catch(e) { this.showToast('Error', 'Löschen fehlgeschlagen'); }
+                showToast(title, subtitle, type = 'info') {
+                    const id = Date.now();
+                    this.toasts.push({id, title, subtitle, type});
+                    setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 4000);
                 },
                 
-                async toggleLike(track) {
-                    if(!track) return;
-                    // Optimistic update
-                    track.liked = !track.liked; 
-                    try {
-                        await fetch(`/api/tracks/${track.id}/like`, { 
-                            method: 'POST', 
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({liked: track.liked})
-                        });
-                        this.fetchLikes(); 
-                    } catch(e) { track.liked = !track.liked; }
-                },
-
-                async togglePurchase(track) {
-                    if(!track) return;
-                    track.purchased = !track.purchased;
-                    await fetch(`/api/tracks/${track.id}/purchase`, { 
-                        method: 'POST', 
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({purchased: track.purchased})
-                    });
-                },
-
-                async stopQueue() {
-                    await fetch('/api/queue/stop', { method: 'POST' });
-                    this.showToast('Stop', 'Queue angehalten');
-                    this.fetchQueue();
-                },
-
-                showToast(title, subtitle) {
-                    const id = Date.now();
-                    this.toasts.push({id, title, subtitle});
-                    setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 3000);
-                },
-
-                // Placeholders
-                toggleProducerFavorite(item) {},
                 rescanSetContext() {},
                 renameSetContext() {},
-                
                 logout() { window.location.href = '/logout'; }
             }))
         })
     </script>
 </head>
-<body class="h-full flex flex-col" x-data="tracklistify()">
+<body class="h-full flex flex-col" x-data="tracklistify()" @keydown.window="handleKeydown($event)">
 
     <div class="app-shell">
-        
         <aside class="swiss-sidebar">
              {% include 'components/sidebar_sets.html' %}
         </aside>
 
-        <section class="main-content">
-            
+        <section class="main-content flex-1 flex flex-col min-w-0 overflow-hidden h-full">
             {% include 'components/header.html' %}
-
-            <div class="view-container">
-                
-                <div x-show="currentView === 'dashboard'" class="h-full">
-                    {% include 'components/dashboard.html' %}
-                </div>
-
-                <div x-show="currentView === 'sets'" x-cloak class="h-full">
-                    {% include 'components/main_view.html' %}
-                </div>
-
-                <div x-show="currentView === 'queue'" x-cloak class="h-full">
-                    {% include 'components/queue_view.html' %}
-                </div>
-
-                <div x-show="currentView === 'rescan'" x-cloak class="h-full">
-                    {% include 'components/rescan_view.html' %}
-                </div>
-
+            <div class="view-container flex-1 overflow-hidden relative">
+                <div x-show="currentView === 'dashboard'" class="h-full w-full">{% include 'components/dashboard.html' %}</div>
+                <div x-show="currentView === 'sets'" x-cloak class="h-full w-full">{% include 'components/main_view.html' %}</div>
+                <div x-show="currentView === 'queue'" x-cloak class="h-full w-full">{% include 'components/queue_view.html' %}</div>
+                <div x-show="currentView === 'likes'" x-cloak class="h-full w-full">{% include 'components/main_likes.html' %}</div>
+                <div x-show="currentView === 'rescan'" x-cloak class="h-full w-full">{% include 'components/rescan_view.html' %}</div>
             </div>
         </section>
 
         {% include 'components/sidebar_likes.html' %}
-
     </div>
 
     {% include 'components/footer_player.html' %}
-
     {% include 'components/modals.html' %}
 
-    <div class="toast-stack">
+    <div x-show="ui.contextMenu.show" 
+         @click.outside="closeContextMenu()"
+         x-cloak
+         class="fixed bg-white border border-gray-200 shadow-xl rounded-xl py-1 w-48 z-[100] overflow-hidden"
+         :style="'top: ' + ui.contextMenu.y + 'px; left: ' + ui.contextMenu.x + 'px'">
+        <div class="px-4 py-2 text-[10px] font-bold text-gray-400 bg-gray-50 border-b border-gray-100 uppercase tracking-wider mb-1">Set Optionen</div>
+        <button @click="openEditSetModal(); closeContextMenu()" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2 transition-colors"><span>📝</span> Info / Tags</button>
+        <button @click="deleteSetContext()" class="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors border-t border-gray-100 mt-1"><span>🗑️</span> Set löschen</button>
+    </div>
+
+    <div class="fixed bottom-5 right-5 z-[100] flex flex-col gap-3 pointer-events-none">
         <template x-for="toast in toasts" :key="toast.id">
-            <div class="toast">
-                <div class="title" x-text="toast.title"></div>
-                <div class="subtitle" x-text="toast.subtitle"></div>
+            <div class="pointer-events-auto min-w-[300px] max-w-sm bg-white border-l-4 shadow-xl rounded-md overflow-hidden flex items-start p-4 transition-all duration-300 transform"
+                 x-transition:enter="translate-y-5 opacity-0"
+                 x-transition:enter-end="translate-y-0 opacity-100"
+                 x-transition:leave="opacity-0 scale-95"
+                 :class="{
+                    'border-green-500 bg-green-50': toast.type === 'success',
+                    'border-red-500 bg-red-50': toast.type === 'error',
+                    'border-yellow-500 bg-yellow-50': toast.type === 'warning',
+                    'border-blue-500 bg-blue-50': toast.type === 'info'
+                 }">
+                <div class="mr-3 mt-0.5">
+                    <svg x-show="toast.type === 'success'" class="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <svg x-show="toast.type === 'error'" class="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <svg x-show="toast.type === 'warning'" class="w-6 h-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    <svg x-show="toast.type === 'info'" class="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-sm font-bold" :class="{'text-green-800': toast.type === 'success', 'text-red-800': toast.type === 'error', 'text-yellow-800': toast.type === 'warning', 'text-blue-800': toast.type === 'info'}" x-text="toast.title"></h3>
+                    <p class="text-xs mt-1" :class="{'text-green-700': toast.type === 'success', 'text-red-700': toast.type === 'error', 'text-yellow-700': toast.type === 'warning', 'text-blue-700': toast.type === 'info'}" x-text="toast.subtitle"></p>
+                </div>
             </div>
         </template>
     </div>
+    
+    <audio x-ref="player" @timeupdate="updateProgress" @ended="onAudioEnded" @pause="onAudioPaused" @play="onAudioPlaying" @error="onAudioError"></audio>
 
 </body>
 </html>

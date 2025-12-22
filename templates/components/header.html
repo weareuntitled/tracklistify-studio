@@ -11,9 +11,9 @@
     </div>
 
     <div class="flex-1 flex justify-center">
-        <button @click="showQueueView()"
+        <button @click="currentView = 'queue'"
                 class="hidden sm:flex items-center justify-center px-4 py-1.5 rounded-full border transition-all duration-300 cursor-pointer hover:shadow-md active:scale-95 group min-w-[180px] relative overflow-hidden"
-                :class="queueStatus.active ? 'bg-white border-gray-200' : 'bg-white border-gray-100'">
+                :class="queueStatus.active ? 'bg-white border-gray-200' : 'bg-white border-gray-100 hover:border-gray-300 hover:bg-gray-50'">
 
             <template x-if="queueStatus.active">
                 <div class="absolute inset-0 opacity-20 origin-left transition-transform duration-300 ease-linear"
@@ -22,6 +22,7 @@
             </template>
 
             <div class="relative z-10 flex items-center gap-2">
+                
                 <template x-if="queueStatus.active">
                     <div class="flex items-center gap-2">
                         <span class="relative flex h-2.5 w-2.5">
@@ -34,15 +35,20 @@
                         </div>
                     </div>
                 </template>
+
                 <template x-if="!queueStatus.active">
-                    <span class="text-xs font-medium text-gray-400 group-hover:text-gray-600">System bereit</span>
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                        <span class="text-xs font-medium text-gray-400 group-hover:text-gray-600 transition-colors">System bereit</span>
+                    </div>
                 </template>
+
             </div>
         </button>
     </div>
 
     <div class="flex items-center gap-2">
-        <button @click="showRescanView()" class="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-colors relative" title="Queue">
+        <button @click="currentView = 'rescan'" class="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-colors relative" title="Rescan Candidates">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
             <span x-show="rescanCandidates.length > 0" class="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full ring-2 ring-white"></span>
         </button>
@@ -62,13 +68,29 @@
         <div class="h-6 w-px bg-gray-200 mx-2"></div>
 
         <div class="relative" @click.outside="auth.dropdownOpen = false">
-            <button @click="auth.dropdownOpen = !auth.dropdownOpen" class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-600" x-text="(auth.user.name || 'U')[0]"></div>
+            <button @click="auth.dropdownOpen = !auth.dropdownOpen" class="flex items-center gap-2 hover:bg-gray-50 p-1 pr-2 rounded-full transition-colors border border-transparent hover:border-gray-200">
+                <div class="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 overflow-hidden">
+                    <template x-if="auth.user.avatar_url">
+                        <img :src="auth.user.avatar_url" class="w-full h-full object-cover">
+                    </template>
+                    <template x-if="!auth.user.avatar_url">
+                        <span x-text="(auth.user.name || 'U')[0]"></span>
+                    </template>
+                </div>
+                <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
             </button>
             
-            <div x-show="auth.dropdownOpen" x-transition class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">
-                <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Profil</a>
-                <button @click="logout()" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Logout</button>
+            <div x-show="auth.dropdownOpen" 
+                 x-transition:enter="transition ease-out duration-100"
+                 x-transition:enter-start="transform opacity-0 scale-95"
+                 x-transition:enter-end="transform opacity-100 scale-100"
+                 class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">
+                <div class="px-4 py-3 border-b border-gray-50">
+                    <p class="text-sm font-bold text-gray-900" x-text="auth.user.name"></p>
+                    <p class="text-xs text-gray-500 truncate" x-text="auth.user.email"></p>
+                </div>
+                <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Profil & Einstellungen</a>
+                <button @click="logout()" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Abmelden</button>
             </div>
         </div>
     </div>

@@ -1,7 +1,10 @@
 import os
 import re
+import subprocess
 from functools import lru_cache
 from typing import Any, Dict, Optional
+# Add this at the top with other imports
+from services.resolver import AudioResolver
 
 import yt_dlp  # WICHTIG: pip install yt-dlp
 from flask import (
@@ -343,7 +346,34 @@ def update_set_metadata(sid):
 
 @app.route("/api/sets/<int:sid>", methods=["DELETE"])
 def delete_set(sid):
+    # 1. Fetch file paths BEFORE deleting the record
+    conn = database.get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT source_file, audio_file FROM sets WHERE id = ?", (sid,))
+    row = cur.fetchone()
+    conn.close()
+
+    # 2. Delete from Database
     deleted = database.delete_set(sid)
+
+    # 3. Nuke the files from the Disk
+    if row:
+        # Delete the .json source file (Prevents re-import on restart)
+        if row['source_file'] and os.path.exists(row['source_file']):
+            try:
+                os.remove(row['source_file'])
+                print(f"[Delete] Removed source: {row['source_file']}")
+            except Exception as e:
+                print(f"[Delete] Error removing source: {e}")
+
+        # Delete the .mp3 audio file
+        if row['audio_file'] and os.path.exists(row['audio_file']):
+            try:
+                os.remove(row['audio_file'])
+                print(f"[Delete] Removed audio: {row['audio_file']}")
+            except Exception as e:
+                print(f"[Delete] Error removing audio: {e}")
+
     return jsonify({"ok": bool(deleted), "deleted": deleted})
 
 @app.route("/api/tracks/<int:tid>", methods=["DELETE"])
@@ -370,7 +400,6 @@ def get_liked_tracks_endpoint():
 
 @app.route("/api/tracks/<int:tid>/purchase", methods=["POST"])
 def purchase_track(tid):
-    # Handle optional JSON
     try:
         data = parse_body(PurchaseToggleRequest)
         purchased = 1 if data.purchased else 0
@@ -605,6 +634,21 @@ def stream_track_audio(track_id):
     except Exception as e:
         return send_file(path)
 
+# REPLACE THE OLD stream_original_track FUNCTION WITH THIS:
+@app.route("/api/stream/original/<int:track_id>")
+def stream_original_track(track_id):
+    """
+    Uses the High-Performance AudioResolver Service.
+    """
+    try:
+        stream_url = AudioResolver.resolve_track(track_id)
+        if stream_url:
+            return redirect(stream_url)
+        else:
+            return jsonify({"error": "Stream not found"}), 404
+    except Exception as e:
+        print(f"Stream Error: {e}")
+        return jsonify({"error": "Internal Server Error"}), 500
 # --- API: Rescan & Audio ---
 
 @app.route("/api/tracks/rescan_candidates")
