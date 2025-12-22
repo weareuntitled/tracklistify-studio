@@ -28,7 +28,8 @@
 
                     <div class="flex-1 overflow-y-auto space-y-4">
                         <template x-for="track in likedTracks" :key="'liked-' + track.id">
-                            <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
+                            <div class="border rounded-xl p-4 shadow-sm transition-all flex flex-col gap-3 group"
+                                 :class="ui.playingId === track.id ? 'bg-orange-50/60 border-orange-200' : 'bg-white border-gray-200 hover:bg-orange-50/40 hover:border-orange-200'">
                                 <div class="flex items-start gap-3">
                                     <button @click="togglePlay(track)"
                                             class="w-12 h-12 rounded-full bg-gray-100 hover:bg-orange-100 text-gray-400 hover:text-orange-600 flex items-center justify-center transition-colors shrink-0 shadow-inner">
@@ -53,23 +54,8 @@
                                     </button>
                                 </div>
 
-                                <div class="flex flex-wrap gap-2 justify-end">
-                                    <button @click="togglePurchase(track)"
-                                            class="px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded-lg border transition-colors"
-                                            :class="track.purchased ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-white text-gray-500 border-gray-200 hover:border-emerald-200 hover:text-emerald-700'">
-                                        <span x-text="track.purchased ? 'Gekauft' : 'Als gekauft markieren'"></span>
-                                    </button>
-                                    <button x-show="track.producer_id"
-                                            @click="toggleProducerFavorite(track)"
-                                            class="px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded-lg border transition-colors flex items-center gap-1"
-                                            :class="isProducerFavorite(track.producer_id) ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-gray-500 border-gray-200 hover:border-blue-200 hover:text-blue-700'">
-                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a5 5 0 015 5v1a5 5 0 11-10 0V7a5 5 0 015-5zm-6 18a6 6 0 0112 0v1H6v-1z"/></svg>
-                                        <span x-text="isProducerFavorite(track.producer_id) ? 'Producer gespeichert' : 'Producer merken'"></span>
-                                    </button>
-                                    <a :href="getSearchLink(track, 'beatport')" target="_blank"
-                                       class="px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded-lg border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100">
-                                        Beatport
-                                    </a>
+                                <div x-data="{ compact: false, context: 'likes' }">
+                                    {% include "components/partials/collection_actions.html" %}
                                 </div>
                             </div>
                         </template>
@@ -92,7 +78,8 @@
 
                     <div class="flex-1 overflow-y-auto space-y-4">
                         <template x-for="track in purchasedTracks" :key="'purchased-' + track.id">
-                            <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
+                            <div class="border rounded-xl p-4 shadow-sm transition-all flex flex-col gap-3 group"
+                                 :class="ui.playingId === track.id ? 'bg-orange-50/60 border-orange-200' : 'bg-white border-gray-200 hover:bg-orange-50/40 hover:border-orange-200'">
                                 <div class="flex items-start gap-3">
                                     <div class="flex-1 min-w-0">
                                         <div class="text-base font-bold text-gray-900 leading-tight" x-text="track.title"></div>
@@ -106,14 +93,10 @@
                                             <span x-show="track.purchased_at" class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded" x-text="'Gekauft am ' + new Date(track.purchased_at).toLocaleDateString('de-DE')"></span>
                                         </div>
                                     </div>
-                                    <div class="flex flex-col gap-2 items-end">
-                                        <button @click="togglePurchase(track)" class="px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100">
-                                            Entfernen
-                                        </button>
-                                        <button x-show="track.producer_id" @click="toggleProducerFavorite(track)" class="px-3 py-1 text-[11px] font-semibold rounded-lg border transition-colors"
-                                                :class="isProducerFavorite(track.producer_id) ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-gray-500 border-gray-200 hover:border-blue-200 hover:text-blue-700'">
-                                            <span x-text="isProducerFavorite(track.producer_id) ? 'Producer gespeichert' : 'Producer merken'"></span>
-                                        </button>
+                                    <div class="flex-1 flex justify-end">
+                                        <div x-data="{ compact: false, context: 'purchased' }">
+                                            {% include "components/partials/collection_actions.html" %}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
