@@ -42,6 +42,7 @@ pydub==0.25.1
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 python-slugify==8.0.4
+pytube==15.0.0
 requests==2.32.3
 scipy==1.13.0
 six==1.16.0
