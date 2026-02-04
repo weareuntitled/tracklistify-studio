@@ -30,6 +30,7 @@ dependencies = [
     "feedparser>=6.0.11",
     "mutagen>=1.47.0",
     "pydub>=0.25.1",
+    "pytube>=15.0.0",
     "python-dotenv>=1.0.1",
     "requests>=2.32.3",
     "yt-dlp>=2024.11.18",

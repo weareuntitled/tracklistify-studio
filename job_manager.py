@@ -6,6 +6,7 @@ import yt_dlp
 import re
 import database
 import shutil
+from pytube import YouTube
 from config import UPLOAD_DIR, BASE_DIR
 
 # Ensure upload directory exists
@@ -172,10 +173,48 @@ class JobManager:
             }
 
             print(f"[JobManager] Downloading {url}...")
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-                if not job["metadata"].get("name"):
-                    job["metadata"]["name"] = info.get('title', 'YouTube Import')
+            def run_download(options):
+                with yt_dlp.YoutubeDL(options) as ydl:
+                    return ydl.extract_info(url, download=True)
+
+            def should_retry(error):
+                message = str(error)
+                return "HTTP Error 403" in message or "HTTP Error 429" in message or "Forbidden" in message
+
+            info = None
+            last_error = None
+            client_candidates = ["default", "android", "web_safari", "ios"]
+            for client in client_candidates:
+                attempt_opts = dict(ydl_opts)
+                attempt_opts['extractor_args'] = {'youtube': {'player_client': [client]}}
+                try:
+                    info = run_download(attempt_opts)
+                    break
+                except Exception as exc:
+                    last_error = exc
+                    if not should_retry(exc):
+                        raise
+                    append_log(f"Download fehlgeschlagen ({client}), versuche nächsten Client...")
+            if info is None:
+                append_log("yt-dlp fehlgeschlagen, versuche pytube...")
+                try:
+                    yt = YouTube(url)
+                    stream = (
+                        yt.streams.filter(only_audio=True)
+                        .order_by("abr")
+                        .desc()
+                        .first()
+                    )
+                    if not stream:
+                        raise Exception("Keine Audio-Streams gefunden.")
+                    stream.download(output_path=UPLOAD_DIR, filename=base_filename)
+                    info = {"title": yt.title}
+                except Exception as exc:
+                    if last_error:
+                        raise last_error
+                    raise exc
+            if not job["metadata"].get("name"):
+                job["metadata"]["name"] = info.get('title', 'YouTube Import')
 
             # --- FOOLPROOF FILE FINDER ---
             print(f"[JobManager] Waiting for file system...")
