@@ -143,7 +143,7 @@
                 },
 
                 // --- 4. PLAYER LOGIC (With Media Keys) ---
-                togglePlay(track) { 
+                async togglePlay(track) { 
                     const player = this.$refs.player;
                     if (!player) return;
 
@@ -162,8 +162,68 @@
                     document.title = `▶ ${track.title} - ${track.artist}`;
                     this.updateMediaSession(track);
 
-                    player.src = `/api/stream/original/${track.id}`;
-                    player.currentTime = 0; 
+                    const localStreamUrl = `/api/stream/${track.id}`;
+                    const originalStreamUrl = `/api/stream/original/${track.id}`;
+                    const fallbackQueue = [];
+
+                    let localStreamMissing = false;
+                    try {
+                        const res = await fetch(localStreamUrl, { method: 'HEAD' });
+                        localStreamMissing = res.status === 404;
+                    } catch (e) { }
+
+                    if (localStreamMissing) {
+                        fallbackQueue.push(originalStreamUrl);
+                        fallbackQueue.push('resolve');
+                    }
+
+                    const setSource = (src) => {
+                        player.src = src;
+                        player.currentTime = 0;
+                        player.load();
+                    };
+
+                    const resolveStreamUrl = async () => {
+                        try {
+                            const res = await fetch('/api/resolve_audio', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ query: `${track.artist} - ${track.title}` })
+                            });
+                            if (!res.ok) return null;
+                            const data = await res.json();
+                            return data.ok ? data.url : null;
+                        } catch (e) {
+                            return null;
+                        }
+                    };
+
+                    const tryNextFallback = async () => {
+                        if (!fallbackQueue.length) {
+                            this.ui.loadingId = null;
+                            this.ui.playingId = null;
+                            this.showToast('Fehler', 'Kein Stream gefunden', 'error');
+                            return;
+                        }
+
+                        const next = fallbackQueue.shift();
+                        if (next === 'resolve') {
+                            const resolvedUrl = await resolveStreamUrl();
+                            if (resolvedUrl) {
+                                setSource(resolvedUrl);
+                                return;
+                            }
+                            await tryNextFallback();
+                            return;
+                        }
+                        setSource(next);
+                    };
+
+                    if (localStreamMissing) {
+                        await tryNextFallback();
+                    } else {
+                        setSource(localStreamUrl);
+                    }
                     
                     player.onloadeddata = () => {
                         this.ui.loadingId = null;
@@ -171,11 +231,14 @@
                     };
                     
                     player.onerror = () => {
+                        if (fallbackQueue.length) {
+                            tryNextFallback();
+                            return;
+                        }
                         this.ui.loadingId = null;
-                        this.showToast('Fehler', 'Original nicht gefunden', 'error');
+                        this.ui.playingId = null;
+                        this.showToast('Fehler', 'Stream nicht gefunden', 'error');
                     };
-
-                    player.load();
                 },
 
                 togglePlayPauseGlobal() {
