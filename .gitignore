@@ -7,3 +7,31 @@ __pycache__/
 *.db
 .vscode/
 .env
+# Secrets
+.env
+*.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Builds
+build/
+dist/
+
+# Runtime data
+tracklistify.db
+*.db
+storage/
+uploads/
+downloads/
+
+# Big dumps or assets you don't want in git
+code_dump.txt
+full_project_dump.txt
+smart_dump.txt
+mix.mp3
+
+# Tool folders
+.tracklistify/
