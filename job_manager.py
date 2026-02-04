@@ -172,10 +172,21 @@ class JobManager:
             }
 
             print(f"[JobManager] Downloading {url}...")
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-                if not job["metadata"].get("name"):
-                    job["metadata"]["name"] = info.get('title', 'YouTube Import')
+            def run_download(options):
+                with yt_dlp.YoutubeDL(options) as ydl:
+                    return ydl.extract_info(url, download=True)
+
+            try:
+                info = run_download(ydl_opts)
+            except Exception as exc:
+                if "HTTP Error 403" not in str(exc):
+                    raise
+                append_log("403 erhalten, versuche alternativen YouTube-Client...")
+                retry_opts = dict(ydl_opts)
+                retry_opts['extractor_args'] = {'youtube': {'player_client': ['android']}}
+                info = run_download(retry_opts)
+            if not job["metadata"].get("name"):
+                job["metadata"]["name"] = info.get('title', 'YouTube Import')
 
             # --- FOOLPROOF FILE FINDER ---
             print(f"[JobManager] Waiting for file system...")
