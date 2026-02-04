@@ -65,13 +65,16 @@
         </div>
         <div class="divide-y divide-gray-100 ui-card-section">
             {% for collection in collections %}
-                <div class="px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition">
+                <a href="/sets/{{ collection.id }}" class="px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition">
                     <div>
                         <p class="text-sm font-semibold text-gray-900">{{ collection.name }}</p>
                         <p class="text-xs text-gray-500">{{ collection.artist }}{% if collection.event %} @ {{ collection.event }}{% endif %}</p>
                     </div>
-                    <div class="text-xs text-gray-400">{{ collection.created_at }}</div>
-                </div>
+                    <div class="flex items-center gap-3 text-xs text-gray-400">
+                        <span>{{ collection.created_at }}</span>
+                        <span class="inline-flex items-center rounded-full bg-orange-50 px-2 py-1 text-[11px] font-semibold text-orange-700">Open</span>
+                    </div>
+                </a>
             {% else %}
                 <div class="px-5 py-6 text-center text-gray-500 text-sm">Noch keine Sets vorhanden.</div>
             {% endfor %}
