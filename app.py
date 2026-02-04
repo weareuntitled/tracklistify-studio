@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import subprocess
@@ -59,6 +60,7 @@ database.init_db()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key")
+app.logger.setLevel(logging.INFO)
 
 # Blueprints
 auth_api = Blueprint("auth_api", __name__, url_prefix="/api/auth")
@@ -134,6 +136,25 @@ def parse_profile_payload() -> ProfileUpdatePayload:
             raise BadRequest(exc.errors())
 
     return parse_body(ProfileUpdatePayload)
+
+
+def log_static_request(label: str, base_dir: str, filename: str) -> None:
+    if not filename:
+        app.logger.warning("%s request missing filename", label)
+        return
+    full_path = os.path.join(base_dir, filename)
+    app.logger.info(
+        "%s request path=%s filename=%s base_dir=%s exists=%s method=%s ip=%s range=%s referer=%s",
+        label,
+        request.path,
+        filename,
+        base_dir,
+        os.path.exists(full_path),
+        request.method,
+        request.remote_addr,
+        request.headers.get("Range"),
+        request.headers.get("Referer"),
+    )
 
 def safe_path(base: str, *paths: str) -> str:
     """Prevents directory traversal attacks."""
@@ -700,14 +721,17 @@ def run_import():
 
 @app.route("/snippets/<path:filename>")
 def serve_snippets(filename):
+    log_static_request("Snippets", SNIPPET_DIR, filename)
     return send_from_directory(SNIPPET_DIR, filename)
 
 @app.route("/static/<path:filename>")
 def serve_static(filename):
+    log_static_request("Static", STATIC_DIR, filename)
     return send_from_directory(STATIC_DIR, filename)
 
 @app.route("/static/js/<path:filename>")
 def serve_js(filename):
+    log_static_request("Static JS", os.path.join(STATIC_DIR, "js"), filename)
     return send_from_directory(os.path.join(STATIC_DIR, "js"), filename)
 
 
@@ -725,6 +749,14 @@ def handle_exception(error):
         code = 500
         message = str(error) or "Internal Server Error"
         print(f"Server Error: {message}") # Debug print
+    app.logger.warning(
+        "HTTP error code=%s path=%s method=%s ip=%s message=%s",
+        code,
+        request.path,
+        request.method,
+        request.remote_addr,
+        message,
+    )
 
     return jsonify({"error": True, "message": message, "code": code}), code
 
