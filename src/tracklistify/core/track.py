@@ -134,7 +134,12 @@ class TrackMatcher:
         self.tracks: List[Track] = []
         config = get_config()
         self.time_threshold = config.time_threshold
-        self._min_confidence = 0  # Keep all tracks with confidence > 0
+        normalized_confidence = (
+            config.min_confidence * 100
+            if 0 <= config.min_confidence <= 1
+            else config.min_confidence
+        )
+        self._min_confidence = max(0, min(float(normalized_confidence), 100))
         self.max_duplicates = config.max_duplicates
         self._config = config
 

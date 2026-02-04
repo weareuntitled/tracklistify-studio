@@ -440,10 +440,12 @@ class ConfigValidator:
 
         if "min_confidence" in config:
             if (
-                not isinstance(config["min_confidence"], float)
-                or not 0 <= config["min_confidence"] <= 1
+                not isinstance(config["min_confidence"], (int, float))
+                or not 0 <= config["min_confidence"] <= 100
             ):
-                raise ValueError("Minimum confidence must be a float between 0 and 1")
+                raise ValueError(
+                    "Minimum confidence must be a number between 0 and 100"
+                )
 
 
 def validate_field_type(value: Any, field_type: Type[T]) -> T:

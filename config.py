@@ -21,6 +21,7 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 # User Store
 USERS_JSON_PATH = os.path.join(STORAGE_DIR, "users.json")
+SETTINGS_JSON_PATH = os.path.join(STORAGE_DIR, "settings.json")
 
 # Sicherstellen, dass alle Ordner existieren
 for d in [UPLOAD_DIR, DOWNLOAD_DIR, SNIPPET_DIR, JSON_OUTPUT_DIR, STATIC_DIR, STORAGE_DIR]:
