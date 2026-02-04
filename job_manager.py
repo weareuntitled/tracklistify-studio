@@ -118,11 +118,42 @@ class JobManager:
                     job["log"] = "Finalisiere..."
                     job["progress"] = 80
 
+            class JobLogger:
+                def __init__(self, active_job):
+                    self.job = active_job
+
+                def _set_log(self, level, message):
+                    clean = re.sub(r'\x1b\[[0-9;]*m', '', str(message)).strip()
+                    if clean:
+                        rendered = f"{level.upper()} - yt-dlp - {clean}"
+                        self.job["log"] = rendered
+                        print(f"[yt-dlp] {rendered}")
+
+                def debug(self, msg):
+                    self._set_log("debug", msg)
+
+                def info(self, msg):
+                    self._set_log("info", msg)
+
+                def warning(self, msg):
+                    self._set_log("warning", msg)
+
+                def error(self, msg):
+                    self._set_log("error", msg)
+
             ydl_opts = {
                 'format': 'bestaudio/best',
                 'outtmpl': output_template, 
                 'ffmpeg_location': FFMPEG_PATH, 
-                'quiet': True,
+                'quiet': False,
+                'verbose': True,
+                'logtostderr': True,
+                'logger': JobLogger(job),
+                'extractor_args': {'youtube': {'player_client': ['default']}},
+                'retries': 3,
+                'fragment_retries': 3,
+                'socket_timeout': 15,
+                'retry_sleep_functions': {'http': 5},
                 'noplaylist': True,
                 'progress_hooks': [progress_hook]
             }
