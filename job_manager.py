@@ -105,6 +105,16 @@ class JobManager:
             url = job["value"]
             output_template = os.path.join(UPLOAD_DIR, base_filename)
             
+            def append_log(message):
+                clean = re.sub(r'\x1b\[[0-9;]*m', '', str(message)).strip()
+                if not clean:
+                    return
+                history = job.setdefault("log_history", [])
+                history.append(clean)
+                if len(history) > 4:
+                    history[:] = history[-4:]
+                job["log"] = " | ".join(history)
+
             def progress_hook(d):
                 if d['status'] == 'downloading':
                     try:
@@ -112,17 +122,51 @@ class JobManager:
                         clean_str = re.sub(r'\x1b\[[0-9;]*m', '', raw_str).strip()
                         percent = float(clean_str.replace('%', ''))
                         job["progress"] = percent * 0.8
-                        job["log"] = f"Downloading: {clean_str}"
+                        progress_bucket = int(percent // 5) * 5
+                        if job.get("last_progress_log") != progress_bucket:
+                            job["last_progress_log"] = progress_bucket
+                            append_log(f"Downloading: {clean_str}")
                     except: pass
                 elif d['status'] == 'finished':
-                    job["log"] = "Finalisiere..."
+                    append_log("Finalisiere...")
                     job["progress"] = 80
+
+            class JobLogger:
+                def __init__(self, active_job):
+                    self.job = active_job
+
+                def _set_log(self, level, message):
+                    clean = re.sub(r'\x1b\[[0-9;]*m', '', str(message)).strip()
+                    if clean:
+                        rendered = f"{level.upper()} - yt-dlp - {clean}"
+                        append_log(rendered)
+                        print(f"[yt-dlp] {rendered}")
+
+                def debug(self, msg):
+                    self._set_log("debug", msg)
+
+                def info(self, msg):
+                    self._set_log("info", msg)
+
+                def warning(self, msg):
+                    self._set_log("warning", msg)
+
+                def error(self, msg):
+                    self._set_log("error", msg)
 
             ydl_opts = {
                 'format': 'bestaudio/best',
                 'outtmpl': output_template, 
                 'ffmpeg_location': FFMPEG_PATH, 
-                'quiet': True,
+                'quiet': False,
+                'verbose': True,
+                'logtostderr': True,
+                'logger': JobLogger(job),
+                'extractor_args': {'youtube': {'player_client': ['default']}},
+                'retries': 3,
+                'fragment_retries': 3,
+                'socket_timeout': 15,
+                'retry_sleep_functions': {'http': 5},
                 'noplaylist': True,
                 'progress_hooks': [progress_hook]
             }

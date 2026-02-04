@@ -5,11 +5,10 @@ title Tracklistify Helper Console
 :: In das Verzeichnis der Batch-Datei wechseln (falls als Admin gestartet)
 cd /d "%~dp0"
 
-:: Prüfen, ob venv existiert
+:: Prüfen, ob venv existiert (falls nicht, erstellen)
 if not exist ".venv\Scripts\activate.bat" (
-    echo [FEHLER] .venv nicht gefunden! Bitte erstelle ein Virtual Environment.
-    pause
-    exit /b
+    echo [INFO] .venv nicht gefunden. Erstelle Virtual Environment...
+    python -m venv .venv
 )
 
 :: Venv aktivieren
@@ -17,7 +16,7 @@ call .venv\Scripts\activate
 
 :: Dependencies installieren
 echo Installiere Python-Abhaengigkeiten...
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 
 :: Info ausgeben
 echo.

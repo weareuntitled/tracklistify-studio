@@ -77,7 +77,8 @@ document.addEventListener('alpine:init', () => {
         },
         
         toasts: [],
-        lastLogLine: '', 
+        lastLogLine: '',
+        lastConsoleLog: '',
 
         // =====================================================================
         // PLAYER & PRELOADER STATE
@@ -254,6 +255,11 @@ document.addEventListener('alpine:init', () => {
                     this.showToast("Verarbeitung fertig", "Set wurde importiert.", "success");
                 }
                 
+                if (status.active?.log && status.active.log !== this.lastConsoleLog) {
+                    console.log(`[queue] ${status.active.log}`);
+                    this.lastConsoleLog = status.active.log;
+                }
+
                 // Live Log Toasties
                 this.handleLiveLog(status);
                 this.handleQueueProgress(status);
