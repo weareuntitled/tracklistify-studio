@@ -123,6 +123,7 @@ class JobManager:
                 'outtmpl': output_template, 
                 'ffmpeg_location': FFMPEG_PATH, 
                 'quiet': True,
+                'extractor_args': {'youtube': {'player_client': ['default']}},
                 'noplaylist': True,
                 'progress_hooks': [progress_hook]
             }
