@@ -125,7 +125,9 @@ class JobManager:
                 def _set_log(self, level, message):
                     clean = re.sub(r'\x1b\[[0-9;]*m', '', str(message)).strip()
                     if clean:
-                        self.job["log"] = f"{level.upper()} - yt-dlp - {clean}"
+                        rendered = f"{level.upper()} - yt-dlp - {clean}"
+                        self.job["log"] = rendered
+                        print(f"[yt-dlp] {rendered}")
 
                 def debug(self, msg):
                     self._set_log("debug", msg)
@@ -143,8 +145,9 @@ class JobManager:
                 'format': 'bestaudio/best',
                 'outtmpl': output_template, 
                 'ffmpeg_location': FFMPEG_PATH, 
-                'quiet': True,
+                'quiet': False,
                 'verbose': True,
+                'logtostderr': True,
                 'logger': JobLogger(job),
                 'extractor_args': {'youtube': {'player_client': ['default']}},
                 'retries': 3,
