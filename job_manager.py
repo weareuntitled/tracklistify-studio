@@ -3,6 +3,7 @@ import time
 import os
 import asyncio
 import yt_dlp
+from yt_dlp.utils import DownloadError
 import re
 import database
 import shutil
@@ -156,26 +157,46 @@ class JobManager:
 
             ydl_opts = {
                 'format': 'bestaudio/best',
-                'outtmpl': output_template, 
-                'ffmpeg_location': FFMPEG_PATH, 
+                'outtmpl': output_template,
+                'ffmpeg_location': FFMPEG_PATH,
                 'quiet': False,
                 'verbose': True,
                 'logtostderr': True,
                 'logger': JobLogger(job),
-                'extractor_args': {'youtube': {'player_client': ['default']}},
                 'retries': 3,
                 'fragment_retries': 3,
                 'socket_timeout': 15,
                 'retry_sleep_functions': {'http': 5},
                 'noplaylist': True,
-                'progress_hooks': [progress_hook]
+                'progress_hooks': [progress_hook],
             }
 
             print(f"[JobManager] Downloading {url}...")
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-                if not job["metadata"].get("name"):
-                    job["metadata"]["name"] = info.get('title', 'YouTube Import')
+            info = None
+            last_error = None
+            player_clients = [["default"], ["android"], ["web_safari"]]
+            for idx, clients in enumerate(player_clients):
+                if idx > 0:
+                    append_log(f"Retry mit Client: {clients[0]}")
+                ydl_opts["extractor_args"] = {'youtube': {'player_client': clients}}
+                try:
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        info = ydl.extract_info(url, download=True)
+                    break
+                except DownloadError as exc:
+                    last_error = exc
+                    if "HTTP Error 403" in str(exc):
+                        append_log("Download blockiert (HTTP 403). Wechsle Client...")
+                        continue
+                    raise
+                except Exception as exc:
+                    last_error = exc
+                    raise
+
+            if info is None:
+                raise last_error or Exception("Download fehlgeschlagen.")
+            if not job["metadata"].get("name"):
+                job["metadata"]["name"] = info.get('title', 'YouTube Import')
 
             # --- FOOLPROOF FILE FINDER ---
             print(f"[JobManager] Waiting for file system...")
