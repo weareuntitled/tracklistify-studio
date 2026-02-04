@@ -112,7 +112,7 @@ class TrackIdentificationConfig(BaseConfig):
 
     # Track identification specific fields
     segment_length: int = field(default=60)
-    min_confidence: float = field(default=0.5)
+    min_confidence: float = field(default=50.0)
     time_threshold: float = field(default=30.0)
     max_duplicates: int = field(default=2)
     overlap_duration: int = field(default=10)
@@ -183,7 +183,7 @@ class TrackIdentificationConfig(BaseConfig):
         # Add range validation rules
         self._validator.add_range_rule("segment_length", 10, 300)
         self._validator.add_range_rule("overlap_duration", 0, 30)
-        self._validator.add_range_rule("min_confidence", 0.0, 1.0)
+        self._validator.add_range_rule("min_confidence", 0.0, 100.0)
         self._validator.add_range_rule("time_threshold", 0.0, 300.0)
         self._validator.add_range_rule("max_duplicates", 0, 10)
 

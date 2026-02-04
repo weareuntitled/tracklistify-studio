@@ -20,7 +20,7 @@ from flask import (
     session,
     Response
 )
-from pydantic import BaseModel, EmailStr, ValidationError
+from pydantic import BaseModel, EmailStr, Field, ValidationError
 from werkzeug.exceptions import BadRequest, HTTPException
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -54,6 +54,7 @@ from services.user_store import (
     ProfileUpdatePayload,
     InvitePayload
 )
+from services.settings_store import SettingsStore
 
 # Initialize Database
 database.init_db()
@@ -68,6 +69,13 @@ auth_api = Blueprint("auth_api", __name__, url_prefix="/api/auth")
 # Initialize User Store & Create Admin
 user_store = UserStore()
 ADMIN_LOGIN_EMAIL = user_store.ensure_default_admin().email
+settings_store = SettingsStore()
+
+def apply_settings_to_env(settings: Dict[str, Any]) -> None:
+    if "min_confidence" in settings and settings["min_confidence"] is not None:
+        os.environ["TRACKLISTIFY_MIN_CONFIDENCE"] = str(settings["min_confidence"])
+
+apply_settings_to_env(settings_store.get_settings())
 
 # --- Helper Functions ---
 
@@ -209,6 +217,7 @@ def profile_page():
     user_collections = database.get_all_sets()
     liked_tracks = database.get_liked_tracks()
     stats = database.get_dashboard_stats()
+    settings = settings_store.get_settings()
 
     display_name = user.name or user.dj_name or user.email
 
@@ -219,6 +228,7 @@ def profile_page():
         collections=user_collections,
         liked_tracks=liked_tracks,
         stats=stats,
+        confidence_threshold=settings.get("min_confidence", 50.0),
     )
 
 @app.route("/sets/<int:set_id>")
@@ -260,7 +270,9 @@ def login():
         email: EmailStr
 
     try:
-        admin_email = _AdminEmailModel(email=os.getenv("ADMIN_EMAIL", ADMIN_LOGIN_EMAIL)).email
+        admin_email = _AdminEmailModel(
+            email=os.getenv("ADMIN_EMAIL", ADMIN_LOGIN_EMAIL)
+        ).email
     except ValidationError:
         admin_email = ADMIN_LOGIN_EMAIL
 
@@ -331,11 +343,34 @@ def logout():
     return jsonify({"ok": True})
 
 
+class TrackMatcherSettingsPayload(BaseModel):
+    min_confidence: float = Field(..., ge=0, le=100)
+
+
 # Register blueprints
 app.register_blueprint(auth_api)
 
 
 # --- API: Sets & Tracks ---
+
+@app.route("/api/settings/track-matcher", methods=["GET", "POST"])
+def track_matcher_settings():
+    user, error_response = require_session_user()
+    if error_response:
+        return error_response
+
+    if request.method == "POST":
+        payload = parse_body(TrackMatcherSettingsPayload)
+        settings = settings_store.update_settings(
+            {"min_confidence": float(payload.min_confidence)}
+        )
+        apply_settings_to_env(settings)
+        from tracklistify.config.factory import clear_config
+
+        clear_config()
+        return jsonify({"ok": True, "settings": settings})
+
+    return jsonify({"ok": True, "settings": settings_store.get_settings()})
 
 @app.route("/api/sets")
 def list_sets():

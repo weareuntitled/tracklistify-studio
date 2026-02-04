@@ -55,6 +55,43 @@
         </div>
     </div>
 
+    <div class="ui-card ui-card-section mb-8">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">Confidence Threshold (%)</h2>
+                <p class="text-sm text-gray-500">Bestimmt, wie sicher ein Track erkannt sein muss.</p>
+            </div>
+            <form id="confidence-form" class="flex flex-wrap items-center gap-3">
+                <label class="sr-only" for="confidence-range">Confidence Threshold (%)</label>
+                <input
+                    id="confidence-range"
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value="{{ confidence_threshold }}"
+                    class="w-40 accent-orange-500"
+                />
+                <input
+                    id="confidence-number"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value="{{ confidence_threshold }}"
+                    class="w-20 rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                />
+                <button
+                    type="submit"
+                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-orange-200 bg-orange-500 text-sm font-semibold text-white hover:bg-orange-600"
+                >
+                    Speichern
+                </button>
+                <span id="confidence-status" class="text-xs text-gray-500"></span>
+            </form>
+        </div>
+    </div>
+
     <div class="ui-card overflow-hidden">
         <div class="ui-card-header">
             <div>
@@ -98,5 +135,49 @@
         </div>
     </div>
 </div>
+<script>
+    const confidenceForm = document.getElementById('confidence-form');
+    const confidenceRange = document.getElementById('confidence-range');
+    const confidenceNumber = document.getElementById('confidence-number');
+    const confidenceStatus = document.getElementById('confidence-status');
+
+    const syncConfidenceInputs = (value) => {
+        confidenceRange.value = value;
+        confidenceNumber.value = value;
+    };
+
+    confidenceRange.addEventListener('input', (event) => {
+        syncConfidenceInputs(event.target.value);
+    });
+
+    confidenceNumber.addEventListener('input', (event) => {
+        syncConfidenceInputs(event.target.value);
+    });
+
+    confidenceForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        confidenceStatus.textContent = 'Speichern...';
+
+        const rawValue = parseFloat(confidenceNumber.value || confidenceRange.value || 0);
+        const clampedValue = Math.max(0, Math.min(100, rawValue));
+
+        try {
+            const response = await fetch('/api/settings/track-matcher', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ min_confidence: clampedValue })
+            });
+            const data = await response.json();
+            if (response.ok && data.ok) {
+                syncConfidenceInputs(data.settings.min_confidence);
+                confidenceStatus.textContent = 'Gespeichert.';
+            } else {
+                confidenceStatus.textContent = data.error || 'Speichern fehlgeschlagen.';
+            }
+        } catch (error) {
+            confidenceStatus.textContent = 'Speichern fehlgeschlagen.';
+        }
+    });
+</script>
 </body>
 </html>
